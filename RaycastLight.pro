@@ -4,7 +4,12 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+LIBS += -lGL -lOpenCL
+
+QMAKE_CXXFLAGS+= -fopenmp
+QMAKE_LFLAGS +=  -fopenmp
+
+QT       += core gui concurrent opengl
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -25,10 +30,28 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp
+        mainwindow.cpp \
+    openclutilities.cpp \
+    openclglutilities.cpp \
+    volumerendercl.cpp \
+    datrawreader.cpp \
+    volumerenderwidget.cpp
 
 HEADERS += \
-        mainwindow.h
+        mainwindow.h \
+    openclutilities.h \
+    openclglutilities.h \
+    volumerendercl.h \
+    datrawreader.h \
+    volumerenderwidget.h
 
 FORMS += \
         mainwindow.ui
+
+include($$PWD/inc/painting/painting.pri)
+
+RESOURCES += \
+    kernels.qrc
+
+DISTFILES += \
+    kernels/volumeraycast.cl
