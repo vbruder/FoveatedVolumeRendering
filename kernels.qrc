@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/kernels">
+        <file>kernels/volumeraycast.cl</file>
+    </qresource>
+</RCC>
