@@ -584,6 +584,9 @@ void VolumeRenderWidget::setDrawBox(bool box)
  */
 void VolumeRenderWidget::setBackgroundColor(QColor col)
 {
-    std::array<float, 4> color = {{col.redF(), col.greenF(), col.blueF(), col.alphaF()}};
+    std::array<float, 4> color = {{(float)col.redF(), (float)col.greenF(),
+                                   (float)col.blueF(), (float)col.alphaF()}};
     _volumerender.setBackground(color);
+    this->updateView();
 }
+

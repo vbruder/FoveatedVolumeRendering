@@ -61,7 +61,7 @@ float illumination(image3d_t vol, const float4 pos)
     float3 n = fast_normalize(s2 - s1).xyz;
     float3 l = fast_normalize((float4)(2.0f, 10.0f, 2.0f, 0.0f) - pos).xyz;
 
-    return fabs(dot(n, l));
+    return max(0.f, dot(n, l));
     //return shading(n, (normalize((float4)(1.0f, -1.0f, -1.0f, 0.0f) - pos)).xyz, (pos - rayDir));
 }
 
@@ -220,18 +220,7 @@ __kernel void volumeRender(__read_only image3d_t volData,
     float4 tfColor = (float4)(0);
     float opacity = 0.0f;
     float t = 0.0f;
-
     float3 voxLen = (float3)(2.f) / convert_float3(get_image_dim(volData).xyz);
-    float3 entryPoint = camPos.xyz + tnear*rayDir.xyz;
-    float3 exitPoint = camPos.xyz + tfar*rayDir.xyz;
-    float3 bboxMin = (float3)(-1.f);
-    float3 bboxMax = (float3)( 1.f);
-
-//    if (checkEdges(entryPoint, bboxMin, bboxMax))
-//    {
-//        result.xyz = (float3)(0.f);
-//        opacity = 1.f;
-//    }
 
     uint i = 0;
     // raycasting loop: front to back raycasting with early ray termination

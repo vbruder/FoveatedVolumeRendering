@@ -57,7 +57,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->pbResetTff, SIGNAL(clicked()),
             ui->transferFunctionEditor, SLOT(resetTransferFunction()));
     connect(ui->cbInterpolation, SIGNAL(currentIndexChanged(QString)),
-            ui->volumeRenderWidget, SLOT(setInterpolation(QString)));
+            ui->volumeRenderWidget, SLOT(setTffInterpolation(QString)));
     connect(ui->cbInterpolation, SIGNAL(currentIndexChanged(QString)),
             ui->transferFunctionEditor, SLOT(setInterpolation(QString)));
 
