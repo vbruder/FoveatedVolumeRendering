@@ -7,21 +7,6 @@ constant sampler_t linearSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
 constant sampler_t nearestSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
                                 CLK_FILTER_NEAREST;
 
-// Lambert shading
-float4 shading(const float3 n, const float3 l, const float3 v)
-{
-    float4 ambient = (float4)(1.0f, 1.0f, 1.0f, 0.2f);
-    float4 diffuse = (float4)(1.0f, 1.0f, 1.0f, 0.8f);
-
-    float intensity = fabs(dot(n, l)) * diffuse.w;
-    diffuse *= intensity;
-
-    float4 color4 = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
-    color4.xyz = ambient.xyz * ambient.w + diffuse.xyz;
-    return color4;
-}
-
-
 // intersect ray with a box
 // http://www.siggraph.org/education/materials/HyperGraph/raytrace/rtinter3.htm
 int intersectBox(float4 rayOrig, float4 rayDir, float *tnear, float *tfar)
@@ -45,8 +30,8 @@ int intersectBox(float4 rayOrig, float4 rayDir, float *tnear, float *tfar)
     return (int)(minTmax > maxTmin);
 }
 
-
-float illumination(image3d_t vol, const float4 pos)
+// Compute gradient using central difference: f' = ( f(x+h)-f(x-h) ) / 2*h
+float3 gradientCentralDiff(read_only image3d_t vol, const float4 pos)
 {
     float3 volResf = convert_float3(get_image_dim(vol).xyz);
     float3 offset = native_divide((float3)(1.0f, 1.0f, 1.0f), volResf);
@@ -58,54 +43,19 @@ float illumination(image3d_t vol, const float4 pos)
     s2.y = read_imagef(vol, nearestSmp, pos + (float4)(0, +offset.y, 0, 0)).x;
     s1.z = read_imagef(vol, nearestSmp, pos + (float4)(0, 0, -offset.z, 0)).x;
     s2.z = read_imagef(vol, nearestSmp, pos + (float4)(0, 0, +offset.z, 0)).x;
-    float3 n = fast_normalize((s2 - s1)).xyz;
+    return (s2 - s1) / (2.f * offset);
+}
+
+// simple illumination based on central differences
+float illumination(read_only image3d_t vol, const float4 pos)
+{
+    float3 n = fast_normalize(gradientCentralDiff(vol, pos));
     float3 l = fast_normalize((float3)(20.0f, 100.0f, 20.0f) - pos.xyz);
 
     return max(0.f, dot(n, l));
-    //return shading(n, (normalize((float4)(1.0f, -1.0f, -1.0f, 0.0f) - pos)).xyz, (pos - rayDir));
 }
 
-
-uint getui4(uint4 v, int id)
-{
-    if (id == 0) return v.x;
-    if (id == 1) return v.y;
-    if (id == 2) return v.z;
-    if (id == 3) return v.w;
-}
-
-float getf4(float4 v, int id)
-{
-    if (id == 0) return v.x;
-    if (id == 1) return v.y;
-    if (id == 2) return v.z;
-    if (id == 3) return v.w;
-}
-
-float getf8(float8 v, int id)
-{
-    if (id == 0) return v.s0;
-    if (id == 1) return v.s1;
-    if (id == 2) return v.s2;
-    if (id == 3) return v.s3;
-    if (id == 4) return v.s4;
-    if (id == 5) return v.s5;
-    if (id == 6) return v.s6;
-    if (id == 7) return v.s7;
-}
-
-bool approxEq(float x, float y)
-{
-    float delta = 0.005f;
-    return (x < y + delta) && (y < x + delta);
-}
-
-bool approxEq2(float2 a, float2 b)
-{
-    return approxEq(a.x, b.x) && approxEq(a.y, b.y);
-}
-
-
+// check for border edges
 bool checkBoundingBox(float3 pos, float3 voxLen, float2 bound)
 {
     if (
@@ -126,22 +76,6 @@ bool checkBoundingBox(float3 pos, float3 voxLen, float2 bound)
     else
         return false;
 }
-
-
-bool checkEdges(float3 pos, float3 boxMin, float3 boxMax)
-{
-    return
-       approxEq2(pos.xz, boxMin.xz)
-    || approxEq2(pos.yz, boxMin.yz)
-    || approxEq2(pos.xz, boxMax.xz)
-    || approxEq2(pos.yz, boxMax.yz)
-
-    || approxEq2(pos.xz, (float2)(boxMin.x, boxMax.z))
-    || approxEq2(pos.yz, (float2)(boxMin.y, boxMax.z))
-    || approxEq2(pos.xz, (float2)(boxMax.x, boxMin.z))
-    || approxEq2(pos.yz, (float2)(boxMax.y, boxMin.z));
-}
-
 
 /**
  * direct volume raycasting kernel
@@ -238,8 +172,8 @@ __kernel void volumeRender(__read_only image3d_t volData,
         density = useLinear ? read_imagef(volData,  linearSmp, pos).x :
                               read_imagef(volData, nearestSmp, pos).x;
         tfColor = read_imagef(tffData, linearSmp, density);         // map density to color
-         // illumination
-        tfColor.xyz = mix(tfColor.xyz, useIllum ? illumination(volData, pos) : tfColor.xyz, 0.5f);
+        if (useIllum)
+            tfColor.xyz = mix(tfColor.xyz, illumination(volData, pos), 0.5f);
         tfColor.xyz = background.xyz - tfColor.xyz;
 
         // Taylor expansion approximation
