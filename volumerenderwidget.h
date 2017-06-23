@@ -65,6 +65,7 @@ public slots:
     void setIllumination(bool illum);
     void setLinearInterpolation(bool linear);
     void setDrawBox(bool box);
+    void setBackgroundColor(QColor col);
 
 protected:
     // Qt specific QOpenGLWidget methods

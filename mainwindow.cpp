@@ -50,6 +50,7 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->volumeRenderWidget, SLOT(setIllumination(bool)));
     connect(ui->chbBox, SIGNAL(toggled(bool)), ui->volumeRenderWidget, SLOT(setDrawBox(bool)));
     connect(ui->chbOrtho, SIGNAL(toggled(bool)), ui->volumeRenderWidget, SLOT(setCamOrtho(bool)));
+    connect(ui->pbBgColor, SIGNAL(released()), this, SLOT(chooseBackgroundColor()));
     // connect tff editor
     connect(ui->transferFunctionEditor->getEditor(), SIGNAL(gradientStopsChanged(QGradientStops)),
             ui->volumeRenderWidget, SLOT(updateTransferFunction(QGradientStops)));
@@ -372,4 +373,16 @@ void MainWindow::dropEvent(QDropEvent *ev)
             readVolumeFile(fileName);
         }
     }
+}
+
+
+/**
+ * @brief MainWindow::chooseBackgroundColor
+ */
+void MainWindow::chooseBackgroundColor()
+{
+    QColorDialog dia;
+    QColor col = dia.getColor();
+    if (col.isValid())
+        ui->volumeRenderWidget->setBackgroundColor(col);
 }

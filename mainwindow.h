@@ -37,6 +37,7 @@ protected slots:
     void loadTff();
     void saveTff();
 
+    void chooseBackgroundColor();
 protected:
     void dragEnterEvent(QDragEnterEvent *ev) Q_DECL_OVERRIDE;
     void dropEvent(QDropEvent *ev) Q_DECL_OVERRIDE;
