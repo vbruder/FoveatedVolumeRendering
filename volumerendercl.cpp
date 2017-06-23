@@ -80,13 +80,6 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel.setArg(LINEAR, 1);
         cl_float4 bgColor = {{1.f, 1.f, 1.f, 1.f}};
         _raycastKernel.setArg(BACKGROUND, bgColor);
-
-        // TESTING
-//        std::vector<cl_uint> gCnt(1, 0);
-//        _gCountMem = cl::Buffer(_contextCL, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
-//                                    sizeof(cl_int), (void*)gCnt.data());
-//        _raycastKernel.setArg(__TEST_GCOUNT, _gCountMem);
-
     }
     catch (cl::Error err)
     {
@@ -104,11 +97,6 @@ void VolumeRenderCL::setMemObjects()
     _raycastKernel.setArg(OUTPUT, _outputMem);
     _raycastKernel.setArg(TFF, _tffMem);
     _raycastKernel.setArg(VIEW, _viewMem);
-
-//    std::vector<cl_uint> gCnt(1, 0);
-//    _gCountMem = cl::Buffer(_contextCL, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
-//                                sizeof(cl_int), (void*)gCnt.data());
-//    _raycastKernel.setArg(__TEST_GCOUNT, _gCountMem);
 }
 
 
