@@ -58,8 +58,8 @@ float illumination(image3d_t vol, const float4 pos)
     s2.y = read_imagef(vol, nearestSmp, pos + (float4)(0, +offset.y, 0, 0)).x;
     s1.z = read_imagef(vol, nearestSmp, pos + (float4)(0, 0, -offset.z, 0)).x;
     s2.z = read_imagef(vol, nearestSmp, pos + (float4)(0, 0, +offset.z, 0)).x;
-    float3 n = fast_normalize(s2 - s1).xyz;
-    float3 l = fast_normalize((float4)(2.0f, 10.0f, 2.0f, 0.0f) - pos).xyz;
+    float3 n = fast_normalize((s2 - s1)).xyz;
+    float3 l = fast_normalize((float3)(20.0f, 100.0f, 20.0f) - pos.xyz);
 
     return max(0.f, dot(n, l));
     //return shading(n, (normalize((float4)(1.0f, -1.0f, -1.0f, 0.0f) - pos)).xyz, (pos - rayDir));
@@ -238,7 +238,8 @@ __kernel void volumeRender(__read_only image3d_t volData,
         density = useLinear ? read_imagef(volData,  linearSmp, pos).x :
                               read_imagef(volData, nearestSmp, pos).x;
         tfColor = read_imagef(tffData, linearSmp, density);         // map density to color
-        tfColor.xyz *= useIllum ? illumination(volData, pos) : 1.f; // illumination
+         // illumination
+        tfColor.xyz = mix(tfColor.xyz, useIllum ? illumination(volData, pos) : tfColor.xyz, 0.5f);
         tfColor.xyz = background.xyz - tfColor.xyz;
 
         // Taylor expansion approximation
