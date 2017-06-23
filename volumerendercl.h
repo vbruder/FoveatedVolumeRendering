@@ -12,14 +12,16 @@ class VolumeRenderCL
 public:
     enum kernel_arg
     {
-        VOLUME     = 0, // volume data set                      image3d_t
-        OUTPUT     = 1, // output image                         image2d_t
-        RESOLUTION = 2, // volume resolution                    cl_int3
-        TFF        = 3, // transfer function array              image1d_t_array (array of 4)
-        STEP_SIZE,      // step size factor                     cl_float
-        VIEW,           // view matrix                          const float * (read only)
-        ORTHO,          // use orthographic camera              cl_uint
-        ILLUMINATION    // use illumination (per view)          cl_uint4
+        VOLUME     = 0, // volume data set                          image3d_t
+        OUTPUT     = 1, // output image                             image2d_t
+        TFF,            // transfer function array                  image1d_t
+        STEP_SIZE,      // step size factor                         cl_float
+        VIEW,           // view matrix                              const float * (read only)
+        ORTHO,          // use orthographic camera                  cl_uint (bool)
+        ILLUMINATION,   // use illumination (per view)              cl_uint (bool)
+        BOX,            // show bounding box aroud volume           cl_uint (bool)
+        LINEAR,         // use linear interpolation, not nearest    cl_uint (bool)
+        BACKGROUND,     // background color RGBA                    cl_float4
     };
 
     // mipmap down-scaling metric
@@ -115,12 +117,26 @@ public:
      * @param setCamOrtho
      */
     void setCamOrtho(bool setCamOrtho);
-
     /**
      * @brief setIllumination
      * @param illum
      */
     void setIllumination(bool illum);
+    /**
+     * @brief setBoundingBox
+     * @param boundingBox
+     */
+    void setBoundingBox(bool boundingBox);
+    /**
+     * @brief setLinearSampling
+     * @param linearSampling
+     */
+    void setLinearSampling(bool linearSampling);
+    /**
+     * @brief setBackground
+     * @param color
+     */
+    void setBackground(std::array<float, 4> color);
 
 private:
 

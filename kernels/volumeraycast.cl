@@ -1,5 +1,7 @@
 #pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
 
+#define ERT_THRESHOLD 0.98
+
 constant sampler_t linearSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
                                 CLK_FILTER_LINEAR;
 constant sampler_t nearestSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
@@ -44,12 +46,9 @@ int intersectBox(float4 rayOrig, float4 rayDir, float *tnear, float *tfar)
 }
 
 
-float illumination(image3d_t vol, const float4 pos, const uint4 volRes)
+float illumination(image3d_t vol, const float4 pos)
 {
-    float3 volResf;
-    volResf.x = (float)(volRes.x);
-    volResf.y = (float)(volRes.y);
-    volResf.z = (float)(volRes.z);
+    float3 volResf = convert_float3(get_image_dim(vol).xyz);
     float3 offset = native_divide((float3)(1.0f, 1.0f, 1.0f), volResf);
     float3 s1;
     float3 s2;
@@ -60,7 +59,7 @@ float illumination(image3d_t vol, const float4 pos, const uint4 volRes)
     s1.z = read_imagef(vol, nearestSmp, pos + (float4)(0, 0, -offset.z, 0)).x;
     s2.z = read_imagef(vol, nearestSmp, pos + (float4)(0, 0, +offset.z, 0)).x;
     float3 n = fast_normalize(s2 - s1).xyz;
-    float3 l = fast_normalize((float4)(100.0f, 100.0f, 100.0f, 0.0f) - pos).xyz;
+    float3 l = fast_normalize((float4)(2.0f, 10.0f, 2.0f, 0.0f) - pos).xyz;
 
     return fabs(dot(n, l));
     //return shading(n, (normalize((float4)(1.0f, -1.0f, -1.0f, 0.0f) - pos)).xyz, (pos - rayDir));
@@ -149,31 +148,31 @@ bool checkEdges(float3 pos, float3 boxMin, float3 boxMax)
  */
 __kernel void volumeRender(__read_only image3d_t volData,
                            __write_only image2d_t outData,
-                           const uint4 volRes,
                            __read_only image1d_t tffData,     // constant transfer function values
                            const float stepSizeFactor,
                            __constant float *viewMat,
                            const uint orthoCam,
-                           const uint useIllum
-//                          __global uint *gCount
+                           const uint useIllum,
+                           const uint useBox,
+                           const uint useLinear,
+                           const float4 background
                            )
 {
-    float maxRes = (float)max(volRes.x, max(volRes.y, volRes.z));
+    int2 globalId = (int2)(get_global_id(0), get_global_id(1));
+    if(any(globalId >= get_image_dim(outData)))
+        return;
+
+    float maxRes = (float)max(get_image_dim(volData).x, get_image_dim(volData).z);
     float stepSize = native_divide(stepSizeFactor, maxRes);
     stepSize *= 8.0f; // normalization to octile
 
-    uint idX = (uint)get_global_id(0);
-    uint idY = (uint)get_global_id(1);
-
-    if (idX >= get_global_size(0) || idY >= get_global_size(1))
-        return;
-    int2 texCoords = (int2)(idX, idY);
+    int2 texCoords = globalId;
     float2 imgCoords;
-    imgCoords.x = native_divide(((float)idX + 0.5f), (float)(get_global_size(0))) * 2.0f - 1.0f;
-    imgCoords.y = native_divide(((float)idY + 0.5f), (float)(get_global_size(1))) * 2.0f - 1.0f;
+    imgCoords.x = native_divide((globalId.x + 0.5f), (float)(get_global_size(0))) * 2.0f - 1.0f;
+    imgCoords.y = native_divide((globalId.y + 0.5f), (float)(get_global_size(1))) * 2.0f - 1.0f;
     imgCoords.y *= -1.0f;
 
-    float4 rayDir = (float4)(0, 0, 0, 0);
+    float4 rayDir = (float4)(0);
     float tnear = 0.0f;
     float tfar = 1.0f;
     int hit = 0;
@@ -209,75 +208,62 @@ __kernel void volumeRender(__read_only image3d_t volData,
     hit = intersectBox(camPos, rayDir, &tnear, &tfar);
     if (!hit)
     {
-        write_imagef(outData, texCoords, (float4)(1.0f, 1.0f, 1.0f, 0.0f));
+        write_imagef(outData, texCoords, background);
         return;
     }
     tnear = max(0.0f, tnear);     // clamp to near plane
 
-    float4 color = (float4)(1, 1, 1, 0);
-    float4 illumColor = (float4)(0);
+    float4 result = background;
     float alpha = 0.0f;
     float4 pos = (float4)(0);
     float density = 0.0f;
     float4 tfColor = (float4)(0);
     float opacity = 0.0f;
     float t = 0.0f;
-    uint i = 0;
 
-    // draw bounding box
-    pos = camPos + tnear*rayDir;
-    pos = pos * 0.5f + 0.5f;
-    float3 voxLen = (float3)(2.f / volRes.x, 2.f / volRes.y, 2.f / volRes.z);
-    if (checkBoundingBox(pos.xyz, voxLen, (float2)(0, 1)))
-    {
-        color.xyz = (float3)(0, 1, 0);
-        opacity = 1.f;
-    }
-
+    float3 voxLen = (float3)(2.f) / convert_float3(get_image_dim(volData).xyz);
     float3 entryPoint = camPos.xyz + tnear*rayDir.xyz;
     float3 exitPoint = camPos.xyz + tfar*rayDir.xyz;
-    float3 bboxMin = (float3)(-1.f, -1.f, -1.f);
-    float3 bboxMax = (float3)(1.f, 1.f, 1.f);
+    float3 bboxMin = (float3)(-1.f);
+    float3 bboxMax = (float3)( 1.f);
 
     if (checkEdges(entryPoint, bboxMin, bboxMax))
     {
-        color.xyz = (float3)(0, 0, 0);
+        result.xyz = (float3)(0.f);
         opacity = 1.f;
     }
 
-    // raycasting loop
-    // march along ray from front to back, accumulating color
-    while (true)
+    uint i = 0;
+    // raycasting loop: front to back raycasting with early ray termination
+    while (t < tfar)
     {
-        t = (tnear + stepSize*i);
-        //dist = initialDist + t;
+        t = tnear + stepSize*i;     // recalculate t to avoid numerical drift
         pos = camPos + t*rayDir;
-        pos = pos * 0.5f + 0.5f;    // normalize to [0;1]
+        pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
 
-        density = read_imagef(volData, linearSmp, pos).x;
-        tfColor.w = read_imagef(tffData, linearSmp, density).w;
+        density = useLinear ? read_imagef(volData,  linearSmp, pos).x :
+                              read_imagef(volData, nearestSmp, pos).x;
+        tfColor = read_imagef(tffData, linearSmp, density);         // map density to color
+        tfColor.xyz *= useIllum ? illumination(volData, pos) : 1.f; // illumination
+        tfColor.xyz = background.xyz - tfColor.xyz;
 
-        // illumination
-        if (useIllum)
-            tfColor.xyz *= illumination(volData, pos, volRes);
+        // Taylor expansion approximation
+        opacity = 1.f - native_powr(1.f - tfColor.w, stepSizeFactor);
+        result.xyz = result.xyz - tfColor.xyz * opacity * (1.f - alpha);
+        alpha = alpha + opacity * (1.f - alpha);
 
-        opacity = 1.0f - pow(1.0f - tfColor.w, stepSizeFactor);
-        color.xyz = color.xyz - ((float3)(1.0f, 1.0f, 1.0f) - tfColor.xyz) * opacity * (1.0f - alpha);
-        alpha = alpha + opacity * (1.0f - alpha);
-
-        //oldVal = atomic_inc(gCount); // MEM ACCESS
-        if (alpha > 0.98f) break;   // ERT
-        if (t > tfar) break;        // out of box
+        if (alpha > ERT_THRESHOLD) break;   // early ray termination check
         ++i;
     }
 
-    if (checkBoundingBox(pos.xyz, voxLen, (float2)(0, 1)))
+    // draw bounding box
+    if (useBox && checkBoundingBox(pos.xyz, voxLen, (float2)(0.f, 1.f)))
     {
-        color.xyz = (float3)(0);
+        result.xyz = fabs((float3)(1.f) - background.xyz);
         opacity = 1.f;
     }
 
-    color.w = alpha;
-    write_imagef(outData, texCoords, color);
+    result.w = alpha;
+    write_imagef(outData, texCoords, result);
 }
 

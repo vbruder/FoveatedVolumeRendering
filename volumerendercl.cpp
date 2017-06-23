@@ -76,6 +76,10 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel.setArg(STEP_SIZE, 0.5f);     // default step size 0.5*voxel size
         _raycastKernel.setArg(ORTHO, 0);            // perspective cam by default
         _raycastKernel.setArg(ILLUMINATION, 1);     // illumination on by default
+        _raycastKernel.setArg(BOX, 1);
+        _raycastKernel.setArg(LINEAR, 1);
+        cl_float4 bgColor = {{1.f, 1.f, 1.f, 1.f}};
+        _raycastKernel.setArg(BACKGROUND, bgColor);
 
         // TESTING
 //        std::vector<cl_uint> gCnt(1, 0);
@@ -315,10 +319,9 @@ void VolumeRenderCL::loadVolumeData(const std::string fileName)
         std::cout << _dr.properties().to_string() << std::endl;
         volDataToCLmem(_dr.data());
 
-        cl_uint4 resolution = {{_dr.properties().volume_res[0],
-                                _dr.properties().volume_res[1],
-                                _dr.properties().volume_res[2], 0}};
-        _raycastKernel.setArg(RESOLUTION, resolution);
+//        cl_uint4 resolution = {{_dr.properties().volume_res[0],
+//                                _dr.properties().volume_res[1],
+//                                _dr.properties().volume_res[2], 0}};
         calcScaling();
     }
     catch (std::runtime_error e)
@@ -400,11 +403,47 @@ void VolumeRenderCL::setCamOrtho(bool setCamOrtho)
 /**
  * @brief VolumeRenderCL::setIllumination
  * @param illum
- * @param viewId
  */
 void VolumeRenderCL::setIllumination(bool illum)
 {
     try {
         _raycastKernel.setArg(ILLUMINATION, illum);
+    } catch (cl::Error err) { logCLerror(err); }
+}
+
+
+/**
+ * @brief VolumeRenderCL::setBoundingBox
+ * @param boundingBox
+ */
+void VolumeRenderCL::setBoundingBox(bool boundingBox)
+{
+    try {
+        _raycastKernel.setArg(BOX, boundingBox);
+    } catch (cl::Error err) { logCLerror(err); }
+}
+
+
+/**
+ * @brief VolumeRenderCL::setLinearSampling
+ * @param linearSampling
+ */
+void VolumeRenderCL::setLinearSampling(bool linearSampling)
+{
+    try {
+        _raycastKernel.setArg(LINEAR, linearSampling);
+    } catch (cl::Error err) { logCLerror(err); }
+}
+
+
+/**
+ * @brief VolumeRenderCL::setBackground
+ * @param color
+ */
+void VolumeRenderCL::setBackground(std::array<float, 4> color)
+{
+    cl_float3 bgColor = {{color[0], color[1], color[2], color[3]}};
+    try {
+        _raycastKernel.setArg(BACKGROUND, bgColor);
     } catch (cl::Error err) { logCLerror(err); }
 }
