@@ -395,7 +395,7 @@ void VolumeRenderCL::setCamOrtho(bool setCamOrtho)
         return;
 
     try {
-        _raycastKernel.setArg(ORTHO, setCamOrtho);
+        _raycastKernel.setArg(ORTHO, (cl_uint)setCamOrtho);
     } catch (cl::Error err) { logCLerror(err); }
 }
 
@@ -407,7 +407,7 @@ void VolumeRenderCL::setCamOrtho(bool setCamOrtho)
 void VolumeRenderCL::setIllumination(bool illum)
 {
     try {
-        _raycastKernel.setArg(ILLUMINATION, illum);
+        _raycastKernel.setArg(ILLUMINATION, (cl_uint)illum);
     } catch (cl::Error err) { logCLerror(err); }
 }
 
@@ -419,7 +419,7 @@ void VolumeRenderCL::setIllumination(bool illum)
 void VolumeRenderCL::setBoundingBox(bool boundingBox)
 {
     try {
-        _raycastKernel.setArg(BOX, boundingBox);
+        _raycastKernel.setArg(BOX, (cl_uint)boundingBox);
     } catch (cl::Error err) { logCLerror(err); }
 }
 
@@ -428,10 +428,10 @@ void VolumeRenderCL::setBoundingBox(bool boundingBox)
  * @brief VolumeRenderCL::setLinearSampling
  * @param linearSampling
  */
-void VolumeRenderCL::setLinearSampling(bool linearSampling)
+void VolumeRenderCL::setLinearInterpolation(bool linearSampling)
 {
     try {
-        _raycastKernel.setArg(LINEAR, linearSampling);
+        _raycastKernel.setArg(LINEAR, (cl_uint)linearSampling);
     } catch (cl::Error err) { logCLerror(err); }
 }
 

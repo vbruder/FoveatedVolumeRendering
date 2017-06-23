@@ -60,9 +60,11 @@ public slots:
     void updateStepSize(const double stepSize);
     void updateTransferFunction(QGradientStops stops);
 #undef Bool
-    void setInterpolation(QString method);
+    void setTffInterpolation(QString method);
     void setCamOrtho(bool camOrtho);
     void setIllumination(bool illum);
+    void setLinearInterpolation(bool linear);
+    void setDrawBox(bool box);
 
 protected:
     // Qt specific QOpenGLWidget methods

@@ -35,7 +35,8 @@ SOURCES += \
     openclglutilities.cpp \
     volumerendercl.cpp \
     datrawreader.cpp \
-    volumerenderwidget.cpp
+    volumerenderwidget.cpp \
+    transferfunctionwidget.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -43,7 +44,8 @@ HEADERS += \
     openclglutilities.h \
     volumerendercl.h \
     datrawreader.h \
-    volumerenderwidget.h
+    volumerenderwidget.h \
+    transferfunctionwidget.h
 
 FORMS += \
         mainwindow.ui

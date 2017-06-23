@@ -41,6 +41,25 @@ MainWindow::MainWindow(QWidget *parent) :
     _progBar.setAlignment(Qt::AlignCenter);
     connect(&_timer, SIGNAL(timeout()), this, SLOT(addProgress()));
 
+    // connect settings UI
+    connect(ui->dsbStepSize, SIGNAL(valueChanged(double)),
+            ui->volumeRenderWidget, SLOT(updateStepSize(double)));
+    connect(ui->chbLinear, SIGNAL(toggled(bool)),
+            ui->volumeRenderWidget, SLOT(setLinearInterpolation(bool)));
+    connect(ui->chbIllum, SIGNAL(toggled(bool)),
+            ui->volumeRenderWidget, SLOT(setIllumination(bool)));
+    connect(ui->chbBox, SIGNAL(toggled(bool)), ui->volumeRenderWidget, SLOT(setDrawBox(bool)));
+    connect(ui->chbOrtho, SIGNAL(toggled(bool)), ui->volumeRenderWidget, SLOT(setCamOrtho(bool)));
+    // connect tff editor
+    connect(ui->transferFunctionEditor->getEditor(), SIGNAL(gradientStopsChanged(QGradientStops)),
+            ui->volumeRenderWidget, SLOT(updateTransferFunction(QGradientStops)));
+    connect(ui->pbResetTff, SIGNAL(clicked()),
+            ui->transferFunctionEditor, SLOT(resetTransferFunction()));
+    connect(ui->cbInterpolation, SIGNAL(currentIndexChanged(QString)),
+            ui->volumeRenderWidget, SLOT(setInterpolation(QString)));
+    connect(ui->cbInterpolation, SIGNAL(currentIndexChanged(QString)),
+            ui->transferFunctionEditor, SLOT(setInterpolation(QString)));
+
     _statusLabel = new QLabel("No data loaded yet.");
     ui->statusBar->addPermanentWidget(_statusLabel);
 
@@ -178,8 +197,8 @@ void MainWindow::readTff(const QString &fileName)
             }
             if (!stops.isEmpty())
             {
-//                ui->transferFunctionEditor->getEditor()->setGradientStops(stops);
-//                ui->transferFunctionEditor->getEditor()->pointsUpdated();
+                ui->transferFunctionEditor->getEditor()->setGradientStops(stops);
+                ui->transferFunctionEditor->getEditor()->pointsUpdated();
             }
             else
                 qCritical() << "Empty transfer function file.";
@@ -212,13 +231,13 @@ void MainWindow::saveTff()
         else
         {
             QTextStream out(&file);
-//            const QGradientStops stops =
-//                    ui->transferFunctionEditor->getEditor()->getGradientStops();
-//            foreach (QGradientStop s, stops)
-//            {
-//                out << s.first << " " << s.second.red() << " " << s.second.green()
-//                    << " " << s.second.blue() << " " << s.second.alpha() << "\n";
-//            }
+            const QGradientStops stops =
+                    ui->transferFunctionEditor->getEditor()->getGradientStops();
+            foreach (QGradientStop s, stops)
+            {
+                out << s.first << " " << s.second.red() << " " << s.second.green()
+                    << " " << s.second.blue() << " " << s.second.alpha() << "\n";
+            }
             file.close();
         }
     }

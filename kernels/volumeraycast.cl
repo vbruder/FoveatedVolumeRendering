@@ -227,11 +227,11 @@ __kernel void volumeRender(__read_only image3d_t volData,
     float3 bboxMin = (float3)(-1.f);
     float3 bboxMax = (float3)( 1.f);
 
-    if (checkEdges(entryPoint, bboxMin, bboxMax))
-    {
-        result.xyz = (float3)(0.f);
-        opacity = 1.f;
-    }
+//    if (checkEdges(entryPoint, bboxMin, bboxMax))
+//    {
+//        result.xyz = (float3)(0.f);
+//        opacity = 1.f;
+//    }
 
     uint i = 0;
     // raycasting loop: front to back raycasting with early ray termination

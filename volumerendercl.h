@@ -131,7 +131,7 @@ public:
      * @brief setLinearSampling
      * @param linearSampling
      */
-    void setLinearSampling(bool linearSampling);
+    void setLinearInterpolation(bool linearSampling);
     /**
      * @brief setBackground
      * @param color

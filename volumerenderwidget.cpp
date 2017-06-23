@@ -316,7 +316,7 @@ void VolumeRenderWidget::updateStepSize(const double stepSize)
  * @brief VolumeRenderWidget::setInterpolation
  * @param method
  */
-void VolumeRenderWidget::setInterpolation(QString method)
+void VolumeRenderWidget::setTffInterpolation(QString method)
 {
     if (method.contains("Quad"))
         _tffInterpol = QEasingCurve::InOutQuad;
@@ -556,3 +556,23 @@ void VolumeRenderWidget::setIllumination(bool illum)
 }
 
 
+/**
+ * @brief VolumeRenderWidget::setLinearInterpolation
+ * @param linear
+ */
+void VolumeRenderWidget::setLinearInterpolation(bool linear)
+{
+    _volumerender.setLinearInterpolation(linear);
+    this->updateView();
+}
+
+
+/**
+ * @brief VolumeRenderWidget::setDrawBox
+ * @param box
+ */
+void VolumeRenderWidget::setDrawBox(bool box)
+{
+    _volumerender.setBoundingBox(box);
+    this->updateView();
+}
