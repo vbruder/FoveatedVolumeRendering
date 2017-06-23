@@ -162,6 +162,11 @@ __kernel void volumeRender(__read_only image3d_t volData,
     if(any(globalId >= get_image_dim(outData)))
         return;
 
+    // pseudo random number [0,1] for ray offsets to avoid moire patterns
+    float iptr;
+    float rand = fract(sin(dot(convert_float2(globalId),
+                       (float2)(12.9898f, 78.233f))) * 43758.5453f, &iptr);
+
     float maxRes = (float)max(get_image_dim(volData).x, get_image_dim(volData).z);
     float stepSize = native_divide(stepSizeFactor, maxRes);
     stepSize *= 8.0f; // normalization to octile
@@ -211,7 +216,7 @@ __kernel void volumeRender(__read_only image3d_t volData,
         write_imagef(outData, texCoords, background);
         return;
     }
-    tnear = max(0.0f, tnear);     // clamp to near plane
+    tnear = max(0.0f, tnear + rand*stepSize);     // clamp to near plane
 
     float4 result = background;
     float alpha = 0.0f;
