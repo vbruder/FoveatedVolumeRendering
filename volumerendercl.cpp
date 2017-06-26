@@ -251,6 +251,10 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height)
 }
 
 
+/**
+ * @brief VolumeRenderCL::volDataToCLmem
+ * @param volumeData
+ */
 void VolumeRenderCL::volDataToCLmem(const std::vector<char> &volumeData)
 {
     if (!_dr.has_data())

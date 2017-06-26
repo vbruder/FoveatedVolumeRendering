@@ -160,6 +160,9 @@ __kernel void volumeRender(__read_only image3d_t volData,
     float t = 0.0f;
     float3 voxLen = (float3)(1.f) / convert_float3(get_image_dim(volData).xyz);
     float refSamplingInterval = 1.f / samplingRate;
+    float precisionDiv = 1.f;
+    if (get_image_channel_data_type(volData) == CLK_UNORM_INT16)
+        precisionDiv = 8;
 
     uint i = 0;
     // raycasting loop: front to back raycasting with early ray termination
@@ -169,9 +172,9 @@ __kernel void volumeRender(__read_only image3d_t volData,
         pos = camPos + t*rayDir;
         pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
 
-        density = useLinear ? read_imagef(volData,  linearSmp, pos).x :
+        density = useLinear ? read_imagef(volData, linearSmp, pos).x :
                               read_imagef(volData, nearestSmp, pos).x;
-        tfColor = read_imagef(tffData, linearSmp, density);         // map density to color
+        tfColor = read_imagef(tffData, linearSmp, native_divide(density, precisionDiv));  // map density to color
         if (useIllum)
             tfColor.xyz = mix(tfColor.xyz, illumination(volData, pos), 0.5f);
         tfColor.xyz = background.xyz - tfColor.xyz;
