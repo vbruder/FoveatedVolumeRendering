@@ -348,9 +348,9 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
     for (size_t i = 1; i < tffSize; ++i)
     {
         interpolator.setCurrentTime((i/static_cast<double>(tffSize)) * granularity);
-        tff.at(i*4 + 0) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().red() - 1);
+        tff.at(i*4 + 0) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().red()   - 1);
         tff.at(i*4 + 1) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().green() - 1);
-        tff.at(i*4 + 2) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().blue() - 1);
+        tff.at(i*4 + 2) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().blue()  - 1);
         tff.at(i*4 + 3) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().alpha() - 1);
     }
     _volumerender.setTransferFunction(tff);
