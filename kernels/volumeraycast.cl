@@ -2,9 +2,9 @@
 
 #define ERT_THRESHOLD 0.98
 
-constant sampler_t linearSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
+constant sampler_t linearSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP_TO_EDGE |
                                 CLK_FILTER_LINEAR;
-constant sampler_t nearestSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
+constant sampler_t nearestSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP_TO_EDGE |
                                 CLK_FILTER_NEAREST;
 
 // intersect ray with a box
@@ -83,7 +83,7 @@ bool checkBoundingBox(float3 pos, float3 voxLen, float2 bound)
 __kernel void volumeRender(__read_only image3d_t volData,
                            __write_only image2d_t outData,
                            __read_only image1d_t tffData,     // constant transfer function values
-                           const float stepSizeFactor,
+                           const float samplingRate,
                            const float16 viewMat,
                            const uint orthoCam,
                            const uint useIllum,
@@ -102,18 +102,17 @@ __kernel void volumeRender(__read_only image3d_t volData,
                        (float2)(12.9898f, 78.233f))) * 43758.5453f, &iptr);
 
     float maxRes = (float)max(get_image_dim(volData).x, get_image_dim(volData).z);
-    float stepSize = native_divide(stepSizeFactor, maxRes);
-    stepSize *= 8.0f; // normalization to octile
+    float stepSize = native_divide(8.f, maxRes*samplingRate); // normalization to octile
 
     int2 texCoords = globalId;
     float2 imgCoords;
-    imgCoords.x = native_divide((globalId.x + 0.5f), (float)(get_global_size(0))) * 2.0f - 1.0f;
-    imgCoords.y = native_divide((globalId.y + 0.5f), (float)(get_global_size(1))) * 2.0f - 1.0f;
-    imgCoords.y *= -1.0f;
+    imgCoords.x = native_divide((globalId.x + 0.5f), (float)(get_global_size(0))) * 2.f - 1.f;
+    imgCoords.y = native_divide((globalId.y + 0.5f), (float)(get_global_size(1))) * 2.f - 1.f;
+    imgCoords.y *= -1.f;   // flip y coord
 
-    float4 rayDir = (float4)(0);
-    float tnear = 0.0f;
-    float tfar = 1.0f;
+    float4 rayDir = (float4)(0.f);
+    float tnear = 0.f;
+    float tfar = 1.f;
     int hit = 0;
     
     // z position of view plane is -1.0 to fit the cube to the screen quad when axes are aligned, 
@@ -145,21 +144,22 @@ __kernel void volumeRender(__read_only image3d_t volData,
     }
 
     hit = intersectBox(camPos, rayDir, &tnear, &tfar);
-    if (!hit)
+    if (!hit || tfar < 0)
     {
         write_imagef(outData, texCoords, background);
         return;
     }
-    tnear = max(0.0f, tnear + rand*stepSize);     // clamp to near plane
 
+    tnear = max(0.f, tnear + rand*stepSize); // clamp to near plane and offset by 'random' distance
     float4 result = background;
-    float alpha = 0.0f;
+    float alpha = 0.f;
     float4 pos = (float4)(0);
-    float density = 0.0f;
+    float density = 0.f;
     float4 tfColor = (float4)(0);
-    float opacity = 0.0f;
+    float opacity = 0.f;
     float t = 0.0f;
-    float3 voxLen = (float3)(2.f) / convert_float3(get_image_dim(volData).xyz);
+    float3 voxLen = (float3)(1.f) / convert_float3(get_image_dim(volData).xyz);
+    float refSamplingInterval = 1.f / samplingRate;
 
     uint i = 0;
     // raycasting loop: front to back raycasting with early ray termination
@@ -177,7 +177,7 @@ __kernel void volumeRender(__read_only image3d_t volData,
         tfColor.xyz = background.xyz - tfColor.xyz;
 
         // Taylor expansion approximation
-        opacity = 1.f - native_powr(1.f - tfColor.w, stepSizeFactor);
+        opacity = 1.f - native_powr(1.f - tfColor.w, refSamplingInterval);
         result.xyz = result.xyz - tfColor.xyz * opacity * (1.f - alpha);
         alpha = alpha + opacity * (1.f - alpha);
 

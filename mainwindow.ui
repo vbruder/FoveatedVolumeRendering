@@ -107,30 +107,10 @@
         <string>Raycasting settings</string>
        </property>
        <layout class="QGridLayout" name="gridLayout">
-        <item row="3" column="0" colspan="2">
-         <widget class="QCheckBox" name="chbIllum">
-          <property name="text">
-           <string>Local illumination</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QDoubleSpinBox" name="dsbStepSize">
-          <property name="singleStep">
-           <double>0.010000000000000</double>
-          </property>
-          <property name="value">
-           <double>0.400000000000000</double>
-          </property>
-         </widget>
-        </item>
         <item row="0" column="0">
          <widget class="QLabel" name="label">
           <property name="text">
-           <string>Step size</string>
+           <string>Sampling rate</string>
           </property>
          </widget>
         </item>
@@ -144,20 +124,13 @@
           </property>
          </widget>
         </item>
-        <item row="4" column="0" colspan="2">
-         <widget class="QCheckBox" name="chbBox">
+        <item row="3" column="0" colspan="2">
+         <widget class="QCheckBox" name="chbIllum">
           <property name="text">
-           <string>Show bounding box</string>
+           <string>Local illumination</string>
           </property>
           <property name="checked">
            <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="0" colspan="2">
-         <widget class="QCheckBox" name="chbOrtho">
-          <property name="text">
-           <string>Orthographic projection</string>
           </property>
          </widget>
         </item>
@@ -168,6 +141,42 @@
           </property>
           <property name="text">
            <string>Background color</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0" colspan="2">
+         <widget class="QCheckBox" name="chbBox">
+          <property name="text">
+           <string>Show bounding box</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QDoubleSpinBox" name="dsbSamplingRate">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="minimum">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>10.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>3.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0" colspan="2">
+         <widget class="QCheckBox" name="chbOrtho">
+          <property name="text">
+           <string>Orthographic projection</string>
           </property>
          </widget>
         </item>

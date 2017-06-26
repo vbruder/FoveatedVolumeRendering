@@ -57,7 +57,7 @@ public slots:
     void cleanup();
     void resetCam();
 
-    void updateStepSize(const double stepSize);
+    void updateSamplingRate(const double samplingRate);
     void updateTransferFunction(QGradientStops stops);
 #undef Bool
     void setTffInterpolation(QString method);

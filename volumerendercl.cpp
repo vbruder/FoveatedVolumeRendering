@@ -67,7 +67,7 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel = cl::Kernel(program, "volumeRender");
         cl_float16 view = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
         _raycastKernel.setArg(VIEW, view);
-        _raycastKernel.setArg(STEP_SIZE, 0.5f);     // default step size 0.5*voxel size
+        _raycastKernel.setArg(SAMPLING_RATE, 0.5f);     // default step size 0.5*voxel size
         _raycastKernel.setArg(ORTHO, 0);            // perspective cam by default
         _raycastKernel.setArg(ILLUMINATION, 1);     // illumination on by default
         _raycastKernel.setArg(BOX, 1);
@@ -161,10 +161,10 @@ void VolumeRenderCL::updateView(const std::array<float, 16> viewMat)
  * @brief VolumeRenderCL::updateStepSize
  * @param stepSize
  */
-void VolumeRenderCL::updateStepSize(const double stepSize)
+void VolumeRenderCL::updateSamplingRate(const double samplingRate)
 {
     try{
-        _raycastKernel.setArg(STEP_SIZE, static_cast<cl_float>(stepSize));
+        _raycastKernel.setArg(SAMPLING_RATE, static_cast<cl_float>(samplingRate));
     } catch (cl::Error err) {
         logCLerror(err);
     }
@@ -306,8 +306,8 @@ void VolumeRenderCL::loadVolumeData(const std::string fileName)
         std::cerr << e.what() << std::endl;
         throw e;
     }
-    // set initally a simple linear transfer function of gray values
-    std::vector<unsigned char> tff(4*4, 0);
+    // set initally a simple linear transfer function
+    std::vector<unsigned char> tff(8*4, 0);
     std::iota(tff.begin() + 2, tff.end(), 0);
     setTransferFunction(tff);
 

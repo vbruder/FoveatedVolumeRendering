@@ -42,8 +42,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&_timer, SIGNAL(timeout()), this, SLOT(addProgress()));
 
     // connect settings UI
-    connect(ui->dsbStepSize, SIGNAL(valueChanged(double)),
-            ui->volumeRenderWidget, SLOT(updateStepSize(double)));
+    connect(ui->dsbSamplingRate, SIGNAL(valueChanged(double)),
+            ui->volumeRenderWidget, SLOT(updateSamplingRate(double)));
     connect(ui->chbLinear, SIGNAL(toggled(bool)),
             ui->volumeRenderWidget, SLOT(setLinearInterpolation(bool)));
     connect(ui->chbIllum, SIGNAL(toggled(bool)),

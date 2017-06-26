@@ -306,9 +306,9 @@ const QVector3D VolumeRenderWidget::getVolumeResolution()
  * @brief VolumeRenderWidget::updateStepSize
  * @param stepSize
  */
-void VolumeRenderWidget::updateStepSize(const double stepSize)
+void VolumeRenderWidget::updateSamplingRate(const double samplingRate)
 {
-    _volumerender.updateStepSize(stepSize);
+    _volumerender.updateSamplingRate(samplingRate);
 }
 
 
@@ -341,17 +341,17 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
     {
         interpolator.setKeyValueAt(stop.first, stop.second);
     }
-    tff.at(0) = (uchar)1;
-    tff.at(1) = (uchar)1;
-    tff.at(2) = (uchar)1;
+    tff.at(0) = (uchar)0;
+    tff.at(1) = (uchar)0;
+    tff.at(2) = (uchar)0;
     tff.at(3) = (uchar)0;
     for (size_t i = 1; i < tffSize; ++i)
     {
         interpolator.setCurrentTime((i/static_cast<double>(tffSize)) * granularity);
-        tff.at(i*4 + 0) = (uchar)interpolator.currentValue().value<QColor>().red();
-        tff.at(i*4 + 1) = (uchar)interpolator.currentValue().value<QColor>().green();
-        tff.at(i*4 + 2) = (uchar)interpolator.currentValue().value<QColor>().blue();
-        tff.at(i*4 + 3) = (uchar)interpolator.currentValue().value<QColor>().alpha();
+        tff.at(i*4 + 0) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().red() - 1);
+        tff.at(i*4 + 1) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().green() - 1);
+        tff.at(i*4 + 2) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().blue() - 1);
+        tff.at(i*4 + 3) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().alpha() - 1);
     }
     _volumerender.setTransferFunction(tff);
     update();
@@ -363,9 +363,9 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
  */
 void VolumeRenderWidget::cleanup()
 {
-    makeCurrent();
-    if (_quadVbo.isCreated())
-        _quadVbo.destroy();
+//    makeCurrent();
+//    if (_quadVbo.isCreated())
+//        _quadVbo.destroy();
 }
 
 
