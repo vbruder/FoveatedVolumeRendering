@@ -43,13 +43,6 @@ void VolumeRenderCL::initialize()
     {
         // TODO: replace if no NVIDIA GPU
         _contextCL = createCLGLContext(CL_DEVICE_TYPE_GPU, VENDOR_NVIDIA); // VENDOR_ANY
-
-        std::array<float, 16> zeroMat;
-        zeroMat.fill(0);
-        _viewMem = cl::Buffer(_contextCL,
-                              CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                              zeroMat.size() * sizeof(cl_float),
-                              zeroMat.data());
         _queueCL = cl::CommandQueue(_contextCL);
     }
     catch (cl::Error err)
@@ -72,7 +65,8 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
     {
         cl::Program program = buildProgramFromSource(_contextCL, fileName, buildFlags);
         _raycastKernel = cl::Kernel(program, "volumeRender");
-        _raycastKernel.setArg(VIEW, _viewMem);
+        cl_float16 view = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
+        _raycastKernel.setArg(VIEW, view);
         _raycastKernel.setArg(STEP_SIZE, 0.5f);     // default step size 0.5*voxel size
         _raycastKernel.setArg(ORTHO, 0);            // perspective cam by default
         _raycastKernel.setArg(ILLUMINATION, 1);     // illumination on by default
@@ -96,7 +90,6 @@ void VolumeRenderCL::setMemObjects()
     _raycastKernel.setArg(VOLUME, _volumeMem);
     _raycastKernel.setArg(OUTPUT, _outputMem);
     _raycastKernel.setArg(TFF, _tffMem);
-    _raycastKernel.setArg(VIEW, _viewMem);
 }
 
 
@@ -143,21 +136,21 @@ void VolumeRenderCL::updateView(const std::array<float, 16> viewMat)
     if (!_dr.has_data() || _modelScale.size() < 3)
         return;
 
-    std::array<float, 16> modelViewMat;
-    for (size_t i = 0; i < modelViewMat.size(); ++i)
+    cl_float16 modelViewMat;
+    for (size_t i = 0; i < 16; ++i)
     {
         if (i < 4)
-            modelViewMat[i] = viewMat[i] * _modelScale[0];
+            modelViewMat.s[i] = viewMat[i] * _modelScale[0];
         else if (i < 8)
-            modelViewMat[i] = viewMat[i] * _modelScale[1];
+            modelViewMat.s[i] = viewMat[i] * _modelScale[1];
         else if (i < 12)
-            modelViewMat[i] = viewMat[i] * _modelScale[2];
+            modelViewMat.s[i] = viewMat[i] * _modelScale[2];
         else
-            modelViewMat[i] = viewMat[i];
+            modelViewMat.s[i] = viewMat[i];
     }
 
     try{
-        _queueCL.enqueueWriteBuffer(_viewMem, CL_TRUE, 0, 16*sizeof(cl_float), modelViewMat.data());
+        _raycastKernel.setArg(VIEW, modelViewMat);
     } catch (cl::Error err) {
         logCLerror(err);
     }
@@ -306,10 +299,6 @@ void VolumeRenderCL::loadVolumeData(const std::string fileName)
         std::cout << _dr.data().size() << " bytes have been read." << std::endl;
         std::cout << _dr.properties().to_string() << std::endl;
         volDataToCLmem(_dr.data());
-
-//        cl_uint4 resolution = {{_dr.properties().volume_res[0],
-//                                _dr.properties().volume_res[1],
-//                                _dr.properties().volume_res[2], 0}};
         calcScaling();
     }
     catch (std::runtime_error e)

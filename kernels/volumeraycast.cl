@@ -84,7 +84,7 @@ __kernel void volumeRender(__read_only image3d_t volData,
                            __write_only image2d_t outData,
                            __read_only image1d_t tffData,     // constant transfer function values
                            const float stepSizeFactor,
-                           __constant float *viewMat,
+                           const float16 viewMat,
                            const uint orthoCam,
                            const uint useIllum,
                            const uint useBox,
@@ -121,21 +121,21 @@ __kernel void volumeRender(__read_only image3d_t volData,
     // (with FoV of 90° and near plane in range [-1,+1]).
     float4 nearPlanePos = fast_normalize((float4)(imgCoords, -2.0f, 0.0f));
     // transform nearPlane to world space    
-    rayDir.x = dot((float4)(viewMat[ 0], viewMat[ 1], viewMat[ 2], viewMat[ 3]), nearPlanePos);
-    rayDir.y = dot((float4)(viewMat[ 4], viewMat[ 5], viewMat[ 6], viewMat[ 7]), nearPlanePos);
-    rayDir.z = dot((float4)(viewMat[ 8], viewMat[ 9], viewMat[10], viewMat[11]), nearPlanePos);
-    rayDir.w = dot((float4)(viewMat[12], viewMat[13], viewMat[14], viewMat[15]), nearPlanePos);
+    rayDir.x = dot(viewMat.s0123, nearPlanePos);
+    rayDir.y = dot(viewMat.s4567, nearPlanePos);
+    rayDir.z = dot(viewMat.s89ab, nearPlanePos);
+    rayDir.w = dot(viewMat.scdef, nearPlanePos);
     
     // origin is translation vector of view matrix
-    float4 camPos = (float4)(viewMat[3], viewMat[7], viewMat[11], 1.0f);
+    float4 camPos = (float4)(viewMat.s37b, 1.0f);
     rayDir = fast_normalize(rayDir);
 
     if (orthoCam)
     {
-        camPos = (float4)(viewMat[3], viewMat[7], viewMat[11], 1.0f);
-        float4 viewPlane_x = (float4)(viewMat[0], viewMat[4], viewMat[ 8], viewMat[12]);
-        float4 viewPlane_y = (float4)(viewMat[1], viewMat[5], viewMat[ 9], viewMat[13]);
-        float4 viewPlane_z = (float4)(viewMat[2], viewMat[6], viewMat[10], viewMat[14]);
+        camPos = (float4)(viewMat.s37b, 1.0f);
+        float4 viewPlane_x = viewMat.s048c;
+        float4 viewPlane_y = viewMat.s159d;
+        float4 viewPlane_z = viewMat.s26ae;
         rayDir = -viewPlane_z;
         rayDir.w = 0;
         rayDir = fast_normalize(rayDir);

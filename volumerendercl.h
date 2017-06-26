@@ -16,7 +16,7 @@ public:
         OUTPUT     = 1, // output image                             image2d_t
         TFF,            // transfer function array                  image1d_t
         STEP_SIZE,      // step size factor                         cl_float
-        VIEW,           // view matrix                              const float * (read only)
+        VIEW,           // view matrix                              float16
         ORTHO,          // use orthographic camera                  cl_uint (bool)
         ILLUMINATION,   // use illumination (per view)              cl_uint (bool)
         BOX,            // show bounding box aroud volume           cl_uint (bool)
@@ -198,7 +198,6 @@ private:
     cl::ImageGL _outputMem;
     cl::ImageGL _overlayMem;
     cl::Image1D _tffMem;
-    cl::Buffer _viewMem;
 
     std::vector<float> _outputData;
     DatRawReader _dr;
