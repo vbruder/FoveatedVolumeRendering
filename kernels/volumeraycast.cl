@@ -46,13 +46,32 @@ float3 gradientCentralDiff(read_only image3d_t vol, const float4 pos)
     return (s2 - s1) / (2.f * offset);
 }
 
+// specular part of blinn-phong shading model
+float3 specularBlinnPhong(float3 lightColor, float specularExp, float3 materialColor,
+                          float3 normal, float3 toLightDir, float3 toCameraDir)
+{
+    float3 h = toCameraDir + toLightDir;
+
+    // check for special case where the light source is exactly opposite
+    // to the view direction, i.e. the length of the halfway vector is zero
+    if (dot(h, h) < 1.e-6f) // check for squared length
+        return (float3)(0.0f);
+
+    h = normalize(h);
+    return materialColor * lightColor * native_powr(max(dot(normal, h), 0.f), specularExp);
+}
+
 // simple illumination based on central differences
-float illumination(read_only image3d_t vol, const float4 pos)
+float3 illumination(read_only image3d_t vol, const float4 pos, float3 diffuse,float3 toCameraDir)
 {
     float3 n = fast_normalize(gradientCentralDiff(vol, pos));
     float3 l = fast_normalize((float3)(20.0f, 100.0f, 20.0f) - pos.xyz);
 
-    return max(0.f, dot(n, l));
+    float3 amb = diffuse;
+    float3 diff = diffuse * max(0.f, dot(n, l));
+    float3 spec = specularBlinnPhong((float3)(1.f), 100.f, (float3)(1.f), n, l, toCameraDir);
+
+    return (amb + diff + spec) * 0.5f;
 }
 
 // check for border edges
@@ -176,7 +195,7 @@ __kernel void volumeRender(__read_only image3d_t volData,
                               read_imagef(volData, nearestSmp, pos).x;
         tfColor = read_imagef(tffData, linearSmp, native_divide(density, precisionDiv));  // map density to color
         if (useIllum)
-            tfColor.xyz = mix(tfColor.xyz, illumination(volData, pos), 0.5f);
+            tfColor.xyz = illumination(volData, pos, tfColor.xyz, fast_normalize(camPos.xyz - pos.xyz));
         tfColor.xyz = background.xyz - tfColor.xyz;
 
         // Taylor expansion approximation
