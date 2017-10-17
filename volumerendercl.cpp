@@ -176,7 +176,7 @@ void VolumeRenderCL::updateSamplingRate(const double samplingRate)
  * @param width
  * @param height
  */
-void VolumeRenderCL::updateOutputImg(const size_t width, const size_t height, cl_GLuint texId)
+void VolumeRenderCL::updateOutputImg(const size_t width, const size_t height, GLuint texId)
 {
     cl::ImageFormat format;
     format.image_channel_order = CL_RGBA;

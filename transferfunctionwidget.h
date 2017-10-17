@@ -62,7 +62,7 @@ public:
 
     void resetPoints();
 
-    void setInterpolation(QString method);
+    void setInterpolation(const QString method);
 
 public slots:
     void pointsUpdated();

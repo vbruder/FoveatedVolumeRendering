@@ -10,6 +10,7 @@
 #include <QtConcurrentRun>
 #include <QThread>
 #include <QColorDialog>
+#include <QtGlobal>
 
 /**
  * @brief MainWindow::MainWindow
@@ -28,38 +29,42 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     // menu bar actions
-    connect(ui->actionOpen, SIGNAL(triggered()), SLOT(openVolumeFile()));
-    connect(ui->actionSaveTff, SIGNAL(triggered()), SLOT(saveTff()));
-    connect(ui->actionLoadTff, SIGNAL(triggered()), SLOT(loadTff()));
+    connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::openVolumeFile);
+    connect(ui->actionSaveTff, &QAction::triggered, this, &MainWindow::saveTff);
+    connect(ui->actionLoadTff, &QAction::triggered, this, &MainWindow::loadTff);
 
     // future watcher for concurrent data loading
     _watcher = new QFutureWatcher<void>(this);
-    connect(_watcher, SIGNAL(finished()), this, SLOT(finishedLoading()));
+    connect(_watcher, &QFutureWatcher<void>::finished, this, &MainWindow::finishedLoading);
     // loading progress bar
     _progBar.setRange(0, 100);
     _progBar.setTextVisible(true);
     _progBar.setAlignment(Qt::AlignCenter);
-    connect(&_timer, SIGNAL(timeout()), this, SLOT(addProgress()));
+    connect(&_timer, &QTimer::timeout, this, &MainWindow::addProgress);
 
     // connect settings UI
-    connect(ui->dsbSamplingRate, SIGNAL(valueChanged(double)),
-            ui->volumeRenderWidget, SLOT(updateSamplingRate(double)));
-    connect(ui->chbLinear, SIGNAL(toggled(bool)),
-            ui->volumeRenderWidget, SLOT(setLinearInterpolation(bool)));
-    connect(ui->chbIllum, SIGNAL(toggled(bool)),
-            ui->volumeRenderWidget, SLOT(setIllumination(bool)));
-    connect(ui->chbBox, SIGNAL(toggled(bool)), ui->volumeRenderWidget, SLOT(setDrawBox(bool)));
-    connect(ui->chbOrtho, SIGNAL(toggled(bool)), ui->volumeRenderWidget, SLOT(setCamOrtho(bool)));
-    connect(ui->pbBgColor, SIGNAL(released()), this, SLOT(chooseBackgroundColor()));
+    connect(ui->dsbSamplingRate, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            ui->volumeRenderWidget, &VolumeRenderWidget::updateSamplingRate);
+    connect(ui->chbLinear, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setLinearInterpolation);
+    connect(ui->chbIllum, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setIllumination);
+    connect(ui->chbBox, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setDrawBox);
+    connect(ui->chbOrtho, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setCamOrtho);
+    connect(ui->pbBgColor, &QPushButton::released, this, &MainWindow::chooseBackgroundColor);
     // connect tff editor
-    connect(ui->transferFunctionEditor->getEditor(), SIGNAL(gradientStopsChanged(QGradientStops)),
-            ui->volumeRenderWidget, SLOT(updateTransferFunction(QGradientStops)));
-    connect(ui->pbResetTff, SIGNAL(clicked()),
-            ui->transferFunctionEditor, SLOT(resetTransferFunction()));
-    connect(ui->cbInterpolation, SIGNAL(currentIndexChanged(QString)),
-            ui->volumeRenderWidget, SLOT(setTffInterpolation(QString)));
+    connect(ui->transferFunctionEditor->getEditor(), &TransferFunctionEditor::gradientStopsChanged,
+            ui->volumeRenderWidget, &VolumeRenderWidget::updateTransferFunction);
+    connect(ui->pbResetTff, &QPushButton::clicked,
+            ui->transferFunctionEditor, &TransferFunctionWidget::resetTransferFunction);
+    connect(ui->cbInterpolation, qOverload<const QString &>(&QComboBox::currentIndexChanged),
+            ui->volumeRenderWidget, &VolumeRenderWidget::setTffInterpolation);
     connect(ui->cbInterpolation, SIGNAL(currentIndexChanged(QString)),
             ui->transferFunctionEditor, SLOT(setInterpolation(QString)));
+//    connect(ui->cbInterpolation, qOverload<const QString &>(&QComboBox::currentIndexChanged),
+//            ui->transferFunctionEditor, &TransferFunctionEditor::setInterpolation);
 
     _statusLabel = new QLabel("No data loaded yet.");
     ui->statusBar->addPermanentWidget(_statusLabel);

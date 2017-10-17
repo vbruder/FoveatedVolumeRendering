@@ -181,7 +181,7 @@ __kernel void volumeRender(__read_only image3d_t volData,
     float refSamplingInterval = 1.f / samplingRate;
     float precisionDiv = 1.f;
     if (get_image_channel_data_type(volData) == CLK_UNORM_INT16)
-        precisionDiv = 8;
+        precisionDiv = 8.f;
 
     uint i = 0;
     // raycasting loop: front to back raycasting with early ray termination

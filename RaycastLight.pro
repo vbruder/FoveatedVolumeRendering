@@ -36,7 +36,7 @@ SOURCES += \
     volumerendercl.cpp \
     datrawreader.cpp \
     volumerenderwidget.cpp \
-    transferfunctionwidget.cpp
+    transferfunctionwidget.cpp \
 
 HEADERS += \
         mainwindow.h \

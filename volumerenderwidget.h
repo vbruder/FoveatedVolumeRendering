@@ -57,10 +57,10 @@ public slots:
     void cleanup();
     void resetCam();
 
-    void updateSamplingRate(const double samplingRate);
+    void updateSamplingRate(double samplingRate);
     void updateTransferFunction(QGradientStops stops);
 #undef Bool
-    void setTffInterpolation(QString method);
+    void setTffInterpolation(const QString method);
     void setCamOrtho(bool camOrtho);
     void setIllumination(bool illum);
     void setLinearInterpolation(bool linear);
@@ -109,6 +109,7 @@ private:
 
     bool _noUpdate;
     bool _loadingFinished;
+    long long _imgCount;
 };
 
 #endif // VOLUMERENDERWIDGET_H

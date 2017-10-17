@@ -3,7 +3,7 @@
 /// </copyright>
 /// <author>Valentin Bruder</author>
 
-#include "datrawreader.h"
+#include <datrawreader.h>
 
 #include <iostream>
 #include <fstream>

@@ -262,7 +262,7 @@ const QGradientStops TransferFunctionEditor::getGradientStops() const
  * @brief TransferFunctionEditor::setInterpolation
  * @param method
  */
-void TransferFunctionEditor::setInterpolation(QString method)
+void TransferFunctionEditor::setInterpolation(const QString method)
 {
     if (method.contains("Quad"))
     {

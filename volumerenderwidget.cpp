@@ -45,6 +45,7 @@ VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
     _loadingFinished = false;
     this->setMouseTracking(true);
     _noUpdate = true;
+    _imgCount = 0;
 }
 
 
@@ -191,6 +192,14 @@ void VolumeRenderWidget::paintGL()
     _screenQuadVao.release();
     _quadVbo.release();
     _spScreenQuad.release();
+
+    if (_volumerender.hasData())
+    {
+        QImage img = this->grabFramebuffer();
+        QString number = QString("%1").arg(_imgCount++, 5, 10, QChar('0'));
+        img.save("test_" + number + ".png");
+    }
+
     p.endNativePainting();
 
     paintOrientationAxis(p);
@@ -306,7 +315,7 @@ const QVector3D VolumeRenderWidget::getVolumeResolution()
  * @brief VolumeRenderWidget::updateStepSize
  * @param stepSize
  */
-void VolumeRenderWidget::updateSamplingRate(const double samplingRate)
+void VolumeRenderWidget::updateSamplingRate(double samplingRate)
 {
     _volumerender.updateSamplingRate(samplingRate);
 }
@@ -316,7 +325,7 @@ void VolumeRenderWidget::updateSamplingRate(const double samplingRate)
  * @brief VolumeRenderWidget::setInterpolation
  * @param method
  */
-void VolumeRenderWidget::setTffInterpolation(QString method)
+void VolumeRenderWidget::setTffInterpolation(const QString method)
 {
     if (method.contains("Quad"))
         _tffInterpol = QEasingCurve::InOutQuad;
@@ -401,7 +410,10 @@ void VolumeRenderWidget::updateView(float dx, float dy)
     QVector3D rotAxis = QVector3D(dy, dx, 0.0f).normalized();
     double angle = QVector2D(dx, dy).length()*500;
     _rotQuat = _rotQuat * QQuaternion::fromAxisAndAngle(rotAxis, -angle);
-    QMatrix4x4 viewMat(_rotQuat.toRotationMatrix());
+
+    QMatrix4x4 viewMat;
+//    viewMat.scale(QVector3D(1,1,1./_zScale));
+    viewMat.rotate(_rotQuat);
 
     _coordViewMX.setToIdentity();
     _coordViewMX.scale(1, -1, 1);
@@ -409,6 +421,8 @@ void VolumeRenderWidget::updateView(float dx, float dy)
     _coordViewMX *= QMatrix4x4(_rotQuat.toRotationMatrix().transposed());
 
     viewMat.translate(_translation);
+    viewMat.scale(_translation.z());
+
     std::array<float, 16> viewArray;
     for (size_t i = 0; i < viewArray.size(); ++i)
     {
@@ -464,7 +478,9 @@ void VolumeRenderWidget::wheelEvent(QWheelEvent *event)
     double t = 800.0;
     if (event->modifiers() & Qt::ShiftModifier)
         t *= 6.0;
-    _translation.setZ(_translation.z() - event->angleDelta().y() / t);
+
+    // limit translation to origin, otherwise camera setup breaks (flips)
+    _translation.setZ(qMax(0.01, _translation.z() - event->angleDelta().y() / t));
     updateView();
     event->accept();
 }
