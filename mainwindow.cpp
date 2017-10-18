@@ -66,6 +66,11 @@ MainWindow::MainWindow(QWidget *parent) :
 //    connect(ui->cbInterpolation, qOverload<const QString &>(&QComboBox::currentIndexChanged),
 //            ui->transferFunctionEditor, &TransferFunctionEditor::setInterpolation);
 
+    connect(ui->transferFunctionEditor->getEditor(), &TransferFunctionEditor::selectedPointChanged,
+            ui->colorWheel, &colorwidgets::ColorWheel::setColor);
+    connect(ui->colorWheel, &colorwidgets::ColorWheel::colorChanged,
+            ui->transferFunctionEditor, &TransferFunctionWidget::setColorSelected);
+
     _statusLabel = new QLabel("No data loaded yet.");
     ui->statusBar->addPermanentWidget(_statusLabel);
 

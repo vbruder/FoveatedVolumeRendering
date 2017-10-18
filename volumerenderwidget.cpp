@@ -350,17 +350,17 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
     {
         interpolator.setKeyValueAt(stop.first, stop.second);
     }
-    tff.at(0) = (uchar)0;
-    tff.at(1) = (uchar)0;
-    tff.at(2) = (uchar)0;
-    tff.at(3) = (uchar)0;
-    for (size_t i = 1; i < tffSize; ++i)
+//    tff.at(0) = (uchar)0;
+//    tff.at(1) = (uchar)0;
+//    tff.at(2) = (uchar)0;
+//    tff.at(3) = (uchar)0;
+    for (size_t i = 0; i < tffSize; ++i)
     {
         interpolator.setCurrentTime((i/static_cast<double>(tffSize)) * granularity);
-        tff.at(i*4 + 0) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().red()   - 1);
-        tff.at(i*4 + 1) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().green() - 1);
-        tff.at(i*4 + 2) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().blue()  - 1);
-        tff.at(i*4 + 3) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().alpha() - 1);
+        tff.at(i*4 + 0) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().red()   - 3);
+        tff.at(i*4 + 1) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().green() - 3);
+        tff.at(i*4 + 2) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().blue()  - 3);
+        tff.at(i*4 + 3) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().alpha() - 3);
     }
     _volumerender.setTransferFunction(tff);
     update();

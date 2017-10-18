@@ -29,6 +29,7 @@ public:
 
     QSize sizeHint() const override { return QSize(150, 40); }
     QPolygonF points() const;
+    QVector<QColor> colors() const;
 
     HoverPoints *hoverPoints() const { return _pHoverPoints; }
 
@@ -36,6 +37,7 @@ public:
 
 signals:
     void colorsChanged();
+    void selectedPointChanged(const QColor color);
 
 private:
     void generateShade();
@@ -64,11 +66,15 @@ public:
 
     void setInterpolation(const QString method);
 
+    void setColorSelected(const QColor color);
+
 public slots:
     void pointsUpdated();
+    void selectedPointUpdated(const QColor color);
 
 signals:
     void gradientStopsChanged(const QGradientStops &stops);
+    void selectedPointChanged(const QColor color);
 
 private:
     ShadeWidget *_pRedShade;
@@ -98,6 +104,8 @@ public slots:
     void resetTransferFunction();
 
     void setInterpolation(QString method);
+
+    void setColorSelected(const QColor color);
 
 private:
     QPointer<TransferFunctionEditor> _pEditor;

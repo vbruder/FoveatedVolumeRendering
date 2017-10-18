@@ -357,7 +357,8 @@ void VolumeRenderCL::setTransferFunction(std::vector<unsigned char> &tff)
         format.image_channel_data_type = CL_UNORM_INT8;
 
         cl_mem_flags flags = CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR;
-        _tffMem = cl::Image1D(_contextCL, flags, format, tff.size(), tff.data());
+        // divide size by 4 because of RGBA
+        _tffMem = cl::Image1D(_contextCL, flags, format, tff.size() / 4, tff.data());
     }
     catch (cl::Error err)
     {

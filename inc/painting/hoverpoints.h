@@ -93,7 +93,9 @@ public:
     void setBoundingRect(const QRectF &boundingRect) { m_bounds = boundingRect; }
 
     QPolygonF points() const { return m_points; }
+    QVector<QColor> colors() const { return m_colors; }
     void setPoints(const QPolygonF &points);
+    void setColoredPoints(const QPolygonF &points, QVector<QColor> colors);
 
     QSizeF pointSize() const { return m_pointSize; }
     void setPointSize(const QSizeF &size) { m_pointSize = size; }
@@ -117,8 +119,10 @@ public slots:
     void setEnabled(bool enabled);
     void setDisabled(bool disabled) { setEnabled(!disabled); }
 
+    void setColorSelected(const QColor color);
 signals:
     void pointsChanged(const QPolygonF &points);
+    void selectionChanged(const QColor &color);
 
 public:
     void firePointChange();
@@ -130,6 +134,7 @@ private:
     QWidget *m_widget;
 
     QPolygonF m_points;
+    QVector<QColor> m_colors;
     QRectF m_bounds;
     PointShape m_shape;
     SortType m_sortType;

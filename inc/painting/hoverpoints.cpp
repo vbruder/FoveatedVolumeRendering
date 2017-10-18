@@ -72,22 +72,31 @@ HoverPoints::HoverPoints(QWidget *widget, PointShape shape)
     m_pointPen = QPen(QColor(255, 255, 255, 191), 1);
     m_connectionPen = QPen(QColor(255, 255, 255, 127), 2);
     m_pointBrush = QBrush(QColor(191, 191, 191, 127));
-    m_pointSize = QSize(11, 11);
+    m_pointSize = QSize(15, 15);
     m_currentIndex = -1;
     m_editable = true;
     m_enabled = true;
 
-    connect(this, SIGNAL(pointsChanged(QPolygonF)),
-            m_widget, SLOT(update()));
+    connect(this, SIGNAL(pointsChanged(QPolygonF)), m_widget, SLOT(update()));
 }
 
 
 void HoverPoints::setEnabled(bool enabled)
 {
-    if (m_enabled != enabled) {
+    if (m_enabled != enabled)
+    {
         m_enabled = enabled;
         m_widget->update();
     }
+}
+
+
+void HoverPoints::setColorSelected(const QColor color)
+{
+    Q_ASSERT(m_currentIndex < m_colors.size());
+    m_colors.replace(m_currentIndex, color);
+//    firePointChange();
+//    emit selectionChanged(color);//m_colors.at(m_currentIndex));
 }
 
 
@@ -96,7 +105,7 @@ bool HoverPoints::eventFilter(QObject *object, QEvent *event)
     if (object == m_widget && m_enabled) {
         switch (event->type()) {
 
-        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonDblClick:
         {
             if (!m_fingerPointMapping.isEmpty())
                 return true;
@@ -116,9 +125,46 @@ bool HoverPoints::eventFilter(QObject *object, QEvent *event)
                     break;
                 }
             }
+            if (me->button() == Qt::LeftButton && index >= 0)
+            {
+                QColorDialog cd;
+                QColor c = cd.getColor(m_colors.at(index), Q_NULLPTR, "Choose color of added point",
+                                       QColorDialog::ShowAlphaChannel);
+                if (c.isValid())
+                {
+                    m_colors.replace(index, c);
+                    firePointChange();
+                }
+            }
+            break;
+        }
+        case QEvent::MouseButtonPress:
+        {
+            if (!m_fingerPointMapping.isEmpty())
+                return true;
+            QMouseEvent *me = (QMouseEvent *) event;
 
-            if (me->button() == Qt::LeftButton) {
-                if (index == -1) {
+            QPointF clickPos = me->pos();
+            int index = -1;
+            for (int i=0; i<m_points.size(); ++i)
+            {
+                QPainterPath path;
+                if (m_shape == CircleShape)
+                    path.addEllipse(pointBoundingRect(i));
+                else
+                    path.addRect(pointBoundingRect(i));
+
+                if (path.contains(clickPos))
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (me->button() == Qt::LeftButton)
+            {
+                if (index == -1) // insert new point
+                {
                     if (!m_editable)
                         return false;
                     int pos = 0;
@@ -140,30 +186,39 @@ bool HoverPoints::eventFilter(QObject *object, QEvent *event)
                     m_points.insert(pos, clickPos);
                     m_locks.insert(pos, 0);
                     m_currentIndex = pos;
-                    firePointChange();
-                } else {
+                    if (m_currentIndex >= 0)
+                    {
+                        m_colors.insert(pos, m_colors.at(m_currentIndex));
+                    }
+                }
+                else    // select point
+                {
                     m_currentIndex = index;
                 }
+                firePointChange();
                 return true;
-
-            } else if (me->button() == Qt::RightButton) {
-                if (index >= 0 && m_editable) {
-                    if (m_locks[index] == 0) {
+            }
+            else if (me->button() == Qt::RightButton)
+            {
+                if (index >= 0 && m_editable)
+                {
+                    if (m_locks[index] == 0)
+                    {
                         m_locks.remove(index);
                         m_points.remove(index);
+                        m_colors.remove(index);
+                        firePointChange();
                     }
-                    firePointChange();
                     return true;
                 }
             }
-
         }
         break;
 
         case QEvent::MouseButtonRelease:
             if (!m_fingerPointMapping.isEmpty())
                 return true;
-            m_currentIndex = -1;
+//            m_currentIndex = -1;
             break;
 
         case QEvent::MouseMove:
@@ -325,7 +380,14 @@ void HoverPoints::paintPoints()
     p.setBrush(m_pointBrush);
 
     for (int i=0; i<m_points.size(); ++i) {
+        m_pointBrush.setColor(m_colors.at(i));
+        p.setBrush(m_pointBrush);
         QRectF bounds = pointBoundingRect(i);
+        if (i == m_currentIndex)
+            p.setPen(QPen(Qt::red, 2));
+        else
+            p.setPen(m_pointPen);
+
         if (m_shape == CircleShape)
             p.drawEllipse(bounds);
         else
@@ -356,14 +418,44 @@ void HoverPoints::setPoints(const QPolygonF &points)
     if (points.size() != m_points.size())
         m_fingerPointMapping.clear();
     m_points.clear();
+    m_colors.clear();
     for (int i=0; i<points.size(); ++i)
         m_points << bound_point(points.at(i), boundingRect(), 0);
 
     m_locks.clear();
     if (m_points.size() > 0) {
         m_locks.resize(m_points.size());
+        m_colors.resize(m_points.size());
+        m_colors.fill(Qt::white);
 
         m_locks.fill(0);
+    }
+}
+
+
+void HoverPoints::setColoredPoints(const QPolygonF &points, QVector<QColor> colors)
+{
+    if (points.size() != m_points.size())
+        m_fingerPointMapping.clear();
+    m_points.clear();
+    m_colors.clear();
+    if (colors.size() == points.size())
+    {
+        for (int i=0; i<points.size(); ++i)
+        {
+            m_points << bound_point(points.at(i), boundingRect(), 0);
+            m_colors.push_back(colors.at(i));
+        }
+    }
+    m_locks.clear();
+    if (m_points.size() > 0) {
+        m_locks.resize(m_points.size());
+        m_locks.fill(0);
+        if (m_colors.size() < m_points.size())
+        {
+            m_colors.resize(m_points.size());
+            m_colors.fill(Qt::white);
+        }
     }
 }
 
@@ -391,11 +483,12 @@ void HoverPoints::firePointChange()
 {
 //    printf("HoverPoints::firePointChange(), current=%d\n", m_currentIndex);
 
-    if (m_sortType != NoSort) {
-
+    if (m_sortType != NoSort)
+    {
         QPointF oldCurrent;
-        if (m_currentIndex != -1) {
-            oldCurrent = m_points[m_currentIndex];
+        if (m_currentIndex != -1 && m_currentIndex < m_points.size())
+        {
+            oldCurrent = m_points.at(m_currentIndex);
         }
 
         if (m_sortType == XSort)
@@ -404,17 +497,18 @@ void HoverPoints::firePointChange()
             std::sort(m_points.begin(), m_points.end(), y_less_than);
 
         // Compensate for changed order...
-        if (m_currentIndex != -1) {
-            for (int i=0; i<m_points.size(); ++i) {
-                if (m_points[i] == oldCurrent) {
+        if (m_currentIndex != -1)
+        {
+            for (int i=0; i<m_points.size(); ++i)
+            {
+                if (m_points[i] == oldCurrent)
+                {
                     m_currentIndex = i;
                     break;
                 }
             }
         }
-
 //         printf(" - firePointChange(), current=%d\n", m_currentIndex);
-
     }
 
 //     for (int i=0; i<m_points.size(); ++i) {
@@ -423,4 +517,6 @@ void HoverPoints::firePointChange()
 //     }
 
     emit pointsChanged(m_points);
+    if (m_currentIndex >= 0 && m_colors.size() > m_currentIndex)
+        emit selectionChanged(m_colors.at(m_currentIndex));
 }

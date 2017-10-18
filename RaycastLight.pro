@@ -37,6 +37,8 @@ SOURCES += \
     datrawreader.cpp \
     volumerenderwidget.cpp \
     transferfunctionwidget.cpp \
+    colorutils.cpp \
+    colorwheel.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -45,7 +47,9 @@ HEADERS += \
     volumerendercl.h \
     datrawreader.h \
     volumerenderwidget.h \
-    transferfunctionwidget.h
+    transferfunctionwidget.h \
+    colorutils.h \
+    colorwheel.h
 
 FORMS += \
         mainwindow.ui

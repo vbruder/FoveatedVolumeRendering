@@ -2,9 +2,9 @@
 
 #define ERT_THRESHOLD 0.98
 
-constant sampler_t linearSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP_TO_EDGE |
+constant sampler_t linearSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
                                 CLK_FILTER_LINEAR;
-constant sampler_t nearestSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP_TO_EDGE |
+constant sampler_t nearestSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
                                 CLK_FILTER_NEAREST;
 
 // intersect ray with a box
@@ -158,7 +158,7 @@ __kernel void volumeRender(__read_only image3d_t volData,
         rayDir.w = 0;
         rayDir = fast_normalize(rayDir);
         nearPlanePos = camPos + imgCoords.x*viewPlane_x + imgCoords.y*viewPlane_y;
-        nearPlanePos *= length(camPos); // TODO fix volume scaling issues
+        nearPlanePos *= length(camPos);
         camPos = nearPlanePos;
     }
 
@@ -193,6 +193,7 @@ __kernel void volumeRender(__read_only image3d_t volData,
 
         density = useLinear ? read_imagef(volData, linearSmp, pos).x :
                               read_imagef(volData, nearestSmp, pos).x;
+        density = clamp(density, 0.f, 1.f);
         tfColor = read_imagef(tffData, linearSmp, native_divide(density, precisionDiv));  // map density to color
         if (useIllum)
             tfColor.xyz = illumination(volData, pos, tfColor.xyz, fast_normalize(camPos.xyz - pos.xyz));
