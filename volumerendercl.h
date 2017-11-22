@@ -12,16 +12,17 @@ class VolumeRenderCL
 public:
     enum kernel_arg
     {
-        VOLUME     = 0, // volume data set                          image3d_t
-        OUTPUT     = 1, // output image                             image2d_t
-        TFF,            // transfer function array                  image1d_t
-        SAMPLING_RATE,      // step size factor                         cl_float
-        VIEW,           // view matrix                              float16
-        ORTHO,          // use orthographic camera                  cl_uint (bool)
-        ILLUMINATION,   // use illumination (per view)              cl_uint (bool)
-        BOX,            // show bounding box aroud volume           cl_uint (bool)
-        LINEAR,         // use linear interpolation, not nearest    cl_uint (bool)
-        BACKGROUND,     // background color RGBA                    cl_float4
+          VOLUME     = 0 // volume data set                          image3d_t
+        , TFF        = 1 // transfer function array                  image1d_t
+        , BRICKS
+        , OUTPUT         // output image                             image2d_t
+        , SAMPLING_RATE  // step size factor                         cl_float
+        , VIEW           // view matrix                              float16
+        , ORTHO          // use orthographic camera                  cl_uint (bool)
+        , ILLUMINATION   // use illumination (per view)              cl_uint (bool)
+        , BOX            // show bounding box aroud volume           cl_uint (bool)
+        , LINEAR         // use linear interpolation, not nearest    cl_uint (bool)
+        , BACKGROUND     // background color RGBA                    cl_float4
     };
 
     // mipmap down-scaling metric
@@ -139,6 +140,11 @@ public:
     void setBackground(std::array<float, 4> color);
 
 private:
+    /**
+     * @brief Generate coarse grained volume bricks that can be used for ESS.
+     * @param volumeData
+     */
+    void generateBricks();
 
     /**
      * @brief Calculate the scaling vector for the volume data.
@@ -184,7 +190,8 @@ private:
         }
     }
 
-    void setMemObjects();
+    void setMemObjectsRaycast();
+    void setMemObjectsBrickGen();
 
     void initKernel(const std::string fileName, const std::string buildFlags = "");
 
@@ -193,8 +200,10 @@ private:
     cl::Context _contextCL;
     cl::CommandQueue _queueCL;
     cl::Kernel _raycastKernel;
+    cl::Kernel _genBricksKernel;
 
     cl::Image3D _volumeMem;
+    cl::Image3D _bricksMem;
     cl::ImageGL _outputMem;
     cl::ImageGL _overlayMem;
     cl::Image1D _tffMem;

@@ -74,6 +74,8 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel.setArg(LINEAR, 1);
         cl_float4 bgColor = {{1.f, 1.f, 1.f, 1.f}};
         _raycastKernel.setArg(BACKGROUND, bgColor);
+
+        _genBricksKernel = cl::Kernel(program, "generateBricks");
     }
     catch (cl::Error err)
     {
@@ -85,11 +87,23 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
 /**
  * @brief VolumeRenderCL::setMemObjects
  */
-void VolumeRenderCL::setMemObjects()
+void VolumeRenderCL::setMemObjectsRaycast()
 {
     _raycastKernel.setArg(VOLUME, _volumeMem);
-    _raycastKernel.setArg(OUTPUT, _outputMem);
     _raycastKernel.setArg(TFF, _tffMem);
+    _raycastKernel.setArg(BRICKS, _bricksMem);
+    _raycastKernel.setArg(OUTPUT, _outputMem);
+}
+
+
+/**
+ * @brief VolumeRenderCL::setMemObjectsBrickGen
+ */
+void VolumeRenderCL::setMemObjectsBrickGen()
+{
+    _genBricksKernel.setArg(VOLUME, _volumeMem);
+    _genBricksKernel.setArg(TFF, _tffMem);
+    _genBricksKernel.setArg(BRICKS, _bricksMem);
 }
 
 
@@ -208,7 +222,7 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height)
         return;
     try // opencl scope
     {
-        setMemObjects();
+        setMemObjectsRaycast();
         cl::NDRange globalThreads(width, height);
         cl::Event ndrEvt;
 
@@ -250,6 +264,84 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height)
     }
 }
 
+
+/**
+ * @brief RoundPow2
+ * @param iNumber
+ * @return
+ */
+static uint RoundPow2(uint n)
+{
+    // next highest power of 2
+    // (cf: http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2)
+    uint val = n - 1u;
+    val |= val >> 1;
+    val |= val >> 2;
+    val |= val >> 4;
+    val |= val >> 8;
+    val |= val >> 16;
+    val++;
+    // previous power of 2
+    uint x = val >> 1;
+    // round to nearest of the two
+    return (val - n) > (n - x) ? x : val;
+}
+
+/**
+ * @brief VolumeRenderCL::generateBricks
+ * @param volumeData
+ */
+void VolumeRenderCL::generateBricks()
+{
+    if (!_dr.has_data())
+        return;
+    try
+    {
+        // calculate brick size
+        const uint numBricks = 32u;
+        std::array<uint, 3> brickRes = {1u, 1u, 1u};
+        brickRes.at(0) = RoundPow2(_dr.properties().volume_res.at(0)/numBricks);
+        brickRes.at(1) = RoundPow2(_dr.properties().volume_res.at(1)/numBricks);
+        brickRes.at(2) = RoundPow2(_dr.properties().volume_res.at(2)/numBricks);
+        std::array<uint, 3> bricksTexSize = {1u, 1u, 1u};
+        bricksTexSize.at(0) = ceil(_dr.properties().volume_res.at(0)/(double)brickRes.at(0));
+        bricksTexSize.at(1) = ceil(_dr.properties().volume_res.at(1)/(double)brickRes.at(1));
+        bricksTexSize.at(2) = ceil(_dr.properties().volume_res.at(2)/(double)brickRes.at(2));
+
+        // set memory object
+        cl::ImageFormat format;
+        format.image_channel_order = CL_RGBA;  // NOTE: only one channel, change to CL_RG for min+max
+
+        if (_dr.properties().format == "UCHAR")
+            format.image_channel_data_type = CL_UNORM_INT8;
+        else if (_dr.properties().format == "USHORT")
+            format.image_channel_data_type = CL_UNORM_INT16;
+        else if (_dr.properties().format == "FLOAT")
+            format.image_channel_data_type = CL_FLOAT;
+        else
+            throw std::invalid_argument("Unknown or invalid volume data format.");
+
+        _bricksMem = cl::Image3D(_contextCL,
+                                 CL_MEM_READ_WRITE,
+                                 format,
+                                 bricksTexSize.at(0), bricksTexSize.at(1), bricksTexSize.at(2),
+                                 0, 0,
+                                 NULL);
+
+        // run aggregation kernel
+        setMemObjectsBrickGen();
+        cl::NDRange globalThreads(bricksTexSize.at(0), bricksTexSize.at(1), bricksTexSize.at(2));
+        cl::Event ndrEvt;
+        _queueCL.enqueueNDRangeKernel(
+                    _genBricksKernel, cl::NullRange, globalThreads, cl::NullRange, NULL, &ndrEvt);
+        _queueCL.finish();    // global sync
+    }
+    catch (cl::Error err)
+    {
+        throw std::runtime_error( "ERROR: " + std::string(err.what()) + "("
+                                  + getCLErrorString(err.err()) + ")");
+    }
+}
 
 /**
  * @brief VolumeRenderCL::volDataToCLmem
@@ -311,7 +403,7 @@ void VolumeRenderCL::loadVolumeData(const std::string fileName)
         throw e;
     }
     // set initally a simple linear transfer function
-    std::vector<unsigned char> tff(8*4, 0);
+    std::vector<unsigned char> tff(256*4, 0);
     std::iota(tff.begin() + 2, tff.end(), 0);
     setTransferFunction(tff);
 
@@ -359,6 +451,8 @@ void VolumeRenderCL::setTransferFunction(std::vector<unsigned char> &tff)
         cl_mem_flags flags = CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR;
         // divide size by 4 because of RGBA
         _tffMem = cl::Image1D(_contextCL, flags, format, tff.size() / 4, tff.data());
+
+        generateBricks();
     }
     catch (cl::Error err)
     {

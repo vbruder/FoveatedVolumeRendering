@@ -158,7 +158,9 @@ TransferFunctionEditor::TransferFunctionEditor(QWidget *parent) : QWidget(parent
 //    _pBlueShade = new ShadeWidget(ShadeWidget::BlueShade, this);
 //    _shades.push_back(_pBlueShade);
     _pAlphaShade = new ShadeWidget(ShadeWidget::ARGBShade, this);
+
     _shades.push_back(_pAlphaShade);
+
 
     foreach (ShadeWidget *s, _shades)
     {

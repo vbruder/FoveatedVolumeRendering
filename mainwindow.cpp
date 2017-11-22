@@ -74,6 +74,15 @@ MainWindow::MainWindow(QWidget *parent) :
     _statusLabel = new QLabel("No data loaded yet.");
     ui->statusBar->addPermanentWidget(_statusLabel);
 
+    // Load an application style
+    QFile styleFile( "../RaycastLight/style-rangeSlider.qss" );
+    styleFile.open( QFile::ReadOnly );
+    // Apply the loaded stylesheet
+    QString style = QLatin1String( styleFile.readAll() );
+    ui->rsldTffZoomX->setStyleSheet(style);
+//    ui->rsldTffZoomX->style()->unpolish(ui->rsldTffZoomX);
+//    ui->rsldTffZoomX->style()->polish(ui->rsldTffZoomX);
+
     // restore settings
     readSettings();
 }

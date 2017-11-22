@@ -481,8 +481,6 @@ inline static bool y_less_than(const QPointF &p1, const QPointF &p2)
 
 void HoverPoints::firePointChange()
 {
-//    printf("HoverPoints::firePointChange(), current=%d\n", m_currentIndex);
-
     if (m_sortType != NoSort)
     {
         QPointF oldCurrent;
@@ -508,13 +506,7 @@ void HoverPoints::firePointChange()
                 }
             }
         }
-//         printf(" - firePointChange(), current=%d\n", m_currentIndex);
     }
-
-//     for (int i=0; i<m_points.size(); ++i) {
-//         printf(" - point(%2d)=[%.2f, %.2f], lock=%d\n",
-//                i, m_points.at(i).x(), m_points.at(i).y(), m_locks.at(i));
-//     }
 
     emit pointsChanged(m_points);
     if (m_currentIndex >= 0 && m_colors.size() > m_currentIndex)

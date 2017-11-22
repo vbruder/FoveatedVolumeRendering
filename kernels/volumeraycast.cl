@@ -99,16 +99,17 @@ bool checkBoundingBox(float3 pos, float3 voxLen, float2 bound)
 /**
  * direct volume raycasting kernel
  */
-__kernel void volumeRender(__read_only image3d_t volData,
-                           __write_only image2d_t outData,
-                           __read_only image1d_t tffData,     // constant transfer function values
-                           const float samplingRate,
-                           const float16 viewMat,
-                           const uint orthoCam,
-                           const uint useIllum,
-                           const uint useBox,
-                           const uint useLinear,
-                           const float4 background
+__kernel void volumeRender(  __read_only image3d_t volData
+                           , __read_only image1d_t tffData     // constant transfer function values
+                           , __read_only image3d_t volBrickData
+                           , __write_only image2d_t outData
+                           , const float samplingRate
+                           , const float16 viewMat
+                           , const uint orthoCam
+                           , const uint useIllum
+                           , const uint useBox
+                           , const uint useLinear
+                           , const float4 background
                            )
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
@@ -137,14 +138,14 @@ __kernel void volumeRender(__read_only image3d_t volData,
     // z position of view plane is -1.0 to fit the cube to the screen quad when axes are aligned, 
     // zoom is -1 and the data set is uniform in each dimension
     // (with FoV of 90° and near plane in range [-1,+1]).
-    float4 nearPlanePos = fast_normalize((float4)(imgCoords, -2.0f, 0.0f));
-    // transform nearPlane to world space    
+    float4 nearPlanePos = fast_normalize((float4)(imgCoords, -1.0f, 0.0f));
+    // transform nearPlane from view space to world space
     rayDir.x = dot(viewMat.s0123, nearPlanePos);
     rayDir.y = dot(viewMat.s4567, nearPlanePos);
     rayDir.z = dot(viewMat.s89ab, nearPlanePos);
     rayDir.w = dot(viewMat.scdef, nearPlanePos);
     
-    // origin is translation vector of view matrix
+    // camera position in world space (ray origin) is translation vector of view matrix
     float4 camPos = (float4)(viewMat.s37b, 1.0f);
     rayDir = fast_normalize(rayDir);
 
@@ -176,37 +177,108 @@ __kernel void volumeRender(__read_only image3d_t volData,
     float density = 0.f;
     float4 tfColor = (float4)(0);
     float opacity = 0.f;
-    float t = 0.0f;
-    float3 voxLen = (float3)(1.f) / convert_float3(get_image_dim(volData).xyz);
+    float t = tnear;
+    int3 volRes = get_image_dim(volData).xyz;
+    float3 voxLen = (float3)(1.f) / convert_float3(volRes);
+    int3 bricksRes = get_image_dim(volBrickData).xyz;
+    float3 brickLen = (float3)(1.f) / convert_float3(bricksRes);
     float refSamplingInterval = 1.f / samplingRate;
     float precisionDiv = 1.f;
     if (get_image_channel_data_type(volData) == CLK_UNORM_INT16)
         precisionDiv = 8.f;
 
+    // DDA initialization
+    float4 posDDA = (float4)(0);
+    float3 invRay = 1.f/(rayDir.xyz);
+    if (rayDir.x == 0) invRay.x = FLT_MAX;
+    if (rayDir.y == 0) invRay.y = FLT_MAX;
+    if (rayDir.z == 0) invRay.z = FLT_MAX;
+
+    float3 step = (float3)1 * sign(rayDir.xyz);
+    const float3 deltaT = fabs(brickLen*invRay);
+    float3 voxIncr = (float3)0;
+
+    float3 bbHit = camPos.xyz + tnear * rayDir.xyz;     // [-1; 1]
+    float3 bbHitNorm = bbHit * 0.5f + 0.5f;             // [ 0; 1]
+    float3 tv = bbHitNorm * convert_float3(bricksRes.xyz); // [ 0; volRes]
+
+    int3 brickId = convert_int3(floor(bbHitNorm * convert_float3(bricksRes.xyz)));
+    // assert range [0; bricksRes - 1]
+    brickId = clamp(brickId, 0, convert_int3(bricksRes.xyz - 1));
+
+    // correct initial distances to first inner grid boundary
+    tv -= convert_float3(brickId);      // [0; 1] (fractual part)
+    tv *= brickLen;                     // [0; brickLen]
+    tv = (brickLen - tv) * invRay;
+
     uint i = 0;
+    float3 p_exit = (float3)(0);
+    float t_exit = 0;
+    float skip = 0;
     // raycasting loop: front to back raycasting with early ray termination
     while (t < tfar)
     {
-        t = tnear + stepSize*i;     // recalculate t to avoid numerical drift
-        pos = camPos + t*rayDir;
-        pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
+        density = read_imagef(volBrickData, nearestSmp, (int4)(brickId, 0)).y;
 
-        density = useLinear ? read_imagef(volData, linearSmp, pos).x :
-                              read_imagef(volData, nearestSmp, pos).x;
-        density = clamp(density, 0.f, 1.f);
-        tfColor = read_imagef(tffData, linearSmp, native_divide(density, precisionDiv));  // map density to color
-        if (useIllum)
-            tfColor.xyz = illumination(volData, pos, tfColor.xyz, fast_normalize(camPos.xyz - pos.xyz));
-        tfColor.xyz = background.xyz - tfColor.xyz;
+        // increment to next brick
+        voxIncr.x = (tv.x <= tv.y) && (tv.x <= tv.z) ? 1 : 0;
+        voxIncr.y = (tv.y <= tv.x) && (tv.y <= tv.z) ? 1 : 0;
+        voxIncr.z = (tv.z <= tv.x) && (tv.z <= tv.y) ? 1 : 0;
+        tv += voxIncr * deltaT;
+        brickId += convert_int3(voxIncr * step);    // [0; res-1]
 
-        // Taylor expansion approximation
-        opacity = 1.f - native_powr(1.f - tfColor.w, refSamplingInterval);
-        result.xyz = result.xyz - tfColor.xyz * opacity * (1.f - alpha);
-        alpha = alpha + opacity * (1.f - alpha);
+        p_exit = tv;
+        p_exit -= convert_float3(brickId);      // [0; 1] (fractual part)
+        p_exit *= brickLen;                     // [0; brickLen]
+        p_exit = (brickLen - t_exit) * invRay;
+        t_exit = t + length(p_exit);    // FIXME
+        // check if brick contains values -> normal sampling
+        //float alphaMax = read_imagef(tffData, linearSmp, density).w;
+        if (texCoords.x == 400 && texCoords.y == 400)
+        {
+            printf("%#v3f", p_exit);
+            printf(" %#f\n", t);
+            printf(" %#f\n", t_exit);
+            printf(" %#f\n", stepSize);
+        }
+        if (density > 0.f)
+        {
+            while (t < t_exit && i < 1512)
+            {
+                // t += tnear + stepSize*i;     // recalculate t to avoid numerical drift
+                t += stepSize;
+                pos = camPos + t*rayDir;
+                pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
 
-        if (alpha > ERT_THRESHOLD) break;   // early ray termination check
-        ++i;
+                density = useLinear ? read_imagef(volData, linearSmp, pos).x :
+                                      read_imagef(volData, nearestSmp, pos).x;
+                density = clamp(density, 0.f, 1.f);
+                tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
+                if (useIllum)
+                    tfColor.xyz = illumination(volData, pos, tfColor.xyz, fast_normalize(camPos.xyz - pos.xyz));
+                tfColor.xyz = background.xyz - tfColor.xyz;
+
+                // Taylor expansion approximation
+                opacity = 1.f - native_powr(1.f - tfColor.w, refSamplingInterval);
+                result.xyz = result.xyz - tfColor.xyz * opacity * (1.f - alpha);
+                alpha = alpha + opacity * (1.f - alpha);
+
+                if (alpha > ERT_THRESHOLD) break;   // early ray termination check
+                ++i;
+            }
+            t = t_exit;
+        }
+        else
+        {
+            t = t_exit;
+            skip += 0.01f;
+        }
+
+        if (any(brickId < 0) || any(brickId > bricksRes.xyz-1))
+            break;
     }
+//write_imagef(outData, texCoords, (float4)(skip, 0, 0, 1.0f));
+//return;
 
     // draw bounding box
     if (useBox && checkBoundingBox(pos.xyz, voxLen, (float2)(0.f, 1.f)))
@@ -219,3 +291,40 @@ __kernel void volumeRender(__read_only image3d_t volData,
     write_imagef(outData, texCoords, result);
 }
 
+#pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
+
+//************************** Generate brick volume ***************************
+
+__kernel void generateBricks(  __read_only image3d_t volData
+                             , __read_only image1d_t tffData     // constant transfer function values
+                             , __write_only image3d_t volBrickData
+                            )
+{
+    int3 coord = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+    if(any(coord >= get_image_dim(volBrickData).xyz))
+        return;
+
+    int3 voxPerCell = convert_int3(ceil(convert_float4(get_image_dim(volData))/
+                                          convert_float4(get_image_dim(volBrickData))).xyz);
+    int3 volCoordLower = voxPerCell * coord;
+    int3 volCoordUpper = clamp(volCoordLower + voxPerCell, (int3)(0), get_image_dim(volData).xyz);
+
+    float maxVal = 0.f;
+    float minVal = FLT_MAX;
+    float value = 0.f;
+
+    for (int k = volCoordLower.z; k < volCoordUpper.z; ++k)
+    {
+        for (int j = volCoordLower.y; j < volCoordUpper.y; ++j)
+        {
+            for (int i = volCoordLower.x; i < volCoordUpper.x; ++i)
+            {
+                value = read_imagef(volData, nearestSmp, (int4)(i, j, k, 0)).x;  // [0; 1]
+                minVal = min(minVal, value);
+                maxVal = max(maxVal, value);
+            }
+        }
+    }
+
+    write_imagef(volBrickData, (int4)(coord, 0), (float4)(minVal, maxVal, 0, 0));
+}

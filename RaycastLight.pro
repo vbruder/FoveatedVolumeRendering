@@ -38,7 +38,8 @@ SOURCES += \
     volumerenderwidget.cpp \
     transferfunctionwidget.cpp \
     colorutils.cpp \
-    colorwheel.cpp
+    colorwheel.cpp \
+    rangesliderqt.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -49,7 +50,8 @@ HEADERS += \
     volumerenderwidget.h \
     transferfunctionwidget.h \
     colorutils.h \
-    colorwheel.h
+    colorwheel.h \
+    rangesliderqt.h
 
 FORMS += \
         mainwindow.ui
@@ -60,4 +62,5 @@ RESOURCES += \
     kernels.qrc
 
 DISTFILES += \
-    kernels/volumeraycast.cl
+    kernels/volumeraycast.cl \
+    style.qss
