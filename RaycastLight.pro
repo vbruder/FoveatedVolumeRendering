@@ -4,9 +4,11 @@
 #
 #-------------------------------------------------
 
+QMAKE_CXXFLAGS += -std=c++17
+
 LIBS += -lGL -lOpenCL
 
-QMAKE_CXXFLAGS+= -fopenmp
+QMAKE_CXXFLAGS += -fopenmp
 QMAKE_LFLAGS +=  -fopenmp
 
 QT       += core gui concurrent opengl

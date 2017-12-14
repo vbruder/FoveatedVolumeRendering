@@ -59,6 +59,8 @@ public slots:
 
     void updateSamplingRate(double samplingRate);
     void updateTransferFunction(QGradientStops stops);
+    std::vector<unsigned char> getRawTransferFunction(QGradientStops stops) const;
+
 #undef Bool
     void setTffInterpolation(const QString method);
     void setCamOrtho(bool camOrtho);
@@ -109,6 +111,7 @@ private:
 
     bool _noUpdate;
     bool _loadingFinished;
+    bool _writeImage;
     long long _imgCount;
 };
 

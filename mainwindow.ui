@@ -14,16 +14,11 @@
    <string>Basic Volume Raycaster</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="VolumeRenderWidget" name="volumeRenderWidget">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>10</y>
-      <width>1024</width>
-      <height>1024</height>
-     </rect>
-    </property>
-   </widget>
+   <layout class="QGridLayout" name="gridLayout_3">
+    <item row="0" column="0">
+     <widget class="VolumeRenderWidget" name="volumeRenderWidget"/>
+    </item>
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -41,6 +36,7 @@
     <addaction name="actionOpen"/>
     <addaction name="actionLoadTff"/>
     <addaction name="actionSaveTff"/>
+    <addaction name="actionSaveRawTff"/>
     <addaction name="actionQuit"/>
    </widget>
    <addaction name="menuFile"/>
@@ -262,15 +258,14 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
+  <action name="actionSaveRawTff">
+   <property name="text">
+    <string>Save raw transfer functio...</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
-  <customwidget>
-   <class>colorwidgets::ColorWheel</class>
-   <extends>QWidget</extends>
-   <header>colorwheel.h</header>
-   <container>1</container>
-  </customwidget>
   <customwidget>
    <class>VolumeRenderWidget</class>
    <extends>QOpenGLWidget</extends>
@@ -280,6 +275,12 @@
    <class>TransferFunctionWidget</class>
    <extends>QWidget</extends>
    <header>transferfunctionwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>colorwidgets::ColorWheel</class>
+   <extends>QWidget</extends>
+   <header>colorwheel.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

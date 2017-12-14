@@ -1,5 +1,6 @@
 #include "volumerendercl.h"
 
+#include <functional>
 #include <algorithm>
 #include <numeric>
 #include "omp.h"
@@ -41,7 +42,7 @@ void VolumeRenderCL::initialize()
 {
     try // opencl scope
     {
-        // TODO: replace if no NVIDIA GPU
+        // NOTE: replace if no NVIDIA GPU
         _contextCL = createCLGLContext(CL_DEVICE_TYPE_GPU, VENDOR_NVIDIA); // VENDOR_ANY
         _queueCL = cl::CommandQueue(_contextCL);
     }
@@ -68,8 +69,8 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         cl_float16 view = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
         _raycastKernel.setArg(VIEW, view);
         _raycastKernel.setArg(SAMPLING_RATE, 0.5f);     // default step size 0.5*voxel size
-        _raycastKernel.setArg(ORTHO, 0);            // perspective cam by default
-        _raycastKernel.setArg(ILLUMINATION, 1);     // illumination on by default
+        _raycastKernel.setArg(ORTHO, 0);                // perspective cam by default
+        _raycastKernel.setArg(ILLUMINATION, 1);         // illumination on by default
         _raycastKernel.setArg(BOX, 1);
         _raycastKernel.setArg(LINEAR, 1);
         cl_float4 bgColor = {{1.f, 1.f, 1.f, 1.f}};
@@ -93,6 +94,7 @@ void VolumeRenderCL::setMemObjectsRaycast()
     _raycastKernel.setArg(TFF, _tffMem);
     _raycastKernel.setArg(BRICKS, _bricksMem);
     _raycastKernel.setArg(OUTPUT, _outputMem);
+    _raycastKernel.setArg(TFF_PREFIX, _tffPrefixMem);
 }
 
 
@@ -234,29 +236,31 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height)
         _queueCL.enqueueReleaseGLObjects(&memObj);
         _queueCL.finish();    // global sync
 
-        // Profiling: enable before usage
-//        cl_ulong start = 0;
-//        cl_ulong end = 0;
-//        ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
-//        ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
-//        double time = static_cast<double>(end - start)*1e-9;
-//        std::cout << "Kernel time: " << time << std::endl << std::endl;
+#ifdef NO_GL
+        cl::Event readEvt;
+        std::array<size_t, 3> origin = {{0, 0, 0}};
+        std::array<size_t, 3> region = {{width, height, 1}};
+        _queueCL.enqueueReadImage(_outputMem,
+                                  CL_TRUE,
+                                  origin,
+                                  region,
+                                  0,
+                                  0,
+                                  _outputData.data(),
+                                  NULL,
+                                  &readEvt);
+        _queueCL.flush();    // global sync
+#endif
 
-        // Only use this method if not employing CL-GL sharing.
-        // Downloading the output buffer from device (GPU) to Host memory.
-//        cl::Event readEvt;
-//        std::array<size_t, 3> origin = {{0, 0, 0}};
-//        std::array<size_t, 3> region = {{width, height, 1}};
-//        _queueCL.enqueueReadImage(_outputMem,
-//                                  CL_TRUE,
-//                                  origin,
-//                                  region,
-//                                  0,
-//                                  0,
-//                                  _outputData.data(),
-//                                  NULL,
-//                                  &readEvt);
-//        _queueCL.flush();    // global sync
+#ifdef PROFILING
+        // Profiling: enable before usage
+        cl_ulong start = 0;
+        cl_ulong end = 0;
+        ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
+        ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
+        double time = static_cast<double>(end - start)*1e-9;
+        std::cout << "Kernel time: " << time << std::endl << std::endl;
+#endif
     }
     catch (cl::Error err)
     {
@@ -404,8 +408,16 @@ void VolumeRenderCL::loadVolumeData(const std::string fileName)
     }
     // set initally a simple linear transfer function
     std::vector<unsigned char> tff(256*4, 0);
-    std::iota(tff.begin() + 2, tff.end(), 0);
+    std::iota(tff.begin() + 3, tff.end(), 0);
     setTransferFunction(tff);
+
+    std::vector<ushort> prefixSum(256, 0);
+#pragma omp for
+    for (int i = 0; i < (int)prefixSum.size(); ++i)
+        prefixSum.at(i) = i*4;
+
+    std::partial_sum(prefixSum.begin(), prefixSum.end(), prefixSum.begin());
+    setTffPrefixSum(prefixSum);
 
     this->_volLoaded = true;
 }
@@ -451,7 +463,6 @@ void VolumeRenderCL::setTransferFunction(std::vector<unsigned char> &tff)
         cl_mem_flags flags = CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR;
         // divide size by 4 because of RGBA
         _tffMem = cl::Image1D(_contextCL, flags, format, tff.size() / 4, tff.data());
-
         generateBricks();
     }
     catch (cl::Error err)
@@ -460,6 +471,27 @@ void VolumeRenderCL::setTransferFunction(std::vector<unsigned char> &tff)
     }
 }
 
+
+void VolumeRenderCL::setTffPrefixSum(std::vector<unsigned short> &tffPrefixSum)
+{
+    if (!_dr.has_data())
+        return;
+
+    try
+    {
+        cl::ImageFormat format;
+        format.image_channel_order = CL_R;
+        format.image_channel_data_type = CL_UNSIGNED_INT16;
+
+        cl_mem_flags flags = CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR;
+        // divide size by 4 because of RGBA
+        _tffPrefixMem = cl::Image1D(_contextCL, flags, format, tffPrefixSum.size(), tffPrefixSum.data());
+    }
+    catch (cl::Error err)
+    {
+        logCLerror(err);
+    }
+}
 
 /**
  * @brief VolumeRenderCL::setCamOrtho

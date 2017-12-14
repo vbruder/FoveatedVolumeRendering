@@ -36,6 +36,7 @@ protected slots:
 
     void loadTff();
     void saveTff();
+    void saveRawTff();
 
     void chooseBackgroundColor();
 protected:

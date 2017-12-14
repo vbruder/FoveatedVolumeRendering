@@ -31,6 +31,7 @@ MainWindow::MainWindow(QWidget *parent) :
     // menu bar actions
     connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::openVolumeFile);
     connect(ui->actionSaveTff, &QAction::triggered, this, &MainWindow::saveTff);
+    connect(ui->actionSaveRawTff, &QAction::triggered, this, &MainWindow::saveRawTff);
     connect(ui->actionLoadTff, &QAction::triggered, this, &MainWindow::loadTff);
 
     // future watcher for concurrent data loading
@@ -257,6 +258,40 @@ void MainWindow::saveTff()
             {
                 out << s.first << " " << s.second.red() << " " << s.second.green()
                     << " " << s.second.blue() << " " << s.second.alpha() << "\n";
+            }
+            file.close();
+        }
+    }
+}
+
+/**
+ * @brief MainWindow::saveRawTff
+ */
+void MainWindow::saveRawTff()
+{
+    QFileDialog dia;
+    QString defaultPath = _settings->value( "LastTffFile" ).toString();
+    QString pickedFile = dia.getSaveFileName(
+                this, tr("Save Transfer Function"),
+                defaultPath, tr("Transfer function files (*.tff)"));
+
+    if (!pickedFile.isEmpty())
+    {
+        QFile file(pickedFile);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+        {
+            throw std::invalid_argument("Could not open file "
+                                        + pickedFile.toStdString());
+        }
+        else
+        {
+            QTextStream out(&file);
+            const QGradientStops stops =
+                    ui->transferFunctionEditor->getEditor()->getGradientStops();
+            const std::vector<unsigned char> tff = ui->volumeRenderWidget->getRawTransferFunction(stops);
+            foreach (unsigned char c, tff)
+            {
+                out << (int)c << " ";
             }
             file.close();
         }

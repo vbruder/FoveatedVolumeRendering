@@ -37,15 +37,16 @@ static const char *pFsScreenQuadSource =
  */
 VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
     : QOpenGLWidget(parent)
+    , _tffRange(QPoint(0, 255))
+    , _lastLocalCursorPos(QPoint(0,0))
+    , _rotQuat(QQuaternion(1, 0, 0, 0))
+    , _translation(QVector3D(0, 0, 2.0))
+    , _noUpdate(true)
+    , _loadingFinished(false)
+    , _writeImage(false)
+    , _imgCount(0)
 {
-    _rotQuat = QQuaternion(1, 0, 0, 0);
-    _translation = QVector3D(0, 0, 2.0);
-    _tffRange = QPoint(0, 255);
-
-    _loadingFinished = false;
     this->setMouseTracking(true);
-    _noUpdate = true;
-    _imgCount = 0;
 }
 
 
@@ -193,7 +194,7 @@ void VolumeRenderWidget::paintGL()
     _quadVbo.release();
     _spScreenQuad.release();
 
-    if (_volumerender.hasData())
+    if (_volumerender.hasData() && _writeImage)
     {
         QImage img = this->grabFramebuffer();
         QString number = QString("%1").arg(_imgCount++, 5, 10, QChar('0'));
@@ -201,7 +202,6 @@ void VolumeRenderWidget::paintGL()
     }
 
     p.endNativePainting();
-
     paintOrientationAxis(p);
 }
 
@@ -246,7 +246,7 @@ void VolumeRenderWidget::generateOutputTextures()
                  width(), height(), 0,
                  GL_RGBA, GL_UNSIGNED_BYTE,
                  img.bits());
-    glGenerateMipmap(GL_TEXTURE_2D);
+
     _volumerender.updateOutputImg(
                 static_cast<size_t>(width()),
                 static_cast<size_t>(height()),
@@ -339,9 +339,10 @@ void VolumeRenderWidget::setTffInterpolation(const QString method)
  */
 void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
 {
-    const size_t tffSize = 256;
+    const int tffSize = 256;
     const qreal granularity = 4096.0;
     std::vector<uchar> tff(tffSize*4);
+    std::vector<ushort> prefixSum(tffSize);
 
     QPropertyAnimation interpolator;
     interpolator.setEasingCurve(_tffInterpol);
@@ -354,6 +355,39 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
 //    tff.at(1) = (uchar)0;
 //    tff.at(2) = (uchar)0;
 //    tff.at(3) = (uchar)0;
+#pragma omp for
+    for (int i = 0; i < tffSize; ++i)
+    {
+        interpolator.setCurrentTime((i/static_cast<double>(tffSize)) * granularity);
+        tff.at(i*4 + 0) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().red()   - 3);
+        tff.at(i*4 + 1) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().green() - 3);
+        tff.at(i*4 + 2) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().blue()  - 3);
+        tff.at(i*4 + 3) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().alpha() - 3);
+        prefixSum.at(i) = tff.at(i*4 + 3);
+    }
+    _volumerender.setTransferFunction(tff);
+
+    // TODO: replace with std::exclusicve_scan(std::par, ... )
+    std::partial_sum(prefixSum.begin(), prefixSum.end(), prefixSum.begin());
+    _volumerender.setTffPrefixSum(prefixSum);
+
+    update();
+}
+
+std::vector<unsigned char> VolumeRenderWidget::getRawTransferFunction(QGradientStops stops) const
+{
+    const size_t tffSize = 256;
+    const qreal granularity = 4096.0;
+    std::vector<uchar> tff(tffSize*4);
+
+    QPropertyAnimation interpolator;
+    interpolator.setEasingCurve(_tffInterpol);
+    interpolator.setDuration(granularity);
+    foreach (QGradientStop stop, stops)
+    {
+        interpolator.setKeyValueAt(stop.first, stop.second);
+    }
+
     for (size_t i = 0; i < tffSize; ++i)
     {
         interpolator.setCurrentTime((i/static_cast<double>(tffSize)) * granularity);
@@ -362,8 +396,7 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
         tff.at(i*4 + 2) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().blue()  - 3);
         tff.at(i*4 + 3) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().alpha() - 3);
     }
-    _volumerender.setTransferFunction(tff);
-    update();
+    return tff;
 }
 
 

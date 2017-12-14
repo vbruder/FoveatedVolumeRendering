@@ -14,7 +14,7 @@ public:
     {
           VOLUME     = 0 // volume data set                          image3d_t
         , TFF        = 1 // transfer function array                  image1d_t
-        , BRICKS
+        , BRICKS         // low resolution brick volume              image3d_t
         , OUTPUT         // output image                             image2d_t
         , SAMPLING_RATE  // step size factor                         cl_float
         , VIEW           // view matrix                              float16
@@ -23,6 +23,7 @@ public:
         , BOX            // show bounding box aroud volume           cl_uint (bool)
         , LINEAR         // use linear interpolation, not nearest    cl_uint (bool)
         , BACKGROUND     // background color RGBA                    cl_float4
+        , TFF_PREFIX     // prefix sum of transfer function          image1d_t
     };
 
     // mipmap down-scaling metric
@@ -94,6 +95,12 @@ public:
      * @param rangeMax clamp range to maximum
      */
     void setTransferFunction(std::vector<unsigned char> &tff);
+
+    /**
+     * @brief Set the prefix sum of the transfer function.
+     * @param tffPrefixSum The prefix sum as vector of unsigned ints.
+     */
+    void setTffPrefixSum(std::vector<unsigned short> &tffPrefixSum);
 
     /**
      * @brief VolumeRenderCL::scaleVolume
@@ -207,6 +214,7 @@ private:
     cl::ImageGL _outputMem;
     cl::ImageGL _overlayMem;
     cl::Image1D _tffMem;
+    cl::Image1D _tffPrefixMem;
 
     std::vector<float> _outputData;
     DatRawReader _dr;

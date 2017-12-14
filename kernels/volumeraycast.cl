@@ -9,16 +9,16 @@ constant sampler_t nearestSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
 
 // intersect ray with a box
 // http://www.siggraph.org/education/materials/HyperGraph/raytrace/rtinter3.htm
-int intersectBox(float4 rayOrig, float4 rayDir, float *tnear, float *tfar)
+int intersectBox(float3 rayOrig, float3 rayDir, float *tnear, float *tfar)
 {
     // compute intersection of ray with all six bbox planes
-    float4 invRay = native_divide((float4)(1.0f, 1.0f, 1.0f, 1.0f), rayDir);
-    float4 tBot = invRay * ((float4)(-1.0f, -1.0f, -1.0f, 1.0f) - rayOrig);
-    float4 tTop = invRay * ((float4)(1.0f, 1.0f, 1.0f, 1.0f) - rayOrig);
+    float3 invRay = native_divide((float3)(1.0f), rayDir);
+    float3 tBot = invRay * ((float3)(-1.0f) - rayOrig);
+    float3 tTop = invRay * ((float3)(1.0f) - rayOrig);
 
     // re-order intersections to find smallest and largest on each axis
-    float4 tMin = min(tTop, tBot);
-    float4 tMax = max(tTop, tBot);
+    float3 tMin = min(tTop, tBot);
+    float3 tMax = max(tTop, tBot);
 
     // find the largest tMin and the smallest tMax
     float maxTmin = max(max(tMin.x, tMin.y), max(tMin.x, tMin.z));
@@ -28,6 +28,41 @@ int intersectBox(float4 rayOrig, float4 rayDir, float *tnear, float *tfar)
     *tfar = minTmax;
 
     return (int)(minTmax > maxTmin);
+}
+
+int intersectBBox(float3 rayOrig, float3 rayDir, float3 lower, float3 upper, float *tnear, float *tfar)
+{
+    // compute intersection of ray with all six bbox planes
+    float3 invRay = native_divide((float3)(1.0f), rayDir);
+    float3 tBot = invRay * (lower - rayOrig);
+    float3 tTop = invRay * (upper - rayOrig);
+
+    // re-order intersections to find smallest and largest on each axis
+    float3 tMin = min(tTop, tBot);
+    float3 tMax = max(tTop, tBot);
+
+    // find the largest tMin and the smallest tMax
+    float maxTmin = max(max(tMin.x, tMin.y), max(tMin.x, tMin.z));
+    float minTmax = min(min(tMax.x, tMax.y), min(tMax.x, tMax.z));
+
+    *tnear = maxTmin;
+    *tfar = minTmax;
+
+    return (int)(minTmax > maxTmin);
+}
+
+
+int intersectPlane(const float3 rayOrigin, const float3 rayDir,
+                   const float3 planeNormal, const float3 planePos, float *t)
+{
+    float denom = dot(rayDir, planeNormal);
+    if (denom > 1e-6)   // check if parallel
+    {
+        float3 origin2point = planePos - rayOrigin;
+        *t = dot(origin2point, planeNormal) / denom;
+        return (t >= 0);
+    }
+    return false;
 }
 
 // Compute gradient using central difference: f' = ( f(x+h)-f(x-h) ) / 2*h
@@ -110,6 +145,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , const uint useBox
                            , const uint useLinear
                            , const float4 background
+                           , __read_only image1d_t tffPrefix
                            )
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
@@ -118,22 +154,25 @@ __kernel void volumeRender(  __read_only image3d_t volData
 
     // pseudo random number [0,1] for ray offsets to avoid moire patterns
     float iptr;
-    float rand = fract(sin(dot(convert_float2(globalId),
+    float rand = 0.1f*fract(sin(dot(convert_float2(globalId),
                        (float2)(12.9898f, 78.233f))) * 43758.5453f, &iptr);
 
     float maxRes = (float)max(get_image_dim(volData).x, get_image_dim(volData).z);
-    float stepSize = native_divide(8.f, maxRes*samplingRate); // normalization to octile
+//    float stepSize = native_divide(2.f, maxRes*samplingRate); // normalization
 
     int2 texCoords = globalId;
+    float aspectRatio = native_divide((float)get_global_size(1), (float)(get_global_size(0)));
+    aspectRatio = min(aspectRatio, native_divide((float)get_global_size(0), (float)(get_global_size(1))));
+    int maxSize = max(get_global_size(0), get_global_size(1));
     float2 imgCoords;
-    imgCoords.x = native_divide((globalId.x + 0.5f), (float)(get_global_size(0))) * 2.f - 1.f;
-    imgCoords.y = native_divide((globalId.y + 0.5f), (float)(get_global_size(1))) * 2.f - 1.f;
+    imgCoords.x = native_divide((globalId.x + 0.5f), convert_float(maxSize)) * 2.f;
+    imgCoords.y = native_divide((globalId.y + 0.5f), convert_float(maxSize)) * 2.f;
+    // calculate correct offset based on aspect ratio
+    imgCoords -= get_global_size(0) > get_global_size(1) ?
+                        (float2)(1.0f, aspectRatio) : (float2)(aspectRatio, 1.0);
     imgCoords.y *= -1.f;   // flip y coord
 
     float4 rayDir = (float4)(0.f);
-    float tnear = 0.f;
-    float tfar = 1.f;
-    int hit = 0;
     
     // z position of view plane is -1.0 to fit the cube to the screen quad when axes are aligned, 
     // zoom is -1 and the data set is uniform in each dimension
@@ -163,21 +202,34 @@ __kernel void volumeRender(  __read_only image3d_t volData
         camPos = nearPlanePos;
     }
 
-    hit = intersectBox(camPos, rayDir, &tnear, &tfar);
+    float tnear = FLT_MIN;
+    float tfar = FLT_MAX;
+    int hit = 0;
+    // bbox from (-1,-1,-1) to (+1,+1,+1)
+    hit = intersectBox(camPos.xyz, rayDir.xyz, &tnear, &tfar);
     if (!hit || tfar < 0)
     {
         write_imagef(outData, texCoords, background);
         return;
     }
 
-    tnear = max(0.f, tnear + rand*stepSize); // clamp to near plane and offset by 'random' distance
+    float sampleDist = tfar - tnear;
+    if (sampleDist <= 0.f)
+        return;
+    float stepSize = min(sampleDist, sampleDist / (samplingRate*length(sampleDist*rayDir.xyz*convert_float3(get_image_dim(volData).xyz))));
+    float samples = ceil(sampleDist/stepSize);
+    stepSize = sampleDist/samples;
+
+    // raycast parameters
+    tnear = max(0.f, tnear);    // clamp to near plane
     float4 result = background;
     float alpha = 0.f;
     float4 pos = (float4)(0);
     float density = 0.f;
     float4 tfColor = (float4)(0);
     float opacity = 0.f;
-    float t = tnear;
+    float t = tnear + rand*stepSize;    // offset by 'random' distance to avoid moiré pattern
+
     int3 volRes = get_image_dim(volData).xyz;
     float3 voxLen = (float3)(1.f) / convert_float3(volRes);
     int3 bricksRes = get_image_dim(volBrickData).xyz;
@@ -188,97 +240,102 @@ __kernel void volumeRender(  __read_only image3d_t volData
         precisionDiv = 8.f;
 
     // DDA initialization
-    float4 posDDA = (float4)(0);
-    float3 invRay = 1.f/(rayDir.xyz);
-    if (rayDir.x == 0) invRay.x = FLT_MAX;
-    if (rayDir.y == 0) invRay.y = FLT_MAX;
-    if (rayDir.z == 0) invRay.z = FLT_MAX;
+    float3 invRay = 1.f/rayDir.xyz;
+    int3 step = convert_int3(sign(rayDir.xyz));
+    if (rayDir.x == 0.f)
+    {
+        invRay.x = FLT_MAX;
+        step.x = 1;
+    }
+    if (rayDir.y == 0.f)
+    {
+        invRay.y = FLT_MAX;
+        step.y = 1;
+    }
+    if (rayDir.z == 0.f)
+    {
+        invRay.z = FLT_MAX;
+        step.z = 1;
+    }
 
-    float3 step = (float3)1 * sign(rayDir.xyz);
-    const float3 deltaT = fabs(brickLen*invRay);
+    float3 deltaT = convert_float3(step)*(brickLen*2.f*invRay);
     float3 voxIncr = (float3)0;
 
-    float3 bbHit = camPos.xyz + tnear * rayDir.xyz;     // [-1; 1]
-    float3 bbHitNorm = bbHit * 0.5f + 0.5f;             // [ 0; 1]
-    float3 tv = bbHitNorm * convert_float3(bricksRes.xyz); // [ 0; volRes]
+    // convert ray starting point to cell coordinates
+    float3 rayOrigCell = (camPos.xyz + rayDir.xyz * tnear) - (float3)(-1.f);
+    int3 cell = clamp(convert_int3(floor(rayOrigCell / (2.f*brickLen))),
+                        (int3)(0), convert_int3(bricksRes.xyz) - 1);
 
-    int3 brickId = convert_int3(floor(bbHitNorm * convert_float3(bricksRes.xyz)));
-    // assert range [0; bricksRes - 1]
-    brickId = clamp(brickId, 0, convert_int3(bricksRes.xyz - 1));
-
-    // correct initial distances to first inner grid boundary
-    tv -= convert_float3(brickId);      // [0; 1] (fractual part)
-    tv *= brickLen;                     // [0; brickLen]
-    tv = (brickLen - tv) * invRay;
+    // add +1 to cells if ray dir component is negative: rayDir >= 0 ? (-1) : 0
+    float3 tv = tnear + (convert_float(cell - isgreaterequal(rayDir.xyz, (float3)(0))) * (2.f*brickLen) - rayOrigCell) * invRay;
+    int3 exit = step * bricksRes.xyz;
+    if (exit.x < 0) exit.x = -1;
+    if (exit.y < 0) exit.y = -1;
+    if (exit.z < 0) exit.z = -1;
 
     uint i = 0;
-    float3 p_exit = (float3)(0);
     float t_exit = 0;
-    float skip = 0;
+    float t_entry = 0;
+    int cnt = 0;
     // raycasting loop: front to back raycasting with early ray termination
-    while (t < tfar)
+    while (t <= tfar)
     {
-        density = read_imagef(volBrickData, nearestSmp, (int4)(brickId, 0)).y;
+        float2 minMaxDensity = read_imagef(volBrickData, nearestSmp, (int4)(cell, 0)).xy;
 
         // increment to next brick
         voxIncr.x = (tv.x <= tv.y) && (tv.x <= tv.z) ? 1 : 0;
         voxIncr.y = (tv.y <= tv.x) && (tv.y <= tv.z) ? 1 : 0;
         voxIncr.z = (tv.z <= tv.x) && (tv.z <= tv.y) ? 1 : 0;
-        tv += voxIncr * deltaT;
-        brickId += convert_int3(voxIncr * step);    // [0; res-1]
+        cell += convert_int3(voxIncr) * step;    // [0; res-1]
 
-        p_exit = tv;
-        p_exit -= convert_float3(brickId);      // [0; 1] (fractual part)
-        p_exit *= brickLen;                     // [0; brickLen]
-        p_exit = (brickLen - t_exit) * invRay;
-        t_exit = t + length(p_exit);    // FIXME
-        // check if brick contains values -> normal sampling
-        //float alphaMax = read_imagef(tffData, linearSmp, density).w;
-        if (texCoords.x == 400 && texCoords.y == 400)
+        t_exit = (1.f*dot((float3)(1), tv * voxIncr));
+        if (t_exit < t)
         {
-            printf("%#v3f", p_exit);
-            printf(" %#f\n", t);
-            printf(" %#f\n", t_exit);
-            printf(" %#f\n", stepSize);
+            t_exit = t + 0.9*stepSize;
+            ++cnt;
         }
-        if (density > 0.f)
+        tv += voxIncr*deltaT;
+
+        // skip bricks that contain only fully transparent voxels
+        float alphaMax = read_imagef(tffData, nearestSmp, minMaxDensity.y).w;
+        if (alphaMax < 0.001f)
         {
-            while (t < t_exit && i < 1512)
+            uint prefixMin = read_imageui(tffPrefix, nearestSmp, minMaxDensity.x).x;
+            uint prefixMax = read_imageui(tffPrefix, nearestSmp, minMaxDensity.y).x;
+            if (prefixMin == prefixMax)
             {
-                // t += tnear + stepSize*i;     // recalculate t to avoid numerical drift
-                t += stepSize;
-                pos = camPos + t*rayDir;
-                pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
-
-                density = useLinear ? read_imagef(volData, linearSmp, pos).x :
-                                      read_imagef(volData, nearestSmp, pos).x;
-                density = clamp(density, 0.f, 1.f);
-                tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
-                if (useIllum)
-                    tfColor.xyz = illumination(volData, pos, tfColor.xyz, fast_normalize(camPos.xyz - pos.xyz));
-                tfColor.xyz = background.xyz - tfColor.xyz;
-
-                // Taylor expansion approximation
-                opacity = 1.f - native_powr(1.f - tfColor.w, refSamplingInterval);
-                result.xyz = result.xyz - tfColor.xyz * opacity * (1.f - alpha);
-                alpha = alpha + opacity * (1.f - alpha);
-
-                if (alpha > ERT_THRESHOLD) break;   // early ray termination check
-                ++i;
+                t = t_exit;
+                continue;
             }
-            t = t_exit;
         }
-        else
+        while (t < t_exit)
         {
-            t = t_exit;
-            skip += 0.01f;
+            // t += tnear + stepSize*i;     // recalculate t to avoid numerical drift
+            pos = camPos + t*rayDir;
+            pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
+
+            density = useLinear ? read_imagef(volData, linearSmp, pos).x :
+                                  read_imagef(volData, nearestSmp, pos).x;
+            density = clamp(density, 0.f, 1.f);
+            tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
+            if (useIllum)
+                tfColor.xyz = illumination(volData, pos, tfColor.xyz, fast_normalize(camPos.xyz - pos.xyz));
+            tfColor.xyz = background.xyz - tfColor.xyz;
+
+            // Taylor expansion approximation
+            opacity = 1.f - native_powr(1.f - tfColor.w, refSamplingInterval);
+            result.xyz = result.xyz - tfColor.xyz * opacity * (1.f - alpha);
+            alpha = alpha + opacity * (1.f - alpha);
+
+            if (alpha > ERT_THRESHOLD || t >= tfar) break;   // early ray termination check
+            ++i;
+            t += stepSize;
         }
 
-        if (any(brickId < 0) || any(brickId > bricksRes.xyz-1))
-            break;
+        if (alpha > ERT_THRESHOLD) break;
+        if (any(cell == exit)) break;
+        t = t_exit;
     }
-//write_imagef(outData, texCoords, (float4)(skip, 0, 0, 1.0f));
-//return;
 
     // draw bounding box
     if (useBox && checkBoundingBox(pos.xyz, voxLen, (float2)(0.f, 1.f)))
