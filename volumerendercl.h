@@ -1,8 +1,10 @@
 #ifndef VOLUMERENDERCL_H
 #define VOLUMERENDERCL_H
 
-#define __CL_ENABLE_EXCEPTIONS
+#define CL_QUEUE_PROFILING_ENABLE
+#define CL_HPP_ENABLE_EXCEPTIONS
 #include "openclglutilities.h"
+
 #include "datrawreader.h"
 
 #include <valarray>
@@ -146,6 +148,12 @@ public:
      */
     void setBackground(std::array<float, 4> color);
 
+    /**
+     * @brief Get the execution time of the last kernel run.
+     * @return The kernel runtime in seconds.
+     */
+    double getLastExecTime();
+
 private:
     /**
      * @brief Generate coarse grained volume bricks that can be used for ESS.
@@ -220,6 +228,7 @@ private:
     DatRawReader _dr;
     std::valarray<double> _modelScale;
     bool _volLoaded;
+    double _lastExecTime;
 };
 
 #endif // VOLUMERENDERCL_H

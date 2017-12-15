@@ -77,28 +77,42 @@ void VolumeRenderWidget::paintOrientationAxis(QPainter &p)
     QVector4D zArrRight = viewProj * QVector4D( +2,  0, 16, 0);
 
     p.resetTransform();
-    p.setRenderHint(QPainter::Antialiasing);
+    p.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
     p.translate(66, height() - 66);
-//    int textOffset = 3;
+    int textOffset = 5;
     // x axis
     p.setPen(Qt::red);
     p.drawLine(0, 0, x.x(), x.y());
     p.drawLine(xArrLeft.x(), xArrLeft.y(), x.x(), x.y());
     p.drawLine(xArrRight.x(), xArrRight.y(), x.x(), x.y());
-//    p.drawText(x.x() + textOffset, x.y() + textOffset, "x");
+    p.drawText(x.x() + textOffset, x.y() + textOffset, "x");
     // y axis
     p.setPen(Qt::green);
     p.drawLine(0, 0, y.x(), y.y());
     p.drawLine(yArrLeft.x(), yArrLeft.y(), y.x(), y.y());
     p.drawLine(yArrRight.x(), yArrRight.y(), y.x(), y.y());
-//    p.drawText(y.x() + textOffset, y.y() + textOffset, "y");
+    p.drawText(y.x() + textOffset, y.y() + textOffset, "y");
     // z axis
     p.setPen(Qt::blue);
     p.drawLine(0, 0, z.x(), z.y());
     p.drawLine(zArrLeft.x(), zArrLeft.y(), z.x(), z.y());
     p.drawLine(zArrRight.x(), zArrRight.y(), z.x(), z.y());
-//    p.drawText(z.x() + textOffset, z.y() + textOffset, "t");
-    p.end();
+    p.drawText(z.x() + textOffset, z.y() + textOffset, "z");
+}
+
+
+/**
+ * @brief paintFPS
+ */
+void VolumeRenderWidget::paintFPS(QPainter &p, const double fps, const double lastTime)
+{
+    p.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+    p.setPen(Qt::darkGreen);
+    p.setFont(QFont("Helvetica", 11));
+    QString s = "FPS: " + QString::number(fps);
+    p.drawText(10, 20, s);
+    s = "Last: " + QString::number(lastTime);
+    p.drawText(10, 36, s);
 }
 
 
@@ -155,54 +169,82 @@ void VolumeRenderWidget::initializeGL()
 
 
 /**
+ * @brief VolumeRenderWidget::saveFrame
+ */
+void VolumeRenderWidget::saveFrame()
+{
+    _writeImage = true;
+    update();
+}
+
+
+/**
  * @brief VolumeRenderWidget::paintGL
  */
 void VolumeRenderWidget::paintGL()
 {
-    QPainter p(this);
-    p.beginNativePainting();
-
-    //renderOverlay();
+    double fps = 0.0;
     if (this->_loadingFinished && _volumerender.hasData() && !_noUpdate)
     {
         // OpenCL raycast
         _volumerender.runRaycast(this->size().width(), this->size().height());
+        fps = calcFPS();
     }
 
-    // render the ray casting output
-    // clear to white to avoid getting colored borders outside the quad
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-    // draw screen quad
-    //
-    _screenQuadVao.bind();
-    _quadVbo.bind();
-    glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, 0, 0 );
-
-    // render screen quad
-    //
-    _spScreenQuad.bind();
-    _spScreenQuad.setUniformValue( _spScreenQuad.uniformLocation( "projMatrix" ),
-                                      _screenQuadProjMX );
-    _spScreenQuad.setUniformValue( _spScreenQuad.uniformLocation( "mvMatrix" ),
-                                      _viewMX * _modelMX );
-
-    _spScreenQuad.setUniformValue(_spScreenQuad.uniformLocation("outTex"), GL_TEXTURE0);
-    glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
-    _screenQuadVao.release();
-    _quadVbo.release();
-    _spScreenQuad.release();
-
-    if (_volumerender.hasData() && _writeImage)
+    QPainter p(this);
+    p.beginNativePainting();
     {
-        QImage img = this->grabFramebuffer();
-        QString number = QString("%1").arg(_imgCount++, 5, 10, QChar('0'));
-        img.save("test_" + number + ".png");
-    }
+        // render the ray casting output
+        // clear to white to avoid getting colored borders outside the quad
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+        // draw screen quad
+        //
+        _screenQuadVao.bind();
+        _quadVbo.bind();
+        glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, 0, 0 );
+
+        // render screen quad
+        //
+        _spScreenQuad.bind();
+        _spScreenQuad.setUniformValue( _spScreenQuad.uniformLocation( "projMatrix" ),
+                                          _screenQuadProjMX );
+        _spScreenQuad.setUniformValue( _spScreenQuad.uniformLocation( "mvMatrix" ),
+                                          _viewMX * _modelMX );
+
+        _spScreenQuad.setUniformValue(_spScreenQuad.uniformLocation("outTex"), GL_TEXTURE0);
+        glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
+        _screenQuadVao.release();
+        _quadVbo.release();
+        _spScreenQuad.release();
+
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
+
+        if (_volumerender.hasData() && _writeImage)
+        {
+            QImage img = this->grabFramebuffer();
+            QString number = QString("%1").arg(_imgCount++, 5, 10, QChar('0'));
+            img.save("frame_" + number + ".png");
+            _writeImage = false;
+            qInfo() << "Frame written to" << "frame_" + number + ".png";
+        }
+    }
     p.endNativePainting();
+
+    // render overlays
+    paintFPS(p, fps, _volumerender.getLastExecTime());
     paintOrientationAxis(p);
+
+    // recover opengl texture
+    p.beginNativePainting();
+    {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, _outTexId);
+    }
+    p.endNativePainting();
+    p.end();
 }
 
 
@@ -213,6 +255,9 @@ void VolumeRenderWidget::paintGL()
  */
 void VolumeRenderWidget::resizeGL(int w, int h)
 {
+    if (w < h)
+        qWarning() << "A frame width smaller than height might negatively impact performance!";
+
     _screenQuadProjMX.setToIdentity();
     _screenQuadProjMX.perspective(53.14f, 1.0f, Z_NEAR, Z_FAR);
 
@@ -220,6 +265,8 @@ void VolumeRenderWidget::resizeGL(int w, int h)
     _overlayProjMX.perspective(53.14f, qreal(w)/qreal(h ? h : 1), Z_NEAR, Z_FAR);
 
     generateOutputTextures();
+
+    emit frameSizeChanged(this->size());
 }
 
 
@@ -332,6 +379,7 @@ void VolumeRenderWidget::setTffInterpolation(const QString method)
     else if (method.contains("Linear"))
         _tffInterpol = QEasingCurve::Linear;
 }
+
 
 /**
  * @brief VolumeRenderWidget::updateTransferFunction
@@ -639,3 +687,24 @@ void VolumeRenderWidget::setBackgroundColor(QColor col)
     this->updateView();
 }
 
+
+/**
+ * @brief VolumeRenderWidget::calcFPS
+ * @return
+ */
+double VolumeRenderWidget::calcFPS()
+{
+    _times.push_back(_volumerender.getLastExecTime());
+    if (_times.length() > 60)
+        _times.pop_front();
+
+    double sum = 0.0;
+#pragma omp parallel for reduction(+:sum)
+    for (int i = 0; i < _times.size(); ++i)
+        sum += _times.at(i);
+
+    double fps = 1.0/(sum/_times.length());
+
+//    qDebug() << fps;
+    return fps;
+}

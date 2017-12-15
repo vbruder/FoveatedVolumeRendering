@@ -43,6 +43,7 @@ protected:
     void dragEnterEvent(QDragEnterEvent *ev) Q_DECL_OVERRIDE;
     void dropEvent(QDropEvent *ev) Q_DECL_OVERRIDE;
     void closeEvent(QCloseEvent *event) Q_DECL_OVERRIDE;
+    void keyPressEvent(QKeyEvent *event) Q_DECL_OVERRIDE;
 
 private:
 
@@ -54,6 +55,8 @@ private:
     void readSettings();
     void writeSettings();
 
+    void setStatusText();
+
     // ----- Members -----
     Ui::MainWindow *ui;
 
@@ -62,7 +65,7 @@ private:
     QProgressBar _progBar;
     QTimer _timer;
     QString _fileName;
-    QLabel *_statusLabel;
+    QLabel _statusLabel;
 };
 
 #endif // MAINWINDOW_H

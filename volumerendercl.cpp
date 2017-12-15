@@ -8,7 +8,9 @@
 /**
  * @brief VolumeRenderCL::VolumeRenderCL
  */
-VolumeRenderCL::VolumeRenderCL()
+VolumeRenderCL::VolumeRenderCL() :
+    _lastExecTime(0.0)
+  , _volLoaded(false)
 {
 }
 
@@ -44,7 +46,11 @@ void VolumeRenderCL::initialize()
     {
         // NOTE: replace if no NVIDIA GPU
         _contextCL = createCLGLContext(CL_DEVICE_TYPE_GPU, VENDOR_NVIDIA); // VENDOR_ANY
-        _queueCL = cl::CommandQueue(_contextCL);
+        cl_command_queue_properties cqp = 0;
+#ifdef CL_QUEUE_PROFILING_ENABLE
+        cqp = CL_QUEUE_PROFILING_ENABLE;
+#endif
+        _queueCL = cl::CommandQueue(_contextCL, cqp);
     }
     catch (cl::Error err)
     {
@@ -252,14 +258,13 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height)
         _queueCL.flush();    // global sync
 #endif
 
-#ifdef PROFILING
-        // Profiling: enable before usage
+#ifdef CL_QUEUE_PROFILING_ENABLE
         cl_ulong start = 0;
         cl_ulong end = 0;
         ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
         ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
-        double time = static_cast<double>(end - start)*1e-9;
-        std::cout << "Kernel time: " << time << std::endl << std::endl;
+        _lastExecTime = static_cast<double>(end - start)*1e-9;
+//        std::cout << "Kernel time: " << _lastExecTime << std::endl << std::endl;
 #endif
     }
     catch (cl::Error err)
@@ -554,4 +559,14 @@ void VolumeRenderCL::setBackground(std::array<float, 4> color)
     try {
         _raycastKernel.setArg(BACKGROUND, bgColor);
     } catch (cl::Error err) { logCLerror(err); }
+}
+
+
+/**
+ * @brief VolumeRenderCL::getLastExecTime
+ * @return
+ */
+double VolumeRenderCL::getLastExecTime()
+{
+    return _lastExecTime;
 }

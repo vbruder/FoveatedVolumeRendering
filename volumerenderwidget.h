@@ -17,6 +17,7 @@
 #include <QOpenGLTexture>
 #include <QPropertyAnimation>
 #include <qopenglfunctions_4_3_core.h>
+#include <QPainter>
 
 #include "volumerendercl.h"
 
@@ -69,16 +70,22 @@ public slots:
     void setDrawBox(bool box);
     void setBackgroundColor(QColor col);
 
+    void saveFrame();
+signals:
+    void fpsChanged(double);
+    void frameSizeChanged(QSize);
+
 protected:
     // Qt specific QOpenGLWidget methods
     void initializeGL() Q_DECL_OVERRIDE;
     void paintGL() Q_DECL_OVERRIDE;
     void resizeGL(int w, int h) Q_DECL_OVERRIDE;
 
-
 private:
 
     void paintOrientationAxis(QPainter &p);
+    void paintFPS(QPainter &p, const double fps, const double lastTime);
+    double calcFPS();
 
     void generateOutputTextures();
 
@@ -112,7 +119,8 @@ private:
     bool _noUpdate;
     bool _loadingFinished;
     bool _writeImage;
-    long long _imgCount;
+    qint64 _imgCount;
+    QVector<double> _times;
 };
 
 #endif // VOLUMERENDERWIDGET_H

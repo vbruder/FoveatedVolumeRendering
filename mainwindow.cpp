@@ -17,8 +17,9 @@
  * @param parent
  */
 MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    QMainWindow(parent)
+  , ui(new Ui::MainWindow)
+  , _fileName("No volume data loaded yet.")
 {
     QCoreApplication::setOrganizationName("VISUS");
     QCoreApplication::setOrganizationDomain("www.visus.uni-stuttgart.de");
@@ -72,12 +73,13 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->colorWheel, &colorwidgets::ColorWheel::colorChanged,
             ui->transferFunctionEditor, &TransferFunctionWidget::setColorSelected);
 
-    _statusLabel = new QLabel("No data loaded yet.");
-    ui->statusBar->addPermanentWidget(_statusLabel);
+    ui->statusBar->addPermanentWidget(&_statusLabel);
+    connect(ui->volumeRenderWidget, &VolumeRenderWidget::frameSizeChanged,
+            this, &MainWindow::setStatusText);
 
     // Load an application style
     QFile styleFile( "../RaycastLight/style-rangeSlider.qss" );
-    styleFile.open( QFile::ReadOnly );
+    styleFile.open(QFile::ReadOnly);
     // Apply the loaded stylesheet
     QString style = QLatin1String( styleFile.readAll() );
     ui->rsldTffZoomX->setStyleSheet(style);
@@ -111,6 +113,15 @@ void MainWindow::closeEvent(QCloseEvent *event)
 }
 
 
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_P && event->modifiers() == Qt::CTRL)
+        ui->volumeRenderWidget->saveFrame();
+
+    event->accept();
+}
+
+
 /**
  * @brief MainWindow::writeSettings
  */
@@ -122,7 +133,7 @@ void MainWindow::writeSettings()
     _settings->endGroup();
 
     _settings->beginGroup("Settings");
-    // todo
+    // TODO
     _settings->endGroup();
 }
 
@@ -300,6 +311,33 @@ void MainWindow::saveRawTff()
 
 
 /**
+ * @brief MainWindow::getStatus
+ * @return
+ */
+void MainWindow::setStatusText()
+{
+    QString status = "No data loaded yet.";
+    if (ui->volumeRenderWidget->hasData())
+    {
+        status = "File: ";
+        status += _fileName;
+        status += " | volume resolution: ";
+        status += QString::number(ui->volumeRenderWidget->getVolumeResolution().x());
+        status += "x";
+        status += QString::number(ui->volumeRenderWidget->getVolumeResolution().y());
+        status += "x";
+        status += QString::number(ui->volumeRenderWidget->getVolumeResolution().z());
+        status += " | image resolution: ";
+        status += QString::number(ui->volumeRenderWidget->size().width());
+        status += "x";
+        status += QString::number(ui->volumeRenderWidget->size().height());
+        status += " ";
+    }
+    _statusLabel.setText(status);
+}
+
+
+/**
  * @brief MainWindow::finishedLoading
  */
 void MainWindow::finishedLoading()
@@ -308,16 +346,7 @@ void MainWindow::finishedLoading()
     _progBar.hide();
     _timer.stop();
     qDebug() << "finished.";
-
-    QString status;
-    status += _fileName;
-    status += " - Resolution: ";
-    status += QString::number(ui->volumeRenderWidget->getVolumeResolution().x());
-    status += " x ";
-    status += QString::number(ui->volumeRenderWidget->getVolumeResolution().y());
-    status += " x ";
-    status += QString::number(ui->volumeRenderWidget->getVolumeResolution().z());
-    _statusLabel->setText(status);
+    this->setStatusText();
 
 //    const QVector3D volRes = ui->volumeRenderWidget->getVolumeResolution();
 

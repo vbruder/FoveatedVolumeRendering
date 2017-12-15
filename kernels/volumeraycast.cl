@@ -291,7 +291,10 @@ __kernel void volumeRender(  __read_only image3d_t volData
         t_exit = (1.f*dot((float3)(1), tv * voxIncr));
         if (t_exit < t)
         {
-            t_exit = t + 0.9*stepSize;
+//            write_imagef(outData, texCoords, (float4)(1,0,0,1));
+//            return;
+            //t_exit = t + 0.9*stepSize;
+            t = t_exit - 1.1f*stepSize;
             ++cnt;
         }
         tv += voxIncr*deltaT;
