@@ -131,6 +131,14 @@ bool checkBoundingBox(float3 pos, float3 voxLen, float2 bound)
         return false;
 }
 
+bool checkBoundingCell(int3 cell, int3 volRes, int size)
+{
+    if (any(cell > volRes - 1) || any(cell < size))
+        return true;
+    else
+        return false;
+}
+
 /**
  * direct volume raycasting kernel
  */
@@ -158,7 +166,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
                        (float2)(12.9898f, 78.233f))) * 43758.5453f, &iptr);
 
     float maxRes = (float)max(get_image_dim(volData).x, get_image_dim(volData).z);
-//    float stepSize = native_divide(2.f, maxRes*samplingRate); // normalization
 
     int2 texCoords = globalId;
     float aspectRatio = native_divide((float)get_global_size(1), (float)(get_global_size(0)));
@@ -228,7 +235,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     float density = 0.f;
     float4 tfColor = (float4)(0);
     float opacity = 0.f;
-    float t = tnear + rand*stepSize;    // offset by 'random' distance to avoid moiré pattern
+    float t = tnear;// + rand*stepSize;    // offset by 'random' distance to avoid moiré pattern
 
     int3 volRes = get_image_dim(volData).xyz;
     float3 voxLen = (float3)(1.f) / convert_float3(volRes);
@@ -275,12 +282,12 @@ __kernel void volumeRender(  __read_only image3d_t volData
 
     uint i = 0;
     float t_exit = 0;
-    float t_entry = 0;
-    int cnt = 0;
-    // raycasting loop: front to back raycasting with early ray termination
+    // length of diagonal of a brick => longest distance through brick
+    float brickDia = length(brickLen)*2.f;
+    // raycasting loop: front to back raycasting with early ray termination & empty space skipping
     while (t <= tfar)
     {
-        float2 minMaxDensity = read_imagef(volBrickData, nearestSmp, (int4)(cell, 0)).xy;
+        float2 minMaxDensity = read_imagef(volBrickData, linearSmp, (int4)(cell, 0)).xy;
 
         // increment to next brick
         voxIncr.x = (tv.x <= tv.y) && (tv.x <= tv.z) ? 1 : 0;
@@ -288,20 +295,13 @@ __kernel void volumeRender(  __read_only image3d_t volData
         voxIncr.z = (tv.z <= tv.x) && (tv.z <= tv.y) ? 1 : 0;
         cell += convert_int3(voxIncr) * step;    // [0; res-1]
 
-        t_exit = (1.f*dot((float3)(1), tv * voxIncr));
-        if (t_exit < t)
-        {
-//            write_imagef(outData, texCoords, (float4)(1,0,0,1));
-//            return;
-            //t_exit = t + 0.9*stepSize;
-            t = t_exit - 1.1f*stepSize;
-            ++cnt;
-        }
+        t_exit = dot((float3)(1), tv * voxIncr);
+        t_exit = clamp(t_exit, t+stepSize, t+brickDia);
         tv += voxIncr*deltaT;
 
         // skip bricks that contain only fully transparent voxels
-        float alphaMax = read_imagef(tffData, nearestSmp, minMaxDensity.y).w;
-        if (alphaMax < 0.001f)
+        float alphaMax = read_imagef(tffData, linearSmp, minMaxDensity.y).w;
+        if (alphaMax < 1e-6f)
         {
             uint prefixMin = read_imageui(tffPrefix, nearestSmp, minMaxDensity.x).x;
             uint prefixMax = read_imageui(tffPrefix, nearestSmp, minMaxDensity.y).x;
@@ -313,7 +313,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
         }
         while (t < t_exit)
         {
-            // t += tnear + stepSize*i;     // recalculate t to avoid numerical drift
             pos = camPos + t*rayDir;
             pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
 
@@ -335,16 +334,19 @@ __kernel void volumeRender(  __read_only image3d_t volData
             t += stepSize;
         }
 
-        if (alpha > ERT_THRESHOLD) break;
+        if (alpha > ERT_THRESHOLD|| t >= tfar) break;
         if (any(cell == exit)) break;
         t = t_exit;
     }
 
     // draw bounding box
-    if (useBox && checkBoundingBox(pos.xyz, voxLen, (float2)(0.f, 1.f)))
+    if (useBox)
     {
-        result.xyz = fabs((float3)(1.f) - background.xyz);
-        opacity = 1.f;
+        if (checkBoundingBox(pos.xyz, voxLen, (float2)(0.f, 1.f)))
+        {
+            result.xyz = fabs((float3)(1.f) - background.xyz);
+            alpha = 1.f;
+        }
     }
 
     result.w = alpha;

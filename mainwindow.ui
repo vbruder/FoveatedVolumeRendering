@@ -161,7 +161,7 @@
            <string>Show bounding box</string>
           </property>
           <property name="checked">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -180,7 +180,7 @@
            <double>0.100000000000000</double>
           </property>
           <property name="value">
-           <double>3.000000000000000</double>
+           <double>1.500000000000000</double>
           </property>
          </widget>
         </item>

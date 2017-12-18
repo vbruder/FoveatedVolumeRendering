@@ -74,10 +74,10 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel = cl::Kernel(program, "volumeRender");
         cl_float16 view = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
         _raycastKernel.setArg(VIEW, view);
-        _raycastKernel.setArg(SAMPLING_RATE, 0.5f);     // default step size 0.5*voxel size
+        _raycastKernel.setArg(SAMPLING_RATE, 1.5f);     // default step size 0.5*voxel size
         _raycastKernel.setArg(ORTHO, 0);                // perspective cam by default
         _raycastKernel.setArg(ILLUMINATION, 1);         // illumination on by default
-        _raycastKernel.setArg(BOX, 1);
+        _raycastKernel.setArg(BOX, 0);
         _raycastKernel.setArg(LINEAR, 1);
         cl_float4 bgColor = {{1.f, 1.f, 1.f, 1.f}};
         _raycastKernel.setArg(BACKGROUND, bgColor);

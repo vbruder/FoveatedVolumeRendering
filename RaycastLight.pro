@@ -53,7 +53,8 @@ HEADERS += \
     transferfunctionwidget.h \
     colorutils.h \
     colorwheel.h \
-    rangesliderqt.h
+    rangesliderqt.h \
+    inc/CL/cl2.hpp
 
 FORMS += \
         mainwindow.ui

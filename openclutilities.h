@@ -1,15 +1,15 @@
 #ifndef OPENCLUTILITIES_H
 #define OPENCLUTILITIES_H
 
-#define CL_HPP_ENABLE_EXCEPTIONS
 
+#define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS 0
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 #if defined(__APPLE__) || defined(__MACOSX)
     #include "OpenCL/cl2.hpp"
 #else
-    #include <CL/cl2.hpp>
+    #include <inc/CL/cl2.hpp>
 #endif
 
 
@@ -17,7 +17,6 @@
 #include <iostream>
 #include <fstream>
 #include <set>
-
 
 enum cl_vendor
 {
