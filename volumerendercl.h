@@ -69,14 +69,16 @@ public:
      * @brief Run the actual OpenCL volume raycasting kernel.
      * @param width The image width in pixels, used as one dimension of the global thread size.
      * @param height The image height in pixels, used as one dimension of the global thread size.
+     * @param t time series id, defaults to 0 if no time series
      */
-     void runRaycast(const size_t width, const size_t height);
+     void runRaycast(const size_t width, const size_t height, const int t = 0);
 
     /**
      * @brief Load volume data from a given .dat file name.
      * @param fileName The full path to the volume data file.
+     * @return number of loaded volume time steps
      */
-    void loadVolumeData(const std::string fileName);
+    int loadVolumeData(const std::string fileName);
 
     /**
      * @brief Answers if volume data has been loaded.
@@ -170,7 +172,7 @@ private:
      * @brief volDataToCLmem
      * @param volumeData
      */
-    void volDataToCLmem(const std::vector<char> &volumeData);
+    void volDataToCLmem(const std::vector<std::vector<char> > &volumeData);
 
     /**
      *
@@ -189,7 +191,7 @@ private:
             format.image_channel_order = CL_R;
             format.image_channel_data_type = CL_UNORM_INT8;
 
-            _volumeMem = cl::Image3D(_contextCL,
+            _volumesMem = cl::Image3D(_contextCL,
                                      CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                                      format,
                                      _dr.properties().volume_res[0],
@@ -205,8 +207,8 @@ private:
         }
     }
 
-    void setMemObjectsRaycast();
-    void setMemObjectsBrickGen();
+    void setMemObjectsRaycast(const int t);
+    void setMemObjectsBrickGen(const int t);
 
     void initKernel(const std::string fileName, const std::string buildFlags = "");
 
@@ -217,8 +219,8 @@ private:
     cl::Kernel _raycastKernel;
     cl::Kernel _genBricksKernel;
 
-    cl::Image3D _volumeMem;
-    cl::Image3D _bricksMem;
+    std::vector<cl::Image3D> _volumesMem;
+    std::vector<cl::Image3D> _bricksMem;
     cl::ImageGL _outputMem;
     cl::ImageGL _overlayMem;
     cl::Image1D _tffMem;

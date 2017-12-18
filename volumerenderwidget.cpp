@@ -38,6 +38,7 @@ static const char *pFsScreenQuadSource =
 VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
     : QOpenGLWidget(parent)
     , _tffRange(QPoint(0, 255))
+    , _timestep(0)
     , _lastLocalCursorPos(QPoint(0,0))
     , _rotQuat(QQuaternion(1, 0, 0, 0))
     , _translation(QVector3D(0, 0, 2.0))
@@ -177,6 +178,15 @@ void VolumeRenderWidget::saveFrame()
     update();
 }
 
+/**
+ * @brief VolumeRenderWidget::setTimeStep
+ * @param timestep
+ */
+void VolumeRenderWidget::setTimeStep(int timestep)
+{
+    _timestep = timestep;
+    update();
+}
 
 /**
  * @brief VolumeRenderWidget::paintGL
@@ -187,7 +197,7 @@ void VolumeRenderWidget::paintGL()
     if (this->_loadingFinished && _volumerender.hasData() && !_noUpdate)
     {
         // OpenCL raycast
-        _volumerender.runRaycast(this->size().width(), this->size().height());
+        _volumerender.runRaycast(this->size().width(), this->size().height(), _timestep);
         fps = calcFPS();
     }
 
@@ -323,7 +333,8 @@ void VolumeRenderWidget::setupVertexAttribs()
 void VolumeRenderWidget::setVolumeData(const QString &fileName)
 {
     this->_noUpdate = true;
-    _volumerender.loadVolumeData(fileName.toStdString());
+    int timesteps = _volumerender.loadVolumeData(fileName.toStdString());
+    emit timeSeriesLoaded(timesteps - 1);
 
     _overlayModelMX.setToIdentity();
     QVector3D res = getVolumeResolution();

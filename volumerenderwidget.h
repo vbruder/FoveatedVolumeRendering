@@ -71,9 +71,11 @@ public slots:
     void setBackgroundColor(QColor col);
 
     void saveFrame();
+    void setTimeStep(int timestep);
 signals:
     void fpsChanged(double);
     void frameSizeChanged(QSize);
+    void timeSeriesLoaded(int);
 
 protected:
     // Qt specific QOpenGLWidget methods
@@ -110,6 +112,7 @@ private:
     GLuint _outTexId;
     VolumeRenderCL _volumerender;
     QEasingCurve _tffInterpol;
+    int _timestep;
 
     // global rendering flags
     QPoint _lastLocalCursorPos;

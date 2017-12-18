@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <iterator>
 #include <cassert>
-#include <clocale>
 
 /*
  * DatRawReader::read_files
@@ -30,8 +29,12 @@ void DatRawReader::read_files(const std::string dat_file_name)
 
     try
     {
+        this->_prop.raw_file_names.clear();
         read_dat(_prop.dat_file_name);
-        read_raw(_prop.raw_file_name);
+
+        this->_raw_data.clear();
+        for (const auto &n : _prop.raw_file_names)
+            read_raw(n);
     }
     catch (std::runtime_error e)
     {
@@ -52,7 +55,7 @@ bool DatRawReader::has_data() const
 /*
  * DatRawReader::data
  */
-const std::vector<char> & DatRawReader::data() const
+const std::vector<std::vector<char> > & DatRawReader::data() const
 {
     if (!has_data())
     {
@@ -77,10 +80,7 @@ const Properties &DatRawReader::properties() const
  */
 void DatRawReader::read_dat(const std::string dat_file_name)
 {
-    // Qt locale workaround
-    setlocale(LC_ALL, "C");
     std::ifstream dat_file(dat_file_name);
-
     std::string line;
     std::vector<std::vector<std::string>> lines;
 
@@ -110,7 +110,12 @@ void DatRawReader::read_dat(const std::string dat_file_name)
             std::string name = l.at(0);
             if (name.find("ObjectFileName") != std::string::npos && l.size() > 1u)
             {
-                _prop.raw_file_name = l.at(1);
+                _prop.raw_file_names.clear();
+                for (const auto &s : l)
+                {
+                    if (s.find("ObjectFileName") == std::string::npos)
+                        _prop.raw_file_names.push_back(s);
+                }
             }
             else if (name.find("Resolution") != std::string::npos && l.size() > 3u)
             {
@@ -134,13 +139,17 @@ void DatRawReader::read_dat(const std::string dat_file_name)
             {
                 _prop.node_file_name = l.at(1);
             }
+            if (name.find("TimeSeries") != std::string::npos && l.size() > 1u)
+            {
+                _prop.time_series = std::stoi(l.at(1));
+            }
         }
     }
 
     // check that values read from the dat file
-    if (_prop.raw_file_name.empty())
+    if (_prop.raw_file_names.empty())
     {
-        throw std::runtime_error("Missing raw file name declaration in " + dat_file_name);
+        throw std::runtime_error("Missing raw file names declaration in " + dat_file_name);
     }
     if (_prop.volume_res.empty())
     {
@@ -201,16 +210,16 @@ void DatRawReader::read_raw(const std::string raw_file_name)
 #endif
         is.seekg( 0, is.beg );
 
-        _raw_data.clear();
-        _raw_data.resize(_prop.raw_file_size);
+        std::vector<char> raw_timestep;
+        raw_timestep.resize(_prop.raw_file_size);
 
         // read data as a block:
-        is.read(_raw_data.data(), _prop.raw_file_size);
+        is.read(raw_timestep.data(), _prop.raw_file_size);
+        _raw_data.push_back(raw_timestep);
+        raw_timestep.clear();
 
         if (!is)
-        {
             throw std::runtime_error("Error reading " + raw_file_name);
-        }
         is.close();
     }
     else
@@ -222,9 +231,9 @@ void DatRawReader::read_raw(const std::string raw_file_name)
     // file size and volume resolution
     if (_prop.format.empty())
     {
-        unsigned int bytes = _raw_data.size() / (static_cast<long long>(_prop.volume_res[0]) *
-                                                 static_cast<long long>(_prop.volume_res[1]) *
-                                                 static_cast<long long>(_prop.volume_res[2]));
+        unsigned int bytes = _raw_data.at(0).size() / (static_cast<long long>(_prop.volume_res[0]) *
+                                                       static_cast<long long>(_prop.volume_res[1]) *
+                                                       static_cast<long long>(_prop.volume_res[2]));
         switch (bytes)
         {
         case 1:

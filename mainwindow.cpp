@@ -28,6 +28,15 @@ MainWindow::MainWindow(QWidget *parent) :
 
     setAcceptDrops( true );
     ui->setupUi(this);
+    ui->gbTimeSeries->setVisible(false);
+    connect(ui->volumeRenderWidget, &VolumeRenderWidget::timeSeriesLoaded,
+            ui->gbTimeSeries, &QGroupBox::setVisible);
+    connect(ui->volumeRenderWidget, &VolumeRenderWidget::timeSeriesLoaded,
+            ui->sbTimeStep, &QSpinBox::setMaximum);
+    connect(ui->volumeRenderWidget, &VolumeRenderWidget::timeSeriesLoaded,
+            ui->sldTimeStep, &QSlider::setMaximum);
+    connect(ui->sldTimeStep, &QSlider::valueChanged,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setTimeStep);
 
     // menu bar actions
     connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::openVolumeFile);

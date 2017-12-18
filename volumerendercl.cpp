@@ -94,11 +94,11 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
 /**
  * @brief VolumeRenderCL::setMemObjects
  */
-void VolumeRenderCL::setMemObjectsRaycast()
+void VolumeRenderCL::setMemObjectsRaycast(const int t)
 {
-    _raycastKernel.setArg(VOLUME, _volumeMem);
+    _raycastKernel.setArg(VOLUME, _volumesMem.at(t));
     _raycastKernel.setArg(TFF, _tffMem);
-    _raycastKernel.setArg(BRICKS, _bricksMem);
+    _raycastKernel.setArg(BRICKS, _bricksMem.at(t));
     _raycastKernel.setArg(OUTPUT, _outputMem);
     _raycastKernel.setArg(TFF_PREFIX, _tffPrefixMem);
 }
@@ -107,11 +107,11 @@ void VolumeRenderCL::setMemObjectsRaycast()
 /**
  * @brief VolumeRenderCL::setMemObjectsBrickGen
  */
-void VolumeRenderCL::setMemObjectsBrickGen()
+void VolumeRenderCL::setMemObjectsBrickGen(const int t)
 {
-    _genBricksKernel.setArg(VOLUME, _volumeMem);
+    _genBricksKernel.setArg(VOLUME, _volumesMem.at(t));
     _genBricksKernel.setArg(TFF, _tffMem);
-    _genBricksKernel.setArg(BRICKS, _bricksMem);
+    _genBricksKernel.setArg(BRICKS, _bricksMem.at(t));
 }
 
 
@@ -224,13 +224,13 @@ void VolumeRenderCL::updateOutputImg(const size_t width, const size_t height, GL
  * @brief VolumeRenderCL::runRaycast
  * @param imgSize
  */
-void VolumeRenderCL::runRaycast(const size_t width, const size_t height)
+void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const int t)
 {
     if (!this->_volLoaded)
         return;
     try // opencl scope
     {
-        setMemObjectsRaycast();
+        setMemObjectsRaycast(t);
         cl::NDRange globalThreads(width, height);
         cl::Event ndrEvt;
 
@@ -319,7 +319,7 @@ void VolumeRenderCL::generateBricks()
 
         // set memory object
         cl::ImageFormat format;
-        format.image_channel_order = CL_RGBA;  // NOTE: only one channel, change to CL_RG for min+max
+        format.image_channel_order = CL_RG;  // NOTE: only one channel, change to CL_RG for min+max
 
         if (_dr.properties().format == "UCHAR")
             format.image_channel_data_type = CL_UNORM_INT8;
@@ -330,20 +330,23 @@ void VolumeRenderCL::generateBricks()
         else
             throw std::invalid_argument("Unknown or invalid volume data format.");
 
-        _bricksMem = cl::Image3D(_contextCL,
-                                 CL_MEM_READ_WRITE,
-                                 format,
-                                 bricksTexSize.at(0), bricksTexSize.at(1), bricksTexSize.at(2),
-                                 0, 0,
-                                 NULL);
+        for (size_t i = 0; i < _dr.properties().raw_file_names.size(); ++i)
+        {
+            _bricksMem.push_back(cl::Image3D(_contextCL,
+                                     CL_MEM_READ_WRITE,
+                                     format,
+                                     bricksTexSize.at(0), bricksTexSize.at(1), bricksTexSize.at(2),
+                                     0, 0,
+                                     NULL));
 
-        // run aggregation kernel
-        setMemObjectsBrickGen();
-        cl::NDRange globalThreads(bricksTexSize.at(0), bricksTexSize.at(1), bricksTexSize.at(2));
-        cl::Event ndrEvt;
-        _queueCL.enqueueNDRangeKernel(
-                    _genBricksKernel, cl::NullRange, globalThreads, cl::NullRange, NULL, &ndrEvt);
-        _queueCL.finish();    // global sync
+            // run aggregation kernel
+            setMemObjectsBrickGen(i);
+            cl::NDRange globalThreads(bricksTexSize.at(0), bricksTexSize.at(1), bricksTexSize.at(2));
+            cl::Event ndrEvt;
+            _queueCL.enqueueNDRangeKernel(
+                        _genBricksKernel, cl::NullRange, globalThreads, cl::NullRange, NULL, &ndrEvt);
+            _queueCL.finish();    // global sync
+        }
     }
     catch (cl::Error err)
     {
@@ -356,7 +359,7 @@ void VolumeRenderCL::generateBricks()
  * @brief VolumeRenderCL::volDataToCLmem
  * @param volumeData
  */
-void VolumeRenderCL::volDataToCLmem(const std::vector<char> &volumeData)
+void VolumeRenderCL::volDataToCLmem(const std::vector<std::vector<char>> &volumeData)
 {
     if (!_dr.has_data())
         return;
@@ -374,14 +377,18 @@ void VolumeRenderCL::volDataToCLmem(const std::vector<char> &volumeData)
         else
             throw std::invalid_argument("Unknown or invalid volume data format.");
 
-        _volumeMem = cl::Image3D(_contextCL,
-                                 CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                                 format,
-                                 _dr.properties().volume_res[0],
-                                 _dr.properties().volume_res[1],
-                                 _dr.properties().volume_res[2],
-                                 0, 0,
-                                 (void *)volumeData.data());
+        _volumesMem.clear();
+        for (const auto &v : volumeData)
+        {
+            _volumesMem.push_back(cl::Image3D(_contextCL,
+                                              CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                              format,
+                                              _dr.properties().volume_res[0],
+                                              _dr.properties().volume_res[1],
+                                              _dr.properties().volume_res[2],
+                                              0, 0,
+                                              (void *)v.data()));
+        }
     }
     catch (cl::Error err)
     {
@@ -394,14 +401,15 @@ void VolumeRenderCL::volDataToCLmem(const std::vector<char> &volumeData)
  * @brief VolumeRenderCL::loadVolumeData
  * @param fileName
  */
-void VolumeRenderCL::loadVolumeData(const std::string fileName)
+int VolumeRenderCL::loadVolumeData(const std::string fileName)
 {
     this->_volLoaded = false;
     std::cout << "Loading volume data defined in " << fileName << std::endl;
     try
     {
         _dr.read_files(fileName);
-        std::cout << _dr.data().size() << " bytes have been read." << std::endl;
+        std::cout << _dr.data().front().size()*_dr.data().size() << " bytes have been read from "
+                  << _dr.data().size() << " file(s)." << std::endl;
         std::cout << _dr.properties().to_string() << std::endl;
         volDataToCLmem(_dr.data());
         calcScaling();
@@ -425,6 +433,7 @@ void VolumeRenderCL::loadVolumeData(const std::string fileName)
     setTffPrefixSum(prefixSum);
 
     this->_volLoaded = true;
+    return _dr.data().size();
 }
 
 

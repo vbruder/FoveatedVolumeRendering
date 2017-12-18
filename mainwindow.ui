@@ -54,14 +54,7 @@
    </attribute>
    <widget class="QWidget" name="dockWidgetContents">
     <layout class="QGridLayout" name="gridLayout_2">
-     <item row="5" column="0" colspan="2">
-      <widget class="QPushButton" name="pbResetTff">
-       <property name="text">
-        <string>Reset transfer function</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
+     <item row="5" column="1">
       <widget class="QComboBox" name="cbInterpolation">
        <item>
         <property name="text">
@@ -75,15 +68,28 @@
        </item>
       </widget>
      </item>
-     <item row="4" column="0">
+     <item row="5" column="0">
       <widget class="QLabel" name="label_3">
        <property name="text">
         <string>Interpolation</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="0" colspan="2">
+     <item row="6" column="0" colspan="2">
+      <widget class="QPushButton" name="pbResetTff">
+       <property name="text">
+        <string>Reset transfer function</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0" colspan="2">
       <widget class="colorwidgets::ColorWheel" name="colorWheel" native="true">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="maximumSize">
         <size>
          <width>16777215</width>
@@ -92,8 +98,30 @@
        </property>
       </widget>
      </item>
-     <item row="2" column="0" colspan="2">
-      <widget class="TransferFunctionWidget" name="transferFunctionEditor" native="true"/>
+     <item row="4" column="0" colspan="2">
+      <widget class="RangeSliderQt" name="rsldTffZoomX">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>10</height>
+        </size>
+       </property>
+       <property name="cursor">
+        <cursorShape>ArrowCursor</cursorShape>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Plain</enum>
+       </property>
+       <property name="lineWidth">
+        <number>0</number>
+       </property>
+       <property name="midLineWidth">
+        <number>0</number>
+       </property>
+      </widget>
      </item>
      <item row="0" column="0" colspan="2">
       <widget class="QGroupBox" name="groupBox">
@@ -120,13 +148,13 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="0" colspan="2">
-         <widget class="QCheckBox" name="chbLinear">
+        <item row="4" column="0" colspan="2">
+         <widget class="QCheckBox" name="chbBox">
           <property name="text">
-           <string>Linear interpolation</string>
+           <string>Show bounding box</string>
           </property>
           <property name="checked">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -137,31 +165,6 @@
           </property>
           <property name="checked">
            <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0" colspan="2">
-         <widget class="QPushButton" name="pbBgColor">
-          <property name="autoFillBackground">
-           <bool>false</bool>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">QPushButton:default {
-   background: yellow;
-}</string>
-          </property>
-          <property name="text">
-           <string>Background color</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="0" colspan="2">
-         <widget class="QCheckBox" name="chbBox">
-          <property name="text">
-           <string>Show bounding box</string>
-          </property>
-          <property name="checked">
-           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -191,32 +194,66 @@
           </property>
          </widget>
         </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QPushButton" name="pbBgColor">
+          <property name="autoFillBackground">
+           <bool>false</bool>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QPushButton:default {
+   background: yellow;
+}</string>
+          </property>
+          <property name="text">
+           <string>Background color</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0" colspan="2">
+         <widget class="QCheckBox" name="chbLinear">
+          <property name="text">
+           <string>Linear interpolation</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
      <item row="3" column="0" colspan="2">
-      <widget class="RangeSliderQt" name="rsldTffZoomX">
+      <widget class="TransferFunctionWidget" name="transferFunctionEditor" native="true"/>
+     </item>
+     <item row="1" column="0" colspan="2">
+      <widget class="QGroupBox" name="gbTimeSeries">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>10</height>
+         <height>0</height>
         </size>
        </property>
-       <property name="cursor">
-        <cursorShape>ArrowCursor</cursorShape>
+       <property name="title">
+        <string>Time series</string>
        </property>
-       <property name="frameShape">
-        <enum>QFrame::NoFrame</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Plain</enum>
-       </property>
-       <property name="lineWidth">
-        <number>0</number>
-       </property>
-       <property name="midLineWidth">
-        <number>0</number>
-       </property>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="0" column="0">
+         <widget class="QSlider" name="sldTimeStep">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="sbTimeStep"/>
+        </item>
+       </layout>
       </widget>
      </item>
     </layout>
@@ -305,6 +342,38 @@
     <hint type="destinationlabel">
      <x>465</x>
      <y>383</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>sldTimeStep</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>sbTimeStep</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1193</x>
+     <y>335</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1239</x>
+     <y>341</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>sbTimeStep</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>sldTimeStep</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1247</x>
+     <y>329</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1181</x>
+     <y>342</y>
     </hint>
    </hints>
   </connection>
