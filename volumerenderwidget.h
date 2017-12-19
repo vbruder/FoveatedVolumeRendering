@@ -68,7 +68,8 @@ public slots:
     void setIllumination(bool illum);
     void setLinearInterpolation(bool linear);
     void setDrawBox(bool box);
-    void setBackgroundColor(QColor col);
+    void setBackgroundColor(const QColor col);
+    void setImageSamplingRate(const double samplingRate);
 
     void saveFrame();
     void setTimeStep(int timestep);
@@ -89,7 +90,7 @@ private:
     void paintFPS(QPainter &p, const double fps, const double lastTime);
     double calcFPS();
 
-    void generateOutputTextures();
+    void generateOutputTextures(int width, int height);
 
     // -------Members--------
     //
@@ -124,6 +125,7 @@ private:
     bool _writeImage;
     qint64 _imgCount;
     QVector<double> _times;
+    double _imgSamplingRate;       // image oversampling rate
 };
 
 #endif // VOLUMERENDERWIDGET_H

@@ -211,7 +211,9 @@ void VolumeRenderCL::updateOutputImg(const size_t width, const size_t height, GL
                                  0,
                                  texId);
         _raycastKernel.setArg(OUTPUT, _outputMem);
+#ifdef NO_GL
         _outputData.resize(width * height * 4, 0);
+#endif
     }
     catch (cl::Error err)
     {
@@ -307,7 +309,7 @@ void VolumeRenderCL::generateBricks()
     try
     {
         // calculate brick size
-        const uint numBricks = 32u;
+        const uint numBricks = 64u;
         std::array<uint, 3> brickRes = {1u, 1u, 1u};
         brickRes.at(0) = RoundPow2(_dr.properties().volume_res.at(0)/numBricks);
         brickRes.at(1) = RoundPow2(_dr.properties().volume_res.at(1)/numBricks);

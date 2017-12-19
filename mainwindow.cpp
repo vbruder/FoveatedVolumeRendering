@@ -56,6 +56,8 @@ MainWindow::MainWindow(QWidget *parent) :
     // connect settings UI
     connect(ui->dsbSamplingRate, qOverload<double>(&QDoubleSpinBox::valueChanged),
             ui->volumeRenderWidget, &VolumeRenderWidget::updateSamplingRate);
+    connect(ui->dsbImgSampling, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            ui->volumeRenderWidget, &VolumeRenderWidget::setImageSamplingRate);
     connect(ui->chbLinear, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setLinearInterpolation);
     connect(ui->chbIllum, &QCheckBox::toggled,

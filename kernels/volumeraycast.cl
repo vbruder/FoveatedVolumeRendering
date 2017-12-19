@@ -313,7 +313,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
         }
         while (t < t_exit)
         {
-            pos = camPos + t*rayDir;
+            pos = camPos + (t+rand*1.0f*stepSize)*rayDir;
             pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
 
             density = useLinear ? read_imagef(volData, linearSmp, pos).x :

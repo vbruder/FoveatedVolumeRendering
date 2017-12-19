@@ -225,8 +225,9 @@ private:
     cl::ImageGL _overlayMem;
     cl::Image1D _tffMem;
     cl::Image1D _tffPrefixMem;
-
+#ifdef NO_GL
     std::vector<float> _outputData;
+#endif
     DatRawReader _dr;
     std::valarray<double> _modelScale;
     bool _volLoaded;

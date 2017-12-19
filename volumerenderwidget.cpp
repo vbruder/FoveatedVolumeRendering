@@ -46,6 +46,7 @@ VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
     , _loadingFinished(false)
     , _writeImage(false)
     , _imgCount(0)
+    , _imgSamplingRate(1)
 {
     this->setMouseTracking(true);
 }
@@ -189,6 +190,16 @@ void VolumeRenderWidget::setTimeStep(int timestep)
 }
 
 /**
+ * @brief VolumeRenderWidget::setImageSamplingRate
+ * @param samplingRate
+ */
+void VolumeRenderWidget::setImageSamplingRate(const double samplingRate)
+{
+    _imgSamplingRate = samplingRate;
+    this->resizeGL(this->width(), this->height());
+}
+
+/**
  * @brief VolumeRenderWidget::paintGL
  */
 void VolumeRenderWidget::paintGL()
@@ -197,7 +208,8 @@ void VolumeRenderWidget::paintGL()
     if (this->_loadingFinished && _volumerender.hasData() && !_noUpdate)
     {
         // OpenCL raycast
-        _volumerender.runRaycast(this->size().width(), this->size().height(), _timestep);
+        _volumerender.runRaycast(floor(this->size().width() * _imgSamplingRate),
+                                 floor(this->size().height()* _imgSamplingRate), _timestep);
         fps = calcFPS();
     }
 
@@ -274,8 +286,7 @@ void VolumeRenderWidget::resizeGL(int w, int h)
     _overlayProjMX.setToIdentity();
     _overlayProjMX.perspective(53.14f, qreal(w)/qreal(h ? h : 1), Z_NEAR, Z_FAR);
 
-    generateOutputTextures();
-
+    generateOutputTextures(floor(w*_imgSamplingRate), floor(h*_imgSamplingRate));
     emit frameSizeChanged(this->size());
 }
 
@@ -283,32 +294,39 @@ void VolumeRenderWidget::resizeGL(int w, int h)
 /**
  * @brief VolumeRenderWidget::generateOutputTextures
  */
-void VolumeRenderWidget::generateOutputTextures()
+void VolumeRenderWidget::generateOutputTextures(int width, int height)
 {
     glGenTextures(1, &_outTexId);
 
-    QImage img(width(), height(), QImage::Format_RGBA8888);
-    img.fill(Qt::white);
-    QPainter p(&img);
-    p.drawText(width()/2 - 110, height()/2, "Drop your volume data file here.");
-    p.end();
-
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, _outTexId);
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
-                 width(), height(), 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE,
-                 img.bits());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if (!_volumerender.hasData())
+    {
+        QImage img(width, height, QImage::Format_RGBA8888);
+        img.fill(Qt::white);
+        QPainter p(&img);
+        p.setFont(QFont("Helvetia", 12));
+        p.drawText(width/2 - 110, height/2, "Drop your volume data file here.");
+        p.end();
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
+                     width, height, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE,
+                     img.bits());
+    }
+    else
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
+                     width, height, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE,
+                     NULL);
+    }
+    glGenerateMipmap(GL_TEXTURE_2D);
 
-    _volumerender.updateOutputImg(
-                static_cast<size_t>(width()),
-                static_cast<size_t>(height()),
-                _outTexId);
-
+    _volumerender.updateOutputImg(static_cast<size_t>(width), static_cast<size_t>(height), _outTexId);
     updateView(0, 0);
 }
 
@@ -376,6 +394,7 @@ const QVector3D VolumeRenderWidget::getVolumeResolution()
 void VolumeRenderWidget::updateSamplingRate(double samplingRate)
 {
     _volumerender.updateSamplingRate(samplingRate);
+    update();
 }
 
 
@@ -690,7 +709,7 @@ void VolumeRenderWidget::setDrawBox(bool box)
  * @brief VolumeRenderWidget::setBackgroundColor
  * @param col
  */
-void VolumeRenderWidget::setBackgroundColor(QColor col)
+void VolumeRenderWidget::setBackgroundColor(const QColor col)
 {
     std::array<float, 4> color = {{(float)col.redF(), (float)col.greenF(),
                                    (float)col.blueF(), (float)col.alphaF()}};
