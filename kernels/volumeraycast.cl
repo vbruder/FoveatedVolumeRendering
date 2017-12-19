@@ -69,16 +69,21 @@ int intersectPlane(const float3 rayOrigin, const float3 rayDir,
 float3 gradientCentralDiff(read_only image3d_t vol, const float4 pos)
 {
     float3 volResf = convert_float3(get_image_dim(vol).xyz);
-    float3 offset = native_divide((float3)(1.0f, 1.0f, 1.0f), volResf);
+    float3 offset = native_divide((float3)(1.0f), volResf);
     float3 s1;
     float3 s2;
-    s1.x = read_imagef(vol, nearestSmp, pos + (float4)(-offset.x, 0, 0, 0)).x;
-    s2.x = read_imagef(vol, nearestSmp, pos + (float4)(+offset.x, 0, 0, 0)).x;
-    s1.y = read_imagef(vol, nearestSmp, pos + (float4)(0, -offset.y, 0, 0)).x;
-    s2.y = read_imagef(vol, nearestSmp, pos + (float4)(0, +offset.y, 0, 0)).x;
-    s1.z = read_imagef(vol, nearestSmp, pos + (float4)(0, 0, -offset.z, 0)).x;
-    s2.z = read_imagef(vol, nearestSmp, pos + (float4)(0, 0, +offset.z, 0)).x;
-    return (s2 - s1) / (2.f * offset);
+    s1.x = read_imagef(vol, linearSmp, pos + (float4)(-offset.x, 0, 0, 0)).x;
+    s2.x = read_imagef(vol, linearSmp, pos + (float4)(+offset.x, 0, 0, 0)).x;
+    s1.y = read_imagef(vol, linearSmp, pos + (float4)(0, -offset.y, 0, 0)).x;
+    s2.y = read_imagef(vol, linearSmp, pos + (float4)(0, +offset.y, 0, 0)).x;
+    s1.z = read_imagef(vol, linearSmp, pos + (float4)(0, 0, -offset.z, 0)).x;
+    s2.z = read_imagef(vol, linearSmp, pos + (float4)(0, 0, +offset.z, 0)).x;
+
+    float3 normal = fast_normalize(s2 - s1).xyz;
+    if (length(normal) == 0.0f) // TODO: zero correct
+        normal = (float3)(1.f, 0.f, 0.f);
+
+    return normal;
 }
 
 // specular part of blinn-phong shading model
@@ -97,16 +102,16 @@ float3 specularBlinnPhong(float3 lightColor, float specularExp, float3 materialC
 }
 
 // simple illumination based on central differences
-float3 illumination(read_only image3d_t vol, const float4 pos, float3 diffuse,float3 toCameraDir)
+float3 illumination(read_only image3d_t vol, const float4 pos, float3 color, float3 toLightDir)
 {
-    float3 n = fast_normalize(gradientCentralDiff(vol, pos));
-    float3 l = fast_normalize((float3)(20.0f, 100.0f, 20.0f) - pos.xyz);
+    float3 n = fast_normalize(-gradientCentralDiff(vol, pos));
+    float3 l = fast_normalize(toLightDir.xyz);
 
-    float3 amb = diffuse;
-    float3 diff = diffuse * max(0.f, dot(n, l));
-    float3 spec = specularBlinnPhong((float3)(1.f), 100.f, (float3)(1.f), n, l, toCameraDir);
+    float3 amb = color*0.2f;
+    float3 diff = color * max(0.f, dot(n, l)) * 0.8f;
+    float3 spec = specularBlinnPhong((float3)(1.f), 100.f, (float3)(1.f), n, l, toLightDir);
 
-    return (amb + diff + spec) * 0.5f;
+    return (amb + diff + spec);
 }
 
 // check for border edges
@@ -162,7 +167,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
 
     // pseudo random number [0,1] for ray offsets to avoid moire patterns
     float iptr;
-    float rand = 0.1f*fract(sin(dot(convert_float2(globalId),
+    float rand = fract(sin(dot(convert_float2(globalId),
                        (float2)(12.9898f, 78.233f))) * 43758.5453f, &iptr);
 
     float maxRes = (float)max(get_image_dim(volData).x, get_image_dim(volData).z);
@@ -209,6 +214,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
         camPos = nearPlanePos;
     }
 
+    float3 lightPos = camPos.xyz + viewMat.s26a * 2.f;
     float tnear = FLT_MIN;
     float tfar = FLT_MAX;
     int hit = 0;
@@ -321,7 +327,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
             density = clamp(density, 0.f, 1.f);
             tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
             if (useIllum)
-                tfColor.xyz = illumination(volData, pos, tfColor.xyz, fast_normalize(camPos.xyz - pos.xyz));
+                tfColor.xyz = illumination(volData, pos, tfColor.xyz, -rayDir.xyz);
             tfColor.xyz = background.xyz - tfColor.xyz;
 
             // Taylor expansion approximation
