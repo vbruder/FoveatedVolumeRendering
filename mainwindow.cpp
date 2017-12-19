@@ -330,13 +330,13 @@ void MainWindow::setStatusText()
     {
         status = "File: ";
         status += _fileName;
-        status += " | volume resolution: ";
+        status += " | Volume: ";
         status += QString::number(ui->volumeRenderWidget->getVolumeResolution().x());
         status += "x";
         status += QString::number(ui->volumeRenderWidget->getVolumeResolution().y());
         status += "x";
         status += QString::number(ui->volumeRenderWidget->getVolumeResolution().z());
-        status += " | image resolution: ";
+        status += " | Frame: ";
         status += QString::number(ui->volumeRenderWidget->size().width());
         status += "x";
         status += QString::number(ui->volumeRenderWidget->size().height());

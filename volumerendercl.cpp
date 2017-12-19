@@ -319,7 +319,7 @@ void VolumeRenderCL::generateBricks()
 
         // set memory object
         cl::ImageFormat format;
-        format.image_channel_order = CL_RG;  // NOTE: only one channel, change to CL_RG for min+max
+        format.image_channel_order = CL_RG;  // NOTE: CL_RG for min+max
 
         if (_dr.properties().format == "UCHAR")
             format.image_channel_data_type = CL_UNORM_INT8;
@@ -381,7 +381,7 @@ void VolumeRenderCL::volDataToCLmem(const std::vector<std::vector<char>> &volume
         for (const auto &v : volumeData)
         {
             _volumesMem.push_back(cl::Image3D(_contextCL,
-                                              CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                              CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
                                               format,
                                               _dr.properties().volume_res[0],
                                               _dr.properties().volume_res[1],
