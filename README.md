@@ -8,4 +8,4 @@ A reasonably new Qt version is required (tested with Qt 5.9.0) as well as a comp
 
 ![novaBasicRaycaster.jpeg](https://bitbucket.org/repo/8zXkR4o/images/220208695-novaBasicRaycaster.jpeg)
 
-![Screenshot_20170628_155018.png](https://bitbucket.org/repo/8zXkR4o/images/1815829695-Screenshot_20170628_155018.png)
+![2017-12-19-cham](https://bytebucket.org/theVall/basicvolumeraycaster/raw/b29bb112fdde3784923e22f35ef56d7d9408b6f6/screenshots/2017-12-19-cham.png)
