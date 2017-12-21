@@ -249,8 +249,8 @@ void VolumeRenderWidget::paintGL()
             QImage img = this->grabFramebuffer();
             QString number = QString("%1").arg(_imgCount++, 5, 10, QChar('0'));
             img.save("frame_" + number + ".png");
-            _writeImage = false;
             qInfo() << "Frame written to" << "frame_" + number + ".png";
+            _writeImage = false;
         }
     }
     p.endNativePainting();

@@ -332,15 +332,17 @@ void VolumeRenderCL::generateBricks()
         else
             throw std::invalid_argument("Unknown or invalid volume data format.");
 
+        _bricksMem.clear();
         for (size_t i = 0; i < _dr.properties().raw_file_names.size(); ++i)
         {
             _bricksMem.push_back(cl::Image3D(_contextCL,
-                                     CL_MEM_READ_WRITE,
-                                     format,
-                                     bricksTexSize.at(0), bricksTexSize.at(1), bricksTexSize.at(2),
-                                     0, 0,
-                                     NULL));
-
+                                             CL_MEM_READ_WRITE,
+                                             format,
+                                             bricksTexSize.at(0),
+                                             bricksTexSize.at(1),
+                                             bricksTexSize.at(2),
+                                             0, 0,
+                                             NULL));
             // run aggregation kernel
             setMemObjectsBrickGen(i);
             cl::NDRange globalThreads(bricksTexSize.at(0), bricksTexSize.at(1), bricksTexSize.at(2));

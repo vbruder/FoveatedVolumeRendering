@@ -19,19 +19,13 @@ void DatRawReader::read_files(const std::string dat_file_name)
 {
     // check file
     if (!dat_file_name.empty())
-    {
         _prop.dat_file_name = dat_file_name;
-    }
     else
-    {
         throw std::invalid_argument("dat file name must not be empty.");
-    }
 
     try
     {
-        this->_prop.raw_file_names.clear();
-        read_dat(_prop.dat_file_name);
-
+        this->read_dat(_prop.dat_file_name);
         this->_raw_data.clear();
         for (const auto &n : _prop.raw_file_names)
             read_raw(n);
@@ -176,11 +170,8 @@ void DatRawReader::read_dat(const std::string dat_file_name)
  */
 void DatRawReader::read_raw(const std::string raw_file_name)
 {
-    assert(!raw_file_name.empty());
     if (raw_file_name.empty())
-    {
         throw std::invalid_argument("Raw file name must not be empty.");
-    }
 
     // append .raw file name to .dat file name path
     std::size_t found = _prop.dat_file_name.find_last_of("/\\");
@@ -215,8 +206,7 @@ void DatRawReader::read_raw(const std::string raw_file_name)
 
         // read data as a block:
         is.read(raw_timestep.data(), _prop.raw_file_size);
-        _raw_data.push_back(raw_timestep);
-        raw_timestep.clear();
+        _raw_data.push_back(std::move(raw_timestep));
 
         if (!is)
             throw std::runtime_error("Error reading " + raw_file_name);
@@ -224,10 +214,10 @@ void DatRawReader::read_raw(const std::string raw_file_name)
     }
     else
     {
-        throw std::runtime_error("Could no open " + raw_file_name);
+        throw std::runtime_error("Could not open " + raw_file_name);
     }
 
-    // if format was not specified in .dat file, try to calculate it from
+    // if format was not specified in .dat file, try to calculate from
     // file size and volume resolution
     if (_prop.format.empty())
     {

@@ -107,9 +107,9 @@ float3 illumination(read_only image3d_t vol, const float4 pos, float3 color, flo
     float3 n = fast_normalize(-gradientCentralDiff(vol, pos));
     float3 l = fast_normalize(toLightDir.xyz);
 
-    float3 amb = color*0.2f;
+    float3 amb = color * 0.2f;
     float3 diff = color * max(0.f, dot(n, l)) * 0.8f;
-    float3 spec = specularBlinnPhong((float3)(1.f), 100.f, (float3)(1.f), n, l, toLightDir);
+    float3 spec = specularBlinnPhong((float3)(1.f), 40.f, (float3)(1.f), n, l, toLightDir) * 0.2f;
 
     return (amb + diff + spec);
 }
@@ -286,7 +286,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
     if (exit.y < 0) exit.y = -1;
     if (exit.z < 0) exit.z = -1;
 
-    uint i = 0;
     float t_exit = 0;
     // length of diagonal of a brick => longest distance through brick
     float brickDia = length(brickLen)*2.f;
@@ -319,7 +318,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
         }
         while (t < t_exit)
         {
-            pos = camPos + (t+rand*1.0f*stepSize)*rayDir;
+            pos = camPos + t*rayDir;
             pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
 
             density = useLinear ? read_imagef(volData, linearSmp, pos).x :
@@ -336,11 +335,10 @@ __kernel void volumeRender(  __read_only image3d_t volData
             alpha = alpha + opacity * (1.f - alpha);
 
             if (alpha > ERT_THRESHOLD || t >= tfar) break;   // early ray termination check
-            ++i;
             t += stepSize;
         }
 
-        if (alpha > ERT_THRESHOLD|| t >= tfar) break;
+        if (alpha > ERT_THRESHOLD || t >= tfar) break;
         if (any(cell == exit)) break;
         t = t_exit;
     }
