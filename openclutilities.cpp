@@ -123,9 +123,8 @@ cl::Program buildProgramFromSource(cl::Context context, std::string filename,
         std::ifstream sourceFile(filename.c_str());
         if(sourceFile.fail())
             throw cl::Error(1, "Failed to open OpenCL source file");
-        std::string sourceCode(
-            std::istreambuf_iterator<char>(sourceFile),
-            (std::istreambuf_iterator<char>()));
+        std::string sourceCode(std::istreambuf_iterator<char>(sourceFile),
+                               (std::istreambuf_iterator<char>()));
         //cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));
 
         // Make program of the source code in the context
@@ -134,11 +133,14 @@ cl::Program buildProgramFromSource(cl::Context context, std::string filename,
         std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
 
         // Build program for these specific devices
-        try{
+        try {
             program.build(devices, buildOptions.c_str());
-        } catch(cl::Error error) {
-            if(error.err() == CL_BUILD_PROGRAM_FAILURE) {
-                std::cout << "Build log:" << std::endl << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
+        } catch(cl::Error error)
+        {
+            if(error.err() == CL_BUILD_PROGRAM_FAILURE)
+            {
+                std::cout << "Build log:" << std::endl
+                          << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]) << std::endl;
             }
             throw error;
         }

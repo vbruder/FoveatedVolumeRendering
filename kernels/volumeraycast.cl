@@ -183,43 +183,39 @@ __kernel void volumeRender(  __read_only image3d_t volData
     imgCoords -= get_global_size(0) > get_global_size(1) ?
                         (float2)(1.0f, aspectRatio) : (float2)(aspectRatio, 1.0);
     imgCoords.y *= -1.f;   // flip y coord
-
-    float4 rayDir = (float4)(0.f);
     
     // z position of view plane is -1.0 to fit the cube to the screen quad when axes are aligned, 
     // zoom is -1 and the data set is uniform in each dimension
     // (with FoV of 90° and near plane in range [-1,+1]).
-    float4 nearPlanePos = fast_normalize((float4)(imgCoords, -1.0f, 0.0f));
+    float3 nearPlanePos = fast_normalize((float3)(imgCoords, -1.0f));
     // transform nearPlane from view space to world space
-    rayDir.x = dot(viewMat.s0123, nearPlanePos);
-    rayDir.y = dot(viewMat.s4567, nearPlanePos);
-    rayDir.z = dot(viewMat.s89ab, nearPlanePos);
-    rayDir.w = dot(viewMat.scdef, nearPlanePos);
+    float3 rayDir = (float3)(0.f);
+    rayDir.x = dot(viewMat.s012, nearPlanePos);
+    rayDir.y = dot(viewMat.s456, nearPlanePos);
+    rayDir.z = dot(viewMat.s89a, nearPlanePos);
     
     // camera position in world space (ray origin) is translation vector of view matrix
-    float4 camPos = (float4)(viewMat.s37b, 1.0f);
-    rayDir = fast_normalize(rayDir);
+    float3 camPos = viewMat.s37b;
 
     if (orthoCam)
     {
-        camPos = (float4)(viewMat.s37b, 1.0f);
-        float4 viewPlane_x = viewMat.s048c;
-        float4 viewPlane_y = viewMat.s159d;
-        float4 viewPlane_z = viewMat.s26ae;
+        camPos = (float3)(viewMat.s37b);
+        float3 viewPlane_x = viewMat.s048;
+        float3 viewPlane_y = viewMat.s159;
+        float3 viewPlane_z = viewMat.s26a;
         rayDir = -viewPlane_z;
-        rayDir.w = 0;
-        rayDir = fast_normalize(rayDir);
         nearPlanePos = camPos + imgCoords.x*viewPlane_x + imgCoords.y*viewPlane_y;
         nearPlanePos *= length(camPos);
         camPos = nearPlanePos;
     }
+    rayDir = fast_normalize(rayDir);
 
     float3 lightPos = camPos.xyz + viewMat.s26a * 2.f;
     float tnear = FLT_MIN;
     float tfar = FLT_MAX;
     int hit = 0;
     // bbox from (-1,-1,-1) to (+1,+1,+1)
-    hit = intersectBox(camPos.xyz, rayDir.xyz, &tnear, &tfar);
+    hit = intersectBox(camPos, rayDir, &tnear, &tfar);
     if (!hit || tfar < 0)
     {
         write_imagef(outData, texCoords, background);
@@ -229,7 +225,9 @@ __kernel void volumeRender(  __read_only image3d_t volData
     float sampleDist = tfar - tnear;
     if (sampleDist <= 0.f)
         return;
-    float stepSize = min(sampleDist, sampleDist / (samplingRate*length(sampleDist*rayDir.xyz*convert_float3(get_image_dim(volData).xyz))));
+    int3 volRes = get_image_dim(volData).xyz;
+    float stepSize = min(sampleDist, sampleDist /
+                            (samplingRate*length(sampleDist*rayDir*convert_float3(volRes))));
     float samples = ceil(sampleDist/stepSize);
     stepSize = sampleDist/samples;
 
@@ -237,24 +235,26 @@ __kernel void volumeRender(  __read_only image3d_t volData
     tnear = max(0.f, tnear);    // clamp to near plane
     float4 result = background;
     float alpha = 0.f;
-    float4 pos = (float4)(0);
+    float3 pos = (float3)(0);
     float density = 0.f;
     float4 tfColor = (float4)(0);
     float opacity = 0.f;
     float t = tnear;// + rand*stepSize;    // offset by 'random' distance to avoid moiré pattern
 
-    int3 volRes = get_image_dim(volData).xyz;
     float3 voxLen = (float3)(1.f) / convert_float3(volRes);
-    int3 bricksRes = get_image_dim(volBrickData).xyz;
-    float3 brickLen = (float3)(1.f) / convert_float3(bricksRes);
     float refSamplingInterval = 1.f / samplingRate;
     float precisionDiv = 1.f;
     if (get_image_channel_data_type(volData) == CLK_UNORM_INT16)
         precisionDiv = 8.f;
 
-    // DDA initialization
-    float3 invRay = 1.f/rayDir.xyz;
-    int3 step = convert_int3(sign(rayDir.xyz));
+    float t_exit = tfar;
+
+#ifdef ESS
+    // 3D DDA initialization
+    int3 bricksRes = get_image_dim(volBrickData).xyz;
+    float3 brickLen = (float3)(1.f) / convert_float3(bricksRes);
+    float3 invRay = 1.f/rayDir;
+    int3 step = convert_int3(sign(rayDir));
     if (rayDir.x == 0.f)
     {
         invRay.x = FLT_MAX;
@@ -270,30 +270,27 @@ __kernel void volumeRender(  __read_only image3d_t volData
         invRay.z = FLT_MAX;
         step.z = 1;
     }
-
     float3 deltaT = convert_float3(step)*(brickLen*2.f*invRay);
     float3 voxIncr = (float3)0;
 
     // convert ray starting point to cell coordinates
-    float3 rayOrigCell = (camPos.xyz + rayDir.xyz * tnear) - (float3)(-1.f);
+    float3 rayOrigCell = (camPos + rayDir * tnear) - (float3)(-1.f);
     int3 cell = clamp(convert_int3(floor(rayOrigCell / (2.f*brickLen))),
                         (int3)(0), convert_int3(bricksRes.xyz) - 1);
 
     // add +1 to cells if ray dir component is negative: rayDir >= 0 ? (-1) : 0
-    float3 tv = tnear + (convert_float(cell - isgreaterequal(rayDir.xyz, (float3)(0))) * (2.f*brickLen) - rayOrigCell) * invRay;
+    float3 tv = tnear + (convert_float(cell - isgreaterequal(rayDir, (float3)(0))) * (2.f*brickLen) - rayOrigCell) * invRay;
     int3 exit = step * bricksRes.xyz;
     if (exit.x < 0) exit.x = -1;
     if (exit.y < 0) exit.y = -1;
     if (exit.z < 0) exit.z = -1;
-
-    float t_exit = 0;
     // length of diagonal of a brick => longest distance through brick
     float brickDia = length(brickLen)*2.f;
-    // raycasting loop: front to back raycasting with early ray termination & empty space skipping
-    while (t <= tfar)
+
+    // 3D DDA loop over low res grid for image order empty space skipping
+    while (t < tfar)
     {
         float2 minMaxDensity = read_imagef(volBrickData, linearSmp, (int4)(cell, 0)).xy;
-
         // increment to next brick
         voxIncr.x = (tv.x <= tv.y) && (tv.x <= tv.z) ? 1 : 0;
         voxIncr.y = (tv.y <= tv.x) && (tv.y <= tv.z) ? 1 : 0;
@@ -316,17 +313,20 @@ __kernel void volumeRender(  __read_only image3d_t volData
                 continue;
             }
         }
+#endif
+
+        // standard raycast loop
         while (t < t_exit)
         {
             pos = camPos + t*rayDir;
             pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
 
-            density = useLinear ? read_imagef(volData, linearSmp, pos).x :
-                                  read_imagef(volData, nearestSmp, pos).x;
+            density = useLinear ? read_imagef(volData,  linearSmp, as_float4(pos)).x :
+                                  read_imagef(volData, nearestSmp, as_float4(pos)).x;
             density = clamp(density, 0.f, 1.f);
             tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
             if (useIllum)
-                tfColor.xyz = illumination(volData, pos, tfColor.xyz, -rayDir.xyz);
+                tfColor.xyz = illumination(volData, as_float4(pos), tfColor.xyz, -rayDir);
             tfColor.xyz = background.xyz - tfColor.xyz;
 
             // Taylor expansion approximation
@@ -338,15 +338,17 @@ __kernel void volumeRender(  __read_only image3d_t volData
             t += stepSize;
         }
 
+#ifdef ESS
         if (alpha > ERT_THRESHOLD || t >= tfar) break;
         if (any(cell == exit)) break;
         t = t_exit;
     }
+#endif
 
     // draw bounding box
     if (useBox)
     {
-        if (checkBoundingBox(pos.xyz, voxLen, (float2)(0.f, 1.f)))
+        if (checkBoundingBox(pos, voxLen, (float2)(0.f, 1.f)))
         {
             result.xyz = fabs((float3)(1.f) - background.xyz);
             alpha = 1.f;

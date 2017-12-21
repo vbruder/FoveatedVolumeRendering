@@ -57,7 +57,8 @@ void VolumeRenderCL::initialize()
         logCLerror(err);
     }
 
-    initKernel("../RaycastLight/kernels/volumeraycast.cl", "-DIMAGE_SUPPORT=1 -DCL_STD=CL1.2");
+    initKernel("../RaycastLight/kernels/volumeraycast.cl",
+               "-DIMAGE_SUPPORT=1 -DCL_STD=CL1.2 -DESS");
 }
 
 
