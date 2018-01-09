@@ -62,6 +62,8 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->volumeRenderWidget, &VolumeRenderWidget::setLinearInterpolation);
     connect(ui->chbIllum, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setIllumination);
+    connect(ui->chbAmbientOcclusion, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setAmbientOcclusion);
     connect(ui->chbBox, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setDrawBox);
     connect(ui->chbOrtho, &QCheckBox::toggled,

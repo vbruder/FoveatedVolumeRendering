@@ -73,6 +73,7 @@ public slots:
 
     void saveFrame();
     void setTimeStep(int timestep);
+    void setAmbientOcclusion(bool ao);
 signals:
     void fpsChanged(double);
     void frameSizeChanged(QSize);

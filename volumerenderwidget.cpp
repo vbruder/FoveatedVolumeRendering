@@ -684,6 +684,17 @@ void VolumeRenderWidget::setIllumination(bool illum)
 
 
 /**
+ * @brief VolumeRenderWidget::setAmbientOcclusion
+ * @param ao
+ */
+void VolumeRenderWidget::setAmbientOcclusion(bool ao)
+{
+    _volumerender.setAmbientOcclusion(ao);
+    this->updateView();
+}
+
+
+/**
  * @brief VolumeRenderWidget::setLinearInterpolation
  * @param linear
  */

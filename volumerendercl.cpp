@@ -82,6 +82,7 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel.setArg(LINEAR, 1);
         cl_float4 bgColor = {{1.f, 1.f, 1.f, 1.f}};
         _raycastKernel.setArg(BACKGROUND, bgColor);
+        _raycastKernel.setArg(AO, 1);                   // ambient occlusion on by default
 
         _genBricksKernel = cl::Kernel(program, "generateBricks");
     }
@@ -483,6 +484,12 @@ void VolumeRenderCL::setTransferFunction(std::vector<unsigned char> &tff)
         // divide size by 4 because of RGBA
         _tffMem = cl::Image1D(_contextCL, flags, format, tff.size() / 4, tff.data());
         generateBricks();
+
+        std::vector<ushort> prefixSum;
+        for (int i = 3; i < tff.size(); i += 4)
+            prefixSum.push_back(static_cast<ushort>(tff.at(i)));
+        std::partial_sum(prefixSum.begin(), prefixSum.end(), prefixSum.begin());
+        setTffPrefixSum(prefixSum);
     }
     catch (cl::Error err)
     {
@@ -535,6 +542,18 @@ void VolumeRenderCL::setIllumination(bool illum)
 {
     try {
         _raycastKernel.setArg(ILLUMINATION, (cl_uint)illum);
+    } catch (cl::Error err) { logCLerror(err); }
+}
+
+
+/**
+ * @brief VolumeRenderCL::setAmbientOcclusion
+ * @param illum
+ */
+void VolumeRenderCL::setAmbientOcclusion(bool ao)
+{
+    try {
+        _raycastKernel.setArg(AO, (cl_uint)ao);
     } catch (cl::Error err) { logCLerror(err); }
 }
 

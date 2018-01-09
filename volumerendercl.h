@@ -26,6 +26,7 @@ public:
         , LINEAR         // use linear interpolation, not nearest    cl_uint (bool)
         , BACKGROUND     // background color RGBA                    cl_float4
         , TFF_PREFIX     // prefix sum of transfer function          image1d_t
+        , AO             // use ambient occlusion                    cl_uint (bool)
     };
 
     // mipmap down-scaling metric
@@ -155,6 +156,12 @@ public:
      * @return The kernel runtime in seconds.
      */
     double getLastExecTime();
+
+    /**
+     * @brief setAmbientOcclusion
+     * @param ao
+     */
+    void setAmbientOcclusion(bool ao);
 
 private:
     /**

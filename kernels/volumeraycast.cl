@@ -7,6 +7,51 @@ constant sampler_t linearSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
 constant sampler_t nearestSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
                                 CLK_FILTER_NEAREST;
 
+
+uint4 initRNG()
+{
+    uint4 taus;
+    taus.x = 128U + (uint)(get_global_size(0));
+    taus.y = 128U + (uint)(get_global_size(1));
+    taus.z = 128U + (uint)(get_global_size(0) + get_global_size(1));
+    taus.w = 128U + (uint)(get_global_size(0) * get_global_size(1));
+    return taus;
+}
+
+// S1, S2, S3, and M are all constants, and z is part of the
+// private per-thread generator state.
+uint tausStep(uint4 *taus, uint p, int s1, int s2, int s3, uint m)
+{
+    uint4 loc = *taus;
+    uint locZ;
+    if (p == 0) locZ = loc.x;
+    if (p == 1) locZ = loc.y;
+    if (p == 2) locZ = loc.z;
+    uint b = (((locZ << (uint)(s1)) ^ locZ) >> (uint)(s2));
+    locZ = (((locZ & m) << (uint)(s3)) ^ b);
+    if (p == 0) *taus = (uint4)(locZ, loc.yzw);
+    if (p == 1) *taus = (uint4)(loc.x, locZ, loc.zw);
+    if (p == 2) *taus = (uint4)(loc.xy, locZ, loc.w);
+    return locZ;
+}
+
+// A and C are constants
+uint lcgStep(uint4 *taus, uint a, uint c)
+{
+    uint4 loc = *taus;
+    *taus = (uint4)(loc.xyz, a*loc.w + c);
+    return loc.w;
+}
+
+float hybridTaus(uint4 *taus)
+{
+    // Combined period is lcm(p1,p2,p3,p4)~ 2^121
+    return 2.3283064365387e-10 * (float)(tausStep(taus, 0, 13, 19, 12, 4294967294U) ^  // p1=2^31-1
+                                         tausStep(taus, 1, 2, 25, 4, 4294967288U)   ^  // p2=2^30-1
+                                         tausStep(taus, 2, 3, 11, 17, 4294967280U)  ^  // p3=2^28-1
+                                         lcgStep(taus, 1664525U, 1013904223U));     // p4=2^32
+}
+
 // intersect ray with a box
 // http://www.siggraph.org/education/materials/HyperGraph/raytrace/rtinter3.htm
 int intersectBox(float3 rayOrig, float3 rayDir, float *tnear, float *tfar)
@@ -91,7 +136,6 @@ float3 specularBlinnPhong(float3 lightColor, float specularExp, float3 materialC
                           float3 normal, float3 toLightDir, float3 toCameraDir)
 {
     float3 h = toCameraDir + toLightDir;
-
     // check for special case where the light source is exactly opposite
     // to the view direction, i.e. the length of the halfway vector is zero
     if (dot(h, h) < 1.e-6f) // check for squared length
@@ -144,6 +188,48 @@ bool checkBoundingCell(int3 cell, int3 volRes, int size)
         return false;
 }
 
+
+// Uniform Sampling of the hemisphere above the normal n
+float3 getUniformRandomSampleDirectionUpper(float3 n, uint4 *taus)
+{
+    float z = (hybridTaus(taus) * 2.f) - 1.f;
+    float phi = hybridTaus(taus) * 2.f * M_PI_F;
+
+    float3 sampleDirection = (float3)(sqrt(1.f - z*z) * sin( phi), sqrt(1.f - z*z) * cos( phi), z);
+    float cosTheta = dot(n, sampleDirection);
+
+    if (cosTheta < 0)
+        sampleDirection *= -1;
+    return sampleDirection;
+}
+
+
+
+float calcAO(float3 n, uint4 *taus, image3d_t volData, float3 pos, float stepSize, float r)
+{
+    float ao = 0.f;
+    int rays = 32;
+    // rays
+    for (int i = 0; i < rays; ++i)
+    {
+        float3 dir = getUniformRandomSampleDirectionUpper(n, taus);
+        float sample = 0.f;
+        int cnt = 0;
+
+        while (cnt*stepSize < r)
+        {
+            ++cnt;
+            sample += read_imagef(volData, linearSmp, as_float4(pos + dir*cnt*stepSize)).x;;
+        }
+        sample /= cnt;
+        ao += sample;
+    }
+    ao /= (float)(rays);
+
+    return ao;
+}
+
+
 /**
  * direct volume raycasting kernel
  */
@@ -159,12 +245,14 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , const uint useLinear
                            , const float4 background
                            , __read_only image1d_t tffPrefix
+                           , const uint useAO
                            )
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
     if(any(globalId >= get_image_dim(outData)))
         return;
 
+    uint4 taus = initRNG();
     // pseudo random number [0,1] for ray offsets to avoid moire patterns
     float iptr;
     float rand = fract(sin(dot(convert_float2(globalId),
@@ -210,7 +298,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
     }
     rayDir = fast_normalize(rayDir);
 
-    float3 lightPos = camPos.xyz + viewMat.s26a * 2.f;
     float tnear = FLT_MIN;
     float tfar = FLT_MAX;
     int hit = 0;
@@ -334,12 +421,22 @@ __kernel void volumeRender(  __read_only image3d_t volData
             result.xyz = result.xyz - tfColor.xyz * opacity * (1.f - alpha);
             alpha = alpha + opacity * (1.f - alpha);
 
-            if (alpha > ERT_THRESHOLD || t >= tfar) break;   // early ray termination check
+            if (t >= tfar) break;
+            if (alpha > ERT_THRESHOLD)   // early ray termination check
+            {
+                if (useAO)
+                {
+                    float3 n = fast_normalize(-gradientCentralDiff(volData, as_float4(pos)));
+                    // TODO remove megic numbers
+                    result.xyz *= 1.f - 0.5f*calcAO(n, &taus, volData, pos, stepSize*3.f, length(voxLen)*10.f);
+                }
+                break;
+            }
             t += stepSize;
         }
 
 #ifdef ESS
-        if (alpha > ERT_THRESHOLD || t >= tfar) break;
+        if (t >= tfar || alpha > ERT_THRESHOLD) break;
         if (any(cell == exit)) break;
         t = t_exit;
     }
