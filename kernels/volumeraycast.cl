@@ -2,7 +2,7 @@
 
 #define ERT_THRESHOLD 0.98
 
-constant sampler_t linearSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
+constant sampler_t linearSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP_TO_EDGE |
                                 CLK_FILTER_LINEAR;
 constant sampler_t nearestSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
                                 CLK_FILTER_NEAREST;
@@ -195,7 +195,7 @@ float3 getUniformRandomSampleDirectionUpper(float3 n, uint4 *taus)
     float z = (hybridTaus(taus) * 2.f) - 1.f;
     float phi = hybridTaus(taus) * 2.f * M_PI_F;
 
-    float3 sampleDirection = (float3)(sqrt(1.f - z*z) * sin( phi), sqrt(1.f - z*z) * cos( phi), z);
+    float3 sampleDirection = (float3)(sqrt(1.f - z*z) * sin(phi), sqrt(1.f - z*z) * cos(phi), z);
     float cosTheta = dot(n, sampleDirection);
 
     if (cosTheta < 0)
@@ -204,11 +204,11 @@ float3 getUniformRandomSampleDirectionUpper(float3 n, uint4 *taus)
 }
 
 
-
+// Calculate ambient occlusion factor
 float calcAO(float3 n, uint4 *taus, image3d_t volData, float3 pos, float stepSize, float r)
 {
     float ao = 0.f;
-    int rays = 32;
+    int rays = 16;
     // rays
     for (int i = 0; i < rays; ++i)
     {
@@ -246,6 +246,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , const float4 background
                            , __read_only image1d_t tffPrefix
                            , const uint useAO
+                           , const float3 modelScale
                            )
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
@@ -283,7 +284,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     rayDir.z = dot(viewMat.s89a, nearPlanePos);
     
     // camera position in world space (ray origin) is translation vector of view matrix
-    float3 camPos = viewMat.s37b;
+    float3 camPos = viewMat.s37b*modelScale;
 
     if (orthoCam)
     {
@@ -294,9 +295,9 @@ __kernel void volumeRender(  __read_only image3d_t volData
         rayDir = -viewPlane_z;
         nearPlanePos = camPos + imgCoords.x*viewPlane_x + imgCoords.y*viewPlane_y;
         nearPlanePos *= length(camPos);
-        camPos = nearPlanePos;
+        camPos = nearPlanePos * modelScale;
     }
-    rayDir = fast_normalize(rayDir);
+    rayDir = fast_normalize(rayDir*modelScale);
 
     float tnear = FLT_MIN;
     float tfar = FLT_MAX;
@@ -377,7 +378,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     // 3D DDA loop over low res grid for image order empty space skipping
     while (t < tfar)
     {
-        float2 minMaxDensity = read_imagef(volBrickData, linearSmp, (int4)(cell, 0)).xy;
+        float2 minMaxDensity = read_imagef(volBrickData, (int4)(cell, 0)).xy;
         // increment to next brick
         voxIncr.x = (tv.x <= tv.y) && (tv.x <= tv.z) ? 1 : 0;
         voxIncr.y = (tv.y <= tv.x) && (tv.y <= tv.z) ? 1 : 0;
@@ -427,8 +428,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
                 if (useAO)
                 {
                     float3 n = fast_normalize(-gradientCentralDiff(volData, as_float4(pos)));
-                    // TODO remove megic numbers
-                    result.xyz *= 1.f - 0.5f*calcAO(n, &taus, volData, pos, stepSize*3.f, length(voxLen)*10.f);
+                    // TODO remove magic number
+                    result.xyz *= 1.f - opacity*calcAO(n, &taus, volData, pos, length(voxLen), length(voxLen)*5.f);
                 }
                 break;
             }

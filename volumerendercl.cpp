@@ -9,8 +9,9 @@
  * @brief VolumeRenderCL::VolumeRenderCL
  */
 VolumeRenderCL::VolumeRenderCL() :
-    _lastExecTime(0.0)
-  , _volLoaded(false)
+    _volLoaded(false)
+  , _lastExecTime(0.0)
+  , _modelScale{1.0, 1.0, 1.0}
 {
 }
 
@@ -103,6 +104,8 @@ void VolumeRenderCL::setMemObjectsRaycast(const int t)
     _raycastKernel.setArg(BRICKS, _bricksMem.at(t));
     _raycastKernel.setArg(OUTPUT, _outputMem);
     _raycastKernel.setArg(TFF_PREFIX, _tffPrefixMem);
+    cl_float3 modelScale = {_modelScale[0], _modelScale[1], _modelScale[2]};
+    _raycastKernel.setArg(MODEL_SCALE, modelScale);
 }
 
 
@@ -125,18 +128,16 @@ void VolumeRenderCL::calcScaling()
     if (!_dr.has_data())
         return;
 
-    _modelScale = std::valarray<double>(_dr.properties().volume_res.size());
-    for (size_t i = 0; i < _dr.properties().volume_res.size(); ++i)
-    {
-        _modelScale[i] = _dr.properties().volume_res.at(i); // TODO
-    }
-    std::valarray<double> thickness(_dr.properties().slice_thickness.data(),
-                                    _dr.properties().slice_thickness.size());
+    _modelScale = { static_cast<double>(_dr.properties().volume_res.at(0)),
+                    static_cast<double>(_dr.properties().volume_res.at(1)),
+                    static_cast<double>(_dr.properties().volume_res.at(2)) };
+
+    std::valarray<double> thickness = { _dr.properties().slice_thickness.at(0),
+                                        _dr.properties().slice_thickness.at(1),
+                                        _dr.properties().slice_thickness.at(2) };
     _modelScale *= thickness*(1.0/thickness[0]);
-#undef max  // error here if I don't undef max
+#undef max  // error here if we don't undef max
     _modelScale = _modelScale.max() / _modelScale;
-//    std::cout << "Scaling volume: (" << _scale[0] << ", " << _scale[1] << ", "
-//              << _scale[2] << ")" << std::endl;
 }
 
 
@@ -146,7 +147,6 @@ void VolumeRenderCL::calcScaling()
  */
 void VolumeRenderCL::scaleVolume(std::valarray<double> scale)
 {
-    calcScaling();
     _modelScale *= scale;
 }
 
@@ -160,21 +160,11 @@ void VolumeRenderCL::updateView(const std::array<float, 16> viewMat)
     if (!_dr.has_data() || _modelScale.size() < 3)
         return;
 
-    cl_float16 modelViewMat;
+    cl_float16 view;
     for (size_t i = 0; i < 16; ++i)
-    {
-        if (i < 4)
-            modelViewMat.s[i] = viewMat[i] * _modelScale[0];
-        else if (i < 8)
-            modelViewMat.s[i] = viewMat[i] * _modelScale[1];
-        else if (i < 12)
-            modelViewMat.s[i] = viewMat[i] * _modelScale[2];
-        else
-            modelViewMat.s[i] = viewMat[i];
-    }
-
+        view.s[i] = viewMat[i];
     try{
-        _raycastKernel.setArg(VIEW, modelViewMat);
+        _raycastKernel.setArg(VIEW, view);
     } catch (cl::Error err) {
         logCLerror(err);
     }
@@ -338,7 +328,7 @@ void VolumeRenderCL::generateBricks()
         for (size_t i = 0; i < _dr.properties().raw_file_names.size(); ++i)
         {
             _bricksMem.push_back(cl::Image3D(_contextCL,
-                                             CL_MEM_READ_WRITE,
+                                             CL_MEM_READ_WRITE | CL_MEM_HOST_NO_ACCESS,
                                              format,
                                              bricksTexSize.at(0),
                                              bricksTexSize.at(1),
@@ -387,7 +377,7 @@ void VolumeRenderCL::volDataToCLmem(const std::vector<std::vector<char>> &volume
         for (const auto &v : volumeData)
         {
             _volumesMem.push_back(cl::Image3D(_contextCL,
-                                              CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                              CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                                               format,
                                               _dr.properties().volume_res[0],
                                               _dr.properties().volume_res[1],
@@ -486,7 +476,8 @@ void VolumeRenderCL::setTransferFunction(std::vector<unsigned char> &tff)
         generateBricks();
 
         std::vector<ushort> prefixSum;
-        for (int i = 3; i < tff.size(); i += 4)
+        // copy only alpha values (every fourth element)
+        for (int i = 3; i < static_cast<int>(tff.size()); i += 4)
             prefixSum.push_back(static_cast<ushort>(tff.at(i)));
         std::partial_sum(prefixSum.begin(), prefixSum.end(), prefixSum.begin());
         setTffPrefixSum(prefixSum);

@@ -27,6 +27,7 @@ public:
         , BACKGROUND     // background color RGBA                    cl_float4
         , TFF_PREFIX     // prefix sum of transfer function          image1d_t
         , AO             // use ambient occlusion                    cl_uint (bool)
+        , MODEL_SCALE    // model scaling factor                     cl_float3
     };
 
     // mipmap down-scaling metric
@@ -235,10 +236,10 @@ private:
 #ifdef NO_GL
     std::vector<float> _outputData;
 #endif
-    DatRawReader _dr;
-    std::valarray<double> _modelScale;
     bool _volLoaded;
     double _lastExecTime;
+    std::valarray<double> _modelScale;
+    DatRawReader _dr;
 };
 
 #endif // VOLUMERENDERCL_H

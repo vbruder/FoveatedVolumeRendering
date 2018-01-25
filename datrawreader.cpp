@@ -25,7 +25,7 @@ void DatRawReader::read_files(const std::string dat_file_name)
 
     try
     {
-        this->read_dat(_prop.dat_file_name);
+        this->read_dat(_prop.dat_file_name);      
         this->_raw_data.clear();
         for (const auto &n : _prop.raw_file_names)
             read_raw(n);
@@ -55,7 +55,6 @@ const std::vector<std::vector<char> > & DatRawReader::data() const
     {
         throw std::runtime_error("No data available.");
     }
-//    return std::move(_raw_data);
     return _raw_data;
 }
 
@@ -219,11 +218,11 @@ void DatRawReader::read_raw(const std::string raw_file_name)
 
     // if format was not specified in .dat file, try to calculate from
     // file size and volume resolution
-    if (_prop.format.empty())
+    if (_prop.format.empty() && !_raw_data.empty())
     {
-        unsigned int bytes = _raw_data.at(0).size() / (static_cast<long long>(_prop.volume_res[0]) *
-                                                       static_cast<long long>(_prop.volume_res[1]) *
-                                                       static_cast<long long>(_prop.volume_res[2]));
+        unsigned int bytes = _raw_data.at(0).size() / (static_cast<size_t>(_prop.volume_res[0]) *
+                                                       static_cast<size_t>(_prop.volume_res[1]) *
+                                                       static_cast<size_t>(_prop.volume_res[2]));
         switch (bytes)
         {
         case 1:
@@ -233,6 +232,10 @@ void DatRawReader::read_raw(const std::string raw_file_name)
         case 2:
             _prop.format = "USHORT";
             std::cout << "Format determined as USHORT." << std::endl;
+            break;
+        case 4:
+            _prop.format = "FLOAT";
+            std::cout << "Format determined as FLOAT." << std::endl;
             break;
         default: throw std::runtime_error("Could not resolve missing format specification.");
         }
