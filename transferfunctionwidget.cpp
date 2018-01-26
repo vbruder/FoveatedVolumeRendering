@@ -9,7 +9,9 @@
  * @param parent
  */
 ShadeWidget::ShadeWidget(ShadeType type, QWidget *parent)
-    : QWidget(parent), _pShadeType(type), _pAlphaGradient(QLinearGradient(0, 0, 0, 0))
+    : QWidget(parent)
+    , _pShadeType(type)
+    , _pAlphaGradient(QLinearGradient(0, 0, 0, 0))
 {
     // Checkers background
     if (_pShadeType == ARGBShade)
@@ -35,7 +37,7 @@ ShadeWidget::ShadeWidget(ShadeType type, QWidget *parent)
     points << QPointF(0, sizeHint().height())
            << QPointF(sizeHint().width(), 0);
 
-    _pHoverPoints = new HoverPoints(this, HoverPoints::CircleShape);
+    _pHoverPoints = QSharedPointer<HoverPoints>(new HoverPoints(this, HoverPoints::CircleShape));
     _pHoverPoints->setConnectionType(HoverPoints::LineConnection);
     _pHoverPoints->setPoints(points);
     _pHoverPoints->setPointLock(0, HoverPoints::LockToLeft);
@@ -44,8 +46,9 @@ ShadeWidget::ShadeWidget(ShadeType type, QWidget *parent)
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
 
-    connect(_pHoverPoints, SIGNAL(pointsChanged(QPolygonF)), this, SIGNAL(colorsChanged()));
-    connect(_pHoverPoints, &HoverPoints::selectionChanged, this, &ShadeWidget::selectedPointChanged);
+    connect(_pHoverPoints.data(), &HoverPoints::pointsChanged, this, &ShadeWidget::colorsChanged);
+    connect(_pHoverPoints.data(), &HoverPoints::selectionChanged,
+            this, &ShadeWidget::selectedPointChanged);
 }
 
 QPolygonF ShadeWidget::points() const
@@ -84,7 +87,7 @@ void ShadeWidget::setGradientStops(const QGradientStops &stops)
         for (int i=0; i<stops.size(); ++i)
         {
             QColor c = stops.at(i).second;
-            _pAlphaGradient.setColorAt(stops.at(i).first, c);// QColor(c.red(), c.green(), c.blue()));
+            _pAlphaGradient.setColorAt(stops.at(i).first, c);
         }
         _pShade = QImage();
         generateShade();
@@ -131,7 +134,7 @@ void ShadeWidget::generateShade()
                 shade.setColorAt(0, Qt::red);
             else if (_pShadeType == GreenShade)
                 shade.setColorAt(0, Qt::green);
-            else
+            else if (_pShadeType == BlueShade)
                 shade.setColorAt(0, Qt::blue);
 
             QPainter p(&_pShade);
@@ -151,25 +154,14 @@ TransferFunctionEditor::TransferFunctionEditor(QWidget *parent) : QWidget(parent
     vbox->setSpacing(1);
     vbox->setMargin(1);
 
-//    _pRedShade = new ShadeWidget(ShadeWidget::RedShade, this);
-//    _shades.push_back(_pRedShade);
-//    _pGreenShade = new ShadeWidget(ShadeWidget::GreenShade, this);
-//    _shades.push_back(_pGreenShade);
-//    _pBlueShade = new ShadeWidget(ShadeWidget::BlueShade, this);
-//    _shades.push_back(_pBlueShade);
     _pAlphaShade = new ShadeWidget(ShadeWidget::ARGBShade, this);
-
     _shades.push_back(_pAlphaShade);
-
 
     foreach (ShadeWidget *s, _shades)
     {
         vbox->addWidget(s);
     }
 
-//    connect(_pRedShade, SIGNAL(colorsChanged()), this, SLOT(pointsUpdated()));
-//    connect(_pGreenShade, SIGNAL(colorsChanged()), this, SLOT(pointsUpdated()));
-//    connect(_pBlueShade, SIGNAL(colorsChanged()), this, SLOT(pointsUpdated()));
     connect(_pAlphaShade, &ShadeWidget::colorsChanged, this, &TransferFunctionEditor::pointsUpdated);
     connect(_pAlphaShade, &ShadeWidget::selectedPointChanged,
             this, &TransferFunctionEditor::selectedPointUpdated);
@@ -216,12 +208,6 @@ void TransferFunctionEditor::pointsUpdated()
         qreal y = int(points.at(i).y());
         if (i + 1 < points.size() && x == points.at(i + 1).x())
             continue;
-//        QColor color((0x00ff0000 & _pAlphaShade->colorAt(int(x))) >> 16,
-//                     (0x0000ff00 & _pAlphaShade->colorAt(int(x))) >> 8,
-//                     (0x000000ff & _pAlphaShade->colorAt(int(x))),
-//                     (0xff000000 & _pAlphaShade->colorAt(int(x))) >> 24);
-//        color = QColor(_pAlphaShade->colorAt(int(x)));
-
         if (x / w > 1)
             return;
 
@@ -262,13 +248,9 @@ static void setShadePointsColored(ShadeWidget *shade, const QPolygonF &points,
 void TransferFunctionEditor::setGradientStops(const QGradientStops &stops)
 {
     _stops = stops;
-//    QPolygonF pts_red, pts_green, pts_blue, pts_alpha;
     QPolygonF points;
     QVector<QColor> colors;
 
-//    qreal h_red = _pRedShade->height();
-//    qreal h_green = _pGreenShade->height();
-//    qreal h_blue = _pBlueShade->height();
     qreal h_alpha = _pAlphaShade->height();
 
     for (int i = 0; i < stops.size(); ++i)
@@ -277,17 +259,8 @@ void TransferFunctionEditor::setGradientStops(const QGradientStops &stops)
         QRgb color = stops.at(i).second.rgba();
         points << QPointF(pos * _pAlphaShade->width(), h_alpha - qAlpha(color) * h_alpha / 255);
         colors.push_back(color);
-
-//        pts_red << QPointF(pos * _pRedShade->width(), h_red - qRed(color) * h_red / 255);
-//        pts_green << QPointF(pos * _pGreenShade->width(), h_green - qGreen(color) * h_green / 255);
-//        pts_blue << QPointF(pos * _pBlueShade->width(), h_blue - qBlue(color) * h_blue / 255);
-//        pts_alpha << QPointF(pos * _pAlphaShade->width(), h_alpha - qAlpha(color) * h_alpha / 255);
     }
 
-//    set_shade_points(pts_red, _pRedShade);
-//    set_shade_points(pts_green, _pGreenShade);
-//    set_shade_points(pts_blue, _pBlueShade);
-//    set_shade_points(pts_alpha, _pAlphaShade);
     setShadePointsColored(_pAlphaShade, points, colors);
 }
 

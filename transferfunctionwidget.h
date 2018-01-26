@@ -31,7 +31,7 @@ public:
     QPolygonF points() const;
     QVector<QColor> colors() const;
 
-    HoverPoints *hoverPoints() const { return _pHoverPoints; }
+    QSharedPointer<HoverPoints> hoverPoints() const { return _pHoverPoints; }
 
     uint colorAt(int x);
 
@@ -44,7 +44,7 @@ private:
 
     ShadeType _pShadeType;
     QImage _pShade;
-    HoverPoints *_pHoverPoints;
+    QSharedPointer<HoverPoints> _pHoverPoints;
     QLinearGradient _pAlphaGradient;
 };
 
@@ -77,9 +77,6 @@ signals:
     void selectedPointChanged(const QColor color);
 
 private:
-    ShadeWidget *_pRedShade;
-    ShadeWidget *_pGreenShade;
-    ShadeWidget *_pBlueShade;
     ShadeWidget *_pAlphaShade;
 
     QVector<ShadeWidget *> _shades;

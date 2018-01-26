@@ -48,11 +48,10 @@
 **
 ****************************************************************************/
 
-#ifdef QT_OPENGL_SUPPORT
-#include <QGLWidget>
-#endif
+//#ifdef QT_OPENGL_SUPPORT
+//#include <QGLWidget>
+//#endif
 
-#include "arthurwidgets.h"
 #include "hoverpoints.h"
 
 #include <algorithm>
@@ -324,11 +323,6 @@ bool HoverPoints::eventFilter(QObject *object, QEvent *event)
             QApplication::sendEvent(object, event);
             m_widget = that_widget;
             paintPoints();
-#ifdef QT_OPENGL_SUPPORT
-            ArthurFrame *af = qobject_cast<ArthurFrame *>(that_widget);
-            if (af && af->usesOpenGL())
-                af->glWidget()->swapBuffers();
-#endif
             return true;
         }
         default:
@@ -343,25 +337,19 @@ bool HoverPoints::eventFilter(QObject *object, QEvent *event)
 void HoverPoints::paintPoints()
 {
     QPainter p;
-#ifdef QT_OPENGL_SUPPORT
-    ArthurFrame *af = qobject_cast<ArthurFrame *>(m_widget);
-    if (af && af->usesOpenGL())
-        p.begin(af->glWidget());
-    else
-        p.begin(m_widget);
-#else
     p.begin(m_widget);
-#endif
-
     p.setRenderHint(QPainter::Antialiasing);
 
-    if (m_connectionPen.style() != Qt::NoPen && m_connectionType != NoConnection) {
+    if (m_connectionPen.style() != Qt::NoPen && m_connectionType != NoConnection)
+    {
         p.setPen(m_connectionPen);
 
-        if (m_connectionType == CurveConnection) {
+        if (m_connectionType == CurveConnection)
+        {
             QPainterPath path;
             path.moveTo(m_points.at(0));
-            for (int i=1; i<m_points.size(); ++i) {
+            for (int i=1; i<m_points.size(); ++i)
+            {
                 QPointF p1 = m_points.at(i-1);
                 QPointF p2 = m_points.at(i);
                 qreal distance = p2.x() - p1.x();
@@ -371,7 +359,9 @@ void HoverPoints::paintPoints()
                              p2.x(), p2.y());
             }
             p.drawPath(path);
-        } else {
+        }
+        else
+        {
             p.drawPolyline(m_points);
         }
     }
@@ -379,7 +369,8 @@ void HoverPoints::paintPoints()
     p.setPen(m_pointPen);
     p.setBrush(m_pointBrush);
 
-    for (int i=0; i<m_points.size(); ++i) {
+    for (int i=0; i<m_points.size(); ++i)
+    {
         m_pointBrush.setColor(m_colors.at(i));
         p.setBrush(m_pointBrush);
         QRectF bounds = pointBoundingRect(i);
