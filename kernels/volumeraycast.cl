@@ -318,6 +318,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
                             (samplingRate*length(sampleDist*rayDir*convert_float3(volRes))));
     float samples = ceil(sampleDist/stepSize);
     stepSize = sampleDist/samples;
+    float offset = stepSize*rand*0.9f;
 
     // raycast parameters
     tnear = max(0.f, tnear);    // clamp to near plane
@@ -406,7 +407,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
         // standard raycast loop
         while (t < t_exit)
         {
-            pos = camPos + t*rayDir;
+            pos = camPos + (t-offset)*rayDir;
             pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
 
             density = useLinear ? read_imagef(volData,  linearSmp, as_float4(pos)).x :
