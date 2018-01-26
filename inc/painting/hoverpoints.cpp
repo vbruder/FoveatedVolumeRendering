@@ -293,13 +293,15 @@ bool HoverPoints::eventFilter(QObject *object, QEvent *event)
             }
             break;
         case QEvent::TouchEnd:
-            if (m_fingerPointMapping.isEmpty()) {
+        {
+            if (m_fingerPointMapping.isEmpty())
+            {
                 event->ignore();
                 return false;
             }
             return true;
             break;
-
+        }
         case QEvent::Resize:
         {
             QResizeEvent *e = (QResizeEvent *) event;
@@ -307,7 +309,8 @@ bool HoverPoints::eventFilter(QObject *object, QEvent *event)
                 break;
             qreal stretch_x = e->size().width() / qreal(e->oldSize().width());
             qreal stretch_y = e->size().height() / qreal(e->oldSize().height());
-            for (int i=0; i<m_points.size(); ++i) {
+            for (int i=0; i<m_points.size(); ++i)
+            {
                 QPointF p = m_points[i];
                 movePoint(i, QPointF(p.x() * stretch_x, p.y() * stretch_y), false);
             }
@@ -315,7 +318,28 @@ bool HoverPoints::eventFilter(QObject *object, QEvent *event)
             firePointChange();
             break;
         }
+        case QEvent::Wheel:
+        {
+            // TODO: implement proper zoom
+            QWheelEvent *e = (QWheelEvent *) event;
+            QPoint delta =  e->angleDelta();
+            qreal factor = 1.0;
+            if (delta.y() < 0)
+                factor = 0.8;
+            else if (delta.y() > 0)
+                factor = 1.25;
 
+            qreal stretch_x = factor;
+            qreal stretch_y = 1.0;
+            for (int i=0; i<m_points.size(); ++i)
+            {
+                QPointF p = m_points[i];
+                movePoint(i, QPointF(p.x() * stretch_x, p.y() * stretch_y), false);
+            }
+
+            firePointChange();
+            break;
+        }
         case QEvent::Paint:
         {
             QWidget *that_widget = m_widget;
@@ -485,7 +509,7 @@ void HoverPoints::firePointChange()
         else if (m_sortType == YSort)
             std::sort(m_points.begin(), m_points.end(), y_less_than);
 
-        // Compensate for changed order...
+        // Compensate for changed order
         if (m_currentIndex != -1)
         {
             for (int i=0; i<m_points.size(); ++i)

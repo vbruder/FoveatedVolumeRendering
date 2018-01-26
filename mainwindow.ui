@@ -61,34 +61,6 @@
    </attribute>
    <widget class="QWidget" name="dockWidgetContents">
     <layout class="QGridLayout" name="gridLayout_2">
-     <item row="5" column="1">
-      <widget class="QComboBox" name="cbInterpolation">
-       <item>
-        <property name="text">
-         <string>Linear</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Quad</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Interpolation</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="0" colspan="2">
-      <widget class="QPushButton" name="pbResetTff">
-       <property name="text">
-        <string>Reset transfer function</string>
-       </property>
-      </widget>
-     </item>
      <item row="2" column="0" colspan="2">
       <widget class="colorwidgets::ColorWheel" name="colorWheel" native="true">
        <property name="sizePolicy">
@@ -102,31 +74,6 @@
          <width>16777215</width>
          <height>200</height>
         </size>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0" colspan="2">
-      <widget class="RangeSliderQt" name="rsldTffZoomX">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>10</height>
-        </size>
-       </property>
-       <property name="cursor">
-        <cursorShape>ArrowCursor</cursorShape>
-       </property>
-       <property name="frameShape">
-        <enum>QFrame::NoFrame</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Plain</enum>
-       </property>
-       <property name="lineWidth">
-        <number>0</number>
-       </property>
-       <property name="midLineWidth">
-        <number>0</number>
        </property>
       </widget>
      </item>
@@ -272,6 +219,34 @@
      <item row="3" column="0" colspan="2">
       <widget class="TransferFunctionWidget" name="transferFunctionEditor" native="true"/>
      </item>
+     <item row="4" column="1">
+      <widget class="QComboBox" name="cbInterpolation">
+       <item>
+        <property name="text">
+         <string>Linear</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Quad</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Interpolation</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0" colspan="2">
+      <widget class="QPushButton" name="pbResetTff">
+       <property name="text">
+        <string>Reset transfer function</string>
+       </property>
+      </widget>
+     </item>
      <item row="1" column="0" colspan="2">
       <widget class="QGroupBox" name="gbTimeSeries">
        <property name="sizePolicy">
@@ -376,12 +351,6 @@
    <class>colorwidgets::ColorWheel</class>
    <extends>QWidget</extends>
    <header>colorwheel.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>RangeSliderQt</class>
-   <extends>QFrame</extends>
-   <header>rangesliderqt.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -90,12 +90,13 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->volumeRenderWidget, &VolumeRenderWidget::frameSizeChanged,
             this, &MainWindow::setStatusText);
 
+    // TODO: custom double slider for tff editor zoom
     // Load an application style
-    QFile styleFile( "../RaycastLight/style-rangeSlider.qss" );
-    styleFile.open(QFile::ReadOnly);
+//    QFile styleFile( "../RaycastLight/style-rangeSlider.qss" );
+//    styleFile.open(QFile::ReadOnly);
     // Apply the loaded stylesheet
-    QString style = QLatin1String( styleFile.readAll() );
-    ui->rsldTffZoomX->setStyleSheet(style);
+//    QString style = QLatin1String( styleFile.readAll() );
+//    ui->rsldTffZoomX->setStyleSheet(style);
 //    ui->rsldTffZoomX->style()->unpolish(ui->rsldTffZoomX);
 //    ui->rsldTffZoomX->style()->polish(ui->rsldTffZoomX);
 

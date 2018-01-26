@@ -1,8 +1,10 @@
 #ifndef TRANSFERFUNCTIONWIDGET_H
 #define TRANSFERFUNCTIONWIDGET_H
 
-#include "inc/painting/arthurwidgets.h"
 #include <QPointer>
+#include <QGradientStop>
+#include <QPainter>
+#include <QWidget>
 
 class HoverPoints;
 
@@ -14,7 +16,8 @@ class ShadeWidget : public QWidget
     Q_OBJECT
 
 public:
-    enum ShadeType {
+    enum ShadeType
+    {
         RedShade,
         GreenShade,
         BlueShade,
