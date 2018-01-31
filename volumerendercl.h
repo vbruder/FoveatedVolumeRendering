@@ -112,7 +112,7 @@ public:
      * @brief VolumeRenderCL::scaleVolume
      * @param scale
      */
-    void scaleVolume(std::valarray<double> scale);
+    void scaleVolume(std::valarray<float> scale);
 
     /**
      * @brief buildScaledVol
@@ -238,7 +238,7 @@ private:
 #endif
     bool _volLoaded;
     double _lastExecTime;
-    std::valarray<double> _modelScale;
+    std::valarray<float> _modelScale;
     DatRawReader _dr;
 };
 

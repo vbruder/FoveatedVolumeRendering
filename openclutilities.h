@@ -6,12 +6,15 @@
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS 0
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #define CL_HPP_TARGET_OPENCL_VERSION 120
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
 #if defined(__APPLE__) || defined(__MACOSX)
     #include "OpenCL/cl2.hpp"
 #else
     #include <inc/CL/cl2.hpp>
 #endif
-
+#pragma GCC diagnostic pop
 
 #include <string>
 #include <iostream>

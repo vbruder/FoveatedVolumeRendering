@@ -41,7 +41,8 @@ SOURCES += \
     transferfunctionwidget.cpp \
     colorutils.cpp \
     colorwheel.cpp \
-    rangesliderqt.cpp
+    rangesliderqt.cpp \
+    hoverpoints.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -54,12 +55,13 @@ HEADERS += \
     colorutils.h \
     colorwheel.h \
     rangesliderqt.h \
+    hoverpoints.h \
     inc/CL/cl2.hpp
 
 FORMS += \
         mainwindow.ui
 
-include($$PWD/inc/painting/painting.pri)
+#include($$PWD/inc/painting/painting.pri)
 
 RESOURCES += \
     kernels.qrc

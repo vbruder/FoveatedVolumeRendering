@@ -128,14 +128,14 @@ void VolumeRenderCL::calcScaling()
     if (!_dr.has_data())
         return;
 
-    _modelScale = { static_cast<double>(_dr.properties().volume_res.at(0)),
-                    static_cast<double>(_dr.properties().volume_res.at(1)),
-                    static_cast<double>(_dr.properties().volume_res.at(2)) };
+    _modelScale = { static_cast<float>(_dr.properties().volume_res.at(0)),
+                    static_cast<float>(_dr.properties().volume_res.at(1)),
+                    static_cast<float>(_dr.properties().volume_res.at(2)) };
 
-    std::valarray<double> thickness = { _dr.properties().slice_thickness.at(0),
-                                        _dr.properties().slice_thickness.at(1),
-                                        _dr.properties().slice_thickness.at(2) };
-    _modelScale *= thickness*(1.0/thickness[0]);
+    std::valarray<float> thickness = { static_cast<float>(_dr.properties().slice_thickness.at(0)),
+                                       static_cast<float>(_dr.properties().slice_thickness.at(1)),
+                                       static_cast<float>(_dr.properties().slice_thickness.at(2)) };
+    _modelScale *= thickness*(1.f/thickness[0]);
 #undef max  // error here if we don't undef max
     _modelScale = _modelScale.max() / _modelScale;
 }
@@ -145,7 +145,7 @@ void VolumeRenderCL::calcScaling()
  * @brief VolumeRenderCL::scaleVolume
  * @param scale
  */
-void VolumeRenderCL::scaleVolume(std::valarray<double> scale)
+void VolumeRenderCL::scaleVolume(std::valarray<float> scale)
 {
     _modelScale *= scale;
 }
