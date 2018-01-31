@@ -1,5 +1,5 @@
 #include "transferfunctionwidget.h"
-#include "inc/painting/hoverpoints.h"
+#include "hoverpoints.h"
 
 #include <algorithm>
 
