@@ -1,6 +1,8 @@
 #ifndef OPENCLGLUTILITIES_H
 #define OPENCLGLUTILITIES_H
 
+#include "openclutilities.h"
+
 #if defined (__APPLE__) || defined(MACOSX)
     #define GL_SHARING_EXTENSION "cl_APPLE_gl_sharing"
 #else
@@ -24,7 +26,6 @@
     #include <CL/cl_gl.h>
 #endif
 
-#include "openclutilities.h"
 
 cl::Context createCLGLContext(cl_device_type type = CL_DEVICE_TYPE_ALL,
                               cl_vendor vendor = VENDOR_ANY);
