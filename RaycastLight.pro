@@ -13,7 +13,7 @@ QMAKE_LFLAGS +=  -fopenmp
 
 QT       += core gui concurrent opengl
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 5): QT += widgets
 
 TARGET = RaycastLight
 TEMPLATE = app
@@ -41,7 +41,6 @@ SOURCES += \
     transferfunctionwidget.cpp \
     colorutils.cpp \
     colorwheel.cpp \
-    rangesliderqt.cpp \
     hoverpoints.cpp
 
 HEADERS += \
@@ -54,9 +53,7 @@ HEADERS += \
     transferfunctionwidget.h \
     colorutils.h \
     colorwheel.h \
-    rangesliderqt.h \
     hoverpoints.h \
-    inc/CL/cl2.hpp
 
 FORMS += \
         mainwindow.ui

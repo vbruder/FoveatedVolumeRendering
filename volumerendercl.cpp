@@ -3,7 +3,7 @@
 #include <functional>
 #include <algorithm>
 #include <numeric>
-#include "omp.h"
+#include <omp.h>
 
 /**
  * @brief VolumeRenderCL::VolumeRenderCL
