@@ -106,7 +106,7 @@ public:
      * @brief Set the prefix sum of the transfer function.
      * @param tffPrefixSum The prefix sum as vector of unsigned ints.
      */
-    void setTffPrefixSum(std::vector<unsigned short> &tffPrefixSum);
+    void setTffPrefixSum(std::vector<unsigned int> &tffPrefixSum);
 
     /**
      * @brief VolumeRenderCL::scaleVolume

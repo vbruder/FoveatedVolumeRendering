@@ -1,7 +1,6 @@
 #ifndef OPENCLUTILITIES_H
 #define OPENCLUTILITIES_H
 
-
 #define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS 0
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
@@ -44,7 +43,8 @@ cl::Context createCLContext(cl_device_type type = CL_DEVICE_TYPE_ALL, cl_vendor 
 
 cl::Platform getPlatform(cl_device_type = CL_DEVICE_TYPE_ALL, cl_vendor vendor = VENDOR_ANY);
 
-cl::Program buildProgramFromSource(cl::Context context, std::string filename, std::string buildOptions = "");
+cl::Program buildProgramFromSource(cl::Context context, const std::string &filename, 
+                                   const std::string &buildOptions = "");
 
 std::string getCLErrorString(cl_int err);
 

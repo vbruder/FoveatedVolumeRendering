@@ -116,8 +116,8 @@ cl::Context createCLContext(cl_device_type type, cl_vendor vendor)
 }
 
 
-cl::Program buildProgramFromSource(cl::Context context, std::string filename,
-                                   std::string buildOptions)
+cl::Program buildProgramFromSource(cl::Context context, const std::string &filename,
+                                   const std::string &buildOptions)
 {
         // Read source file
         std::ifstream sourceFile(filename.c_str());

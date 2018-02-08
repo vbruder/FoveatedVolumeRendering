@@ -11,6 +11,8 @@
 #include <QThread>
 #include <QColorDialog>
 #include <QtGlobal>
+#include <QDoubleSpinBox>
+#include <QComboBox>
 
 /**
  * @brief MainWindow::MainWindow
@@ -54,9 +56,11 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&_timer, &QTimer::timeout, this, &MainWindow::addProgress);
 
     // connect settings UI
-    connect(ui->dsbSamplingRate, qOverload<double>(&QDoubleSpinBox::valueChanged),
+    connect(ui->dsbSamplingRate, 
+            static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
             ui->volumeRenderWidget, &VolumeRenderWidget::updateSamplingRate);
-    connect(ui->dsbImgSampling, qOverload<double>(&QDoubleSpinBox::valueChanged),
+    connect(ui->dsbImgSampling, 
+            static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
             ui->volumeRenderWidget, &VolumeRenderWidget::setImageSamplingRate);
     connect(ui->chbLinear, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setLinearInterpolation);
@@ -74,7 +78,8 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->volumeRenderWidget, &VolumeRenderWidget::updateTransferFunction);
     connect(ui->pbResetTff, &QPushButton::clicked,
             ui->transferFunctionEditor, &TransferFunctionWidget::resetTransferFunction);
-    connect(ui->cbInterpolation, qOverload<const QString &>(&QComboBox::currentIndexChanged),
+    connect(ui->cbInterpolation, 
+            static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),
             ui->volumeRenderWidget, &VolumeRenderWidget::setTffInterpolation);
     connect(ui->cbInterpolation, SIGNAL(currentIndexChanged(QString)),
             ui->transferFunctionEditor, SLOT(setInterpolation(QString)));

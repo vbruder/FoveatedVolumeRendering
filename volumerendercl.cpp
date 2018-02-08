@@ -46,7 +46,7 @@ void VolumeRenderCL::initialize()
     try // opencl scope
     {
         // NOTE: replace if no NVIDIA GPU
-        _contextCL = createCLGLContext(CL_DEVICE_TYPE_GPU, VENDOR_NVIDIA); // VENDOR_ANY
+        _contextCL = createCLGLContext(CL_DEVICE_TYPE_GPU); // VENDOR_ANY
         cl_command_queue_properties cqp = 0;
 #ifdef CL_QUEUE_PROFILING_ENABLE
         cqp = CL_QUEUE_PROFILING_ENABLE;
@@ -58,8 +58,13 @@ void VolumeRenderCL::initialize()
         logCLerror(err);
     }
 
-    initKernel("../RaycastLight/kernels/volumeraycast.cl",
-               "-DIMAGE_SUPPORT=1 -DCL_STD=CL1.2 -DESS");
+#ifdef _WIN32
+    initKernel("kernels//volumeraycast.cl", "-DIMAGE_SUPPORT=1 -DCL_STD=CL1.2 -DESS");
+#else
+    initKernel("../RaycastLight/kernels/volumeraycast.cl", "-DIMAGE_SUPPORT=1 -DCL_STD=CL1.2 -DESS");
+#endif // _WIN32
+
+
 }
 
 
@@ -273,11 +278,11 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const i
  * @param iNumber
  * @return
  */
-static uint RoundPow2(uint n)
+static unsigned int RoundPow2(unsigned int n)
 {
     // next highest power of 2
     // (cf: http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2)
-    uint val = n - 1u;
+	unsigned int val = n - 1u;
     val |= val >> 1;
     val |= val >> 2;
     val |= val >> 4;
@@ -285,7 +290,7 @@ static uint RoundPow2(uint n)
     val |= val >> 16;
     val++;
     // previous power of 2
-    uint x = val >> 1;
+	unsigned int x = val >> 1;
     // round to nearest of the two
     return (val - n) > (n - x) ? x : val;
 }
@@ -301,12 +306,12 @@ void VolumeRenderCL::generateBricks()
     try
     {
         // calculate brick size
-        const uint numBricks = 64u;
-        std::array<uint, 3> brickRes = {1u, 1u, 1u};
+        const unsigned int numBricks = 64u;
+        std::array<unsigned int, 3> brickRes = {1u, 1u, 1u};
         brickRes.at(0) = RoundPow2(_dr.properties().volume_res.at(0)/numBricks);
         brickRes.at(1) = RoundPow2(_dr.properties().volume_res.at(1)/numBricks);
         brickRes.at(2) = RoundPow2(_dr.properties().volume_res.at(2)/numBricks);
-        std::array<uint, 3> bricksTexSize = {1u, 1u, 1u};
+        std::array<unsigned int, 3> bricksTexSize = {1u, 1u, 1u};
         bricksTexSize.at(0) = ceil(_dr.properties().volume_res.at(0)/(double)brickRes.at(0));
         bricksTexSize.at(1) = ceil(_dr.properties().volume_res.at(1)/(double)brickRes.at(1));
         bricksTexSize.at(2) = ceil(_dr.properties().volume_res.at(2)/(double)brickRes.at(2));
@@ -420,7 +425,7 @@ int VolumeRenderCL::loadVolumeData(const std::string fileName)
     std::iota(tff.begin() + 3, tff.end(), 0);
     setTransferFunction(tff);
 
-    std::vector<ushort> prefixSum(256, 0);
+    std::vector<unsigned int> prefixSum(256, 0);
 #pragma omp for
     for (int i = 0; i < (int)prefixSum.size(); ++i)
         prefixSum.at(i) = i*4;
@@ -475,10 +480,10 @@ void VolumeRenderCL::setTransferFunction(std::vector<unsigned char> &tff)
         _tffMem = cl::Image1D(_contextCL, flags, format, tff.size() / 4, tff.data());
         generateBricks();
 
-        std::vector<ushort> prefixSum;
+        std::vector<unsigned int> prefixSum;
         // copy only alpha values (every fourth element)
         for (int i = 3; i < static_cast<int>(tff.size()); i += 4)
-            prefixSum.push_back(static_cast<ushort>(tff.at(i)));
+            prefixSum.push_back(static_cast<unsigned int>(tff.at(i)));
         std::partial_sum(prefixSum.begin(), prefixSum.end(), prefixSum.begin());
         setTffPrefixSum(prefixSum);
     }
@@ -489,7 +494,7 @@ void VolumeRenderCL::setTransferFunction(std::vector<unsigned char> &tff)
 }
 
 
-void VolumeRenderCL::setTffPrefixSum(std::vector<unsigned short> &tffPrefixSum)
+void VolumeRenderCL::setTffPrefixSum(std::vector<unsigned int> &tffPrefixSum)
 {
     if (!_dr.has_data())
         return;
@@ -498,7 +503,7 @@ void VolumeRenderCL::setTffPrefixSum(std::vector<unsigned short> &tffPrefixSum)
     {
         cl::ImageFormat format;
         format.image_channel_order = CL_R;
-        format.image_channel_data_type = CL_UNSIGNED_INT16;
+        format.image_channel_data_type = CL_UNSIGNED_INT32;
 
         cl_mem_flags flags = CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR;
         // divide size by 4 because of RGBA

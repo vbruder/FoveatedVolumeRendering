@@ -420,7 +420,7 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
     const int tffSize = 256;
     const qreal granularity = 4096.0;
     std::vector<uchar> tff(tffSize*4);
-    std::vector<ushort> prefixSum(tffSize);
+    std::vector<unsigned int> prefixSum(tffSize);
 
     QPropertyAnimation interpolator;
     interpolator.setEasingCurve(_tffInterpol);
