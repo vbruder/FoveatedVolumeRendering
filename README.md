@@ -25,10 +25,11 @@ To compile/run the code you need:
 # License #
 
 Copyright (C) 2017-2018 Valentin Bruder vbruder@gmail.com
-LGPLv3+
+
+This software is licensed under [LGPLv3+](https://www.gnu.org/licenses/lgpl-3.0.en.html).
 
 # Credits #
 	
   * Color wheel from Mattia Basaglia's Qt-Color-Widgets: https://github.com/mbasaglia/Qt-Color-Widgets
-  * OpenCL utils based on Erik Smistad's OpenCLUtilityLibrary: https://github.com/search?utf8=✓&q=erik+smistad&type=Users
+  * OpenCL utils based on Erik Smistad's OpenCLUtilityLibrary: https://github.com/smistad/OpenCLUtilityLibrary
   * Transfer function editor based on Qt sample code.
