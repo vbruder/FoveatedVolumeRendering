@@ -21,3 +21,14 @@ To compile/run the code you need:
 # Planned changes/extensions #
 
 *  Switch to CMake as build system
+
+# License #
+
+Copyright (C) 2017-2018 Valentin Bruder vbruder@gmail.com
+LGPLv3+
+
+# Credits #
+	
+  * Color wheel from Mattia Basaglia's Qt-Color-Widgets: https://github.com/mbasaglia/Qt-Color-Widgets
+  * OpenCL utils based on Erik Smistad's OpenCLUtilityLibrary: https://github.com/search?utf8=✓&q=erik+smistad&type=Users
+  * Transfer function editor based on Qt sample code.
