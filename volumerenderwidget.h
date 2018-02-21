@@ -25,6 +25,7 @@
 
 #include <QObject>
 #include <QWidget>
+#include <QDir>
 #include <QPointer>
 #include <QQuaternion>
 #include <QOpenGLWidget>
@@ -94,6 +95,7 @@ public slots:
     void setImageSamplingRate(const double samplingRate);
 
     void saveFrame();
+    void toggleVideoRecording();
     void setTimeStep(int timestep);
     void setAmbientOcclusion(bool ao);
 signals:
@@ -146,6 +148,7 @@ private:
     bool _noUpdate;
     bool _loadingFinished;
     bool _writeImage;
+    bool _recordVideo;
     qint64 _imgCount;
     QVector<double> _times;
     double _imgSamplingRate;       // image oversampling rate

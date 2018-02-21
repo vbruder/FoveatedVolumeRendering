@@ -67,6 +67,7 @@ VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
     , _noUpdate(true)
     , _loadingFinished(false)
     , _writeImage(false)
+    , _recordVideo(false)
     , _imgCount(0)
     , _imgSamplingRate(1)
 {
@@ -202,6 +203,18 @@ void VolumeRenderWidget::saveFrame()
 }
 
 /**
+ * @brief VolumeRenderWidget::toggleVideoRecording
+ */
+void VolumeRenderWidget::toggleVideoRecording()
+{
+    qInfo() << (_recordVideo ? "Starting to record..." : "Stopping to record.");
+
+    _recordVideo = !_recordVideo;
+    _writeImage = true;
+    update();
+}
+
+/**
  * @brief VolumeRenderWidget::setTimeStep
  * @param timestep
  */
@@ -269,10 +282,13 @@ void VolumeRenderWidget::paintGL()
         if (_volumerender.hasData() && _writeImage)
         {
             QImage img = this->grabFramebuffer();
-            QString number = QString("%1").arg(_imgCount++, 5, 10, QChar('0'));
-            img.save("frame_" + number + ".png");
-            qInfo() << "Frame written to" << "frame_" + number + ".png";
-            _writeImage = false;
+            QString number = QString("%1").arg(_imgCount++, 6, 10, QChar('0'));
+            if (!QDir("img").exists())
+                QDir().mkdir("img");
+            img.save("img/frame_" + number + ".png");
+            qInfo() << "Writing frame: " << "frame_" + number + ".png";
+            if (!_recordVideo)
+                _writeImage = false;
         }
     }
     p.endNativePainting();
@@ -608,7 +624,7 @@ void VolumeRenderWidget::mouseMoveEvent(QMouseEvent *event)
  */
 void VolumeRenderWidget::wheelEvent(QWheelEvent *event)
 {
-    double t = 800.0;
+    double t = 1600.0;
     if (event->modifiers() & Qt::ShiftModifier)
         t *= 6.0;
 
