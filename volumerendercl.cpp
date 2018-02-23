@@ -129,7 +129,11 @@ void VolumeRenderCL::setMemObjectsRaycast(const int t)
     _raycastKernel.setArg(VOLUME, _volumesMem.at(t));
     _raycastKernel.setArg(TFF, _tffMem);
     _raycastKernel.setArg(BRICKS, _bricksMem.at(t));
+#ifdef NO_GL
+    _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
+#else
     _raycastKernel.setArg(OUTPUT, _outputMem);
+#endif
     _raycastKernel.setArg(TFF_PREFIX, _tffPrefixMem);
     cl_float3 modelScale = {_modelScale[0], _modelScale[1], _modelScale[2]};
     _raycastKernel.setArg(MODEL_SCALE, modelScale);
@@ -224,14 +228,20 @@ void VolumeRenderCL::updateOutputImg(const size_t width, const size_t height, GL
     format.image_channel_data_type = CL_FLOAT;
     try
     {
+#ifdef NO_GL
+        _outputMemNoGL = cl::Image2D(_contextCL,
+                                     CL_MEM_WRITE_ONLY,
+                                     format,
+                                     width,
+                                     height);
+        _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
+        _outputData.resize(width * height * 4, 0);
+#else
         _outputMem = cl::ImageGL(_contextCL,
                                  CL_MEM_WRITE_ONLY,
                                  GL_TEXTURE_2D,
                                  0,
                                  texId);
-        _raycastKernel.setArg(OUTPUT, _outputMem);
-#ifdef NO_GL
-        _outputData.resize(width * height * 4, 0);
 #endif
     }
     catch (cl::Error err)
@@ -254,7 +264,23 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const i
         setMemObjectsRaycast(t);
         cl::NDRange globalThreads(width, height);
         cl::Event ndrEvt;
-
+#ifdef NO_GL
+        _queueCL.enqueueNDRangeKernel(
+                    _raycastKernel, cl::NullRange, globalThreads, cl::NullRange, NULL, &ndrEvt);
+        _outputData.resize(width*height*4);
+        cl::Event readEvt;
+        std::array<size_t, 3> origin = {{0, 0, 0}};
+        std::array<size_t, 3> region = {{width, height, 1}};
+        _queueCL.enqueueReadImage(_outputMemNoGL,
+                                  CL_TRUE,
+                                  origin,
+                                  region,
+                                  0, 0,
+                                  _outputData.data(),
+                                  NULL,
+                                  &readEvt);
+        _queueCL.flush();    // global sync
+#else
         std::vector<cl::Memory> memObj;
         memObj.push_back(_outputMem);
         _queueCL.enqueueAcquireGLObjects(&memObj);
@@ -262,21 +288,6 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const i
                     _raycastKernel, cl::NullRange, globalThreads, cl::NullRange, NULL, &ndrEvt);
         _queueCL.enqueueReleaseGLObjects(&memObj);
         _queueCL.finish();    // global sync
-
-#ifdef NO_GL
-        cl::Event readEvt;
-        std::array<size_t, 3> origin = {{0, 0, 0}};
-        std::array<size_t, 3> region = {{width, height, 1}};
-        _queueCL.enqueueReadImage(_outputMem,
-                                  CL_TRUE,
-                                  origin,
-                                  region,
-                                  0,
-                                  0,
-                                  _outputData.data(),
-                                  NULL,
-                                  &readEvt);
-        _queueCL.flush();    // global sync
 #endif
 
 #ifdef CL_QUEUE_PROFILING_ENABLE

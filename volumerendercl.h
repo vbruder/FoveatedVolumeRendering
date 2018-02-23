@@ -31,6 +31,8 @@
 
 #include <valarray>
 
+//#define NO_GL
+
 class VolumeRenderCL
 {
 public:
@@ -186,6 +188,10 @@ public:
      */
     void setAmbientOcclusion(bool ao);
 
+#ifdef NO_GL
+    std::vector<float> getOutputData() {return _outputData;}
+#endif
+
 private:
     /**
      * @brief Generate coarse grained volume bricks that can be used for ESS.
@@ -255,6 +261,8 @@ private:
     cl::ImageGL _overlayMem;
     cl::Image1D _tffMem;
     cl::Image1D _tffPrefixMem;
+    cl::Image2D _outputMemNoGL;
+
 #ifdef NO_GL
     std::vector<float> _outputData;
 #endif

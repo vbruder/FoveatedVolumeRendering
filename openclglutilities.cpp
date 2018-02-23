@@ -103,22 +103,26 @@ cl::Context createCLGLContext(cl_device_type type, cl_vendor vendor)
 cl::Device getValidGLCLInteropDevice(cl::Platform platform, cl_context_properties* properties) {
     // Function for finding a valid device for CL-GL context.
     // Thanks to Jim Vaughn for this contribution
-    cl::Device displayDevice;
-
+//    cl::Device displayDevice;
     cl_device_id interopDeviceId;
 
     int status;
     size_t deviceSize = 0;
 
     // Load extension function call
-    clGetGLContextInfoKHR_fn glGetGLContextInfo_func = (clGetGLContextInfoKHR_fn)clGetExtensionFunctionAddress("clGetGLContextInfoKHR");
+    // TODO select desired platform (not just the first one)
+    cl_platform_id platform_id;
+    clGetPlatformIDs(1, &platform_id, NULL);
+    clGetGLContextInfoKHR_fn glGetGLContextInfo_func =
+            (clGetGLContextInfoKHR_fn)clGetExtensionFunctionAddressForPlatform(platform_id,
+                                                                               "clGetGLContextInfoKHR");
 
     // Ask for the CL device associated with the GL context
-    status = glGetGLContextInfo_func( properties,
-                                    CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR,
-                                    sizeof(cl_device_id),
-                                    &interopDeviceId,
-                                    &deviceSize);
+    status = glGetGLContextInfo_func(properties,
+                                     CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR,
+                                     sizeof(cl_device_id),
+                                     &interopDeviceId,
+                                     &deviceSize);
 
     if(deviceSize == 0) {
         throw cl::Error(1,"No GLGL devices found for current platform");
