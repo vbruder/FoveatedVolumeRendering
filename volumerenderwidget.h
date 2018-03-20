@@ -98,6 +98,8 @@ public slots:
     void toggleVideoRecording();
     void setTimeStep(int timestep);
     void setAmbientOcclusion(bool ao);
+
+    void generateLowResVolume();
 signals:
     void fpsChanged(double);
     void frameSizeChanged(QSize);
@@ -110,7 +112,6 @@ protected:
     void resizeGL(int w, int h) Q_DECL_OVERRIDE;
 
 private:
-
     void paintOrientationAxis(QPainter &p);
     void paintFPS(QPainter &p, const double fps, const double lastTime);
     double calcFPS();

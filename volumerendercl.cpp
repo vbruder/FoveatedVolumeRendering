@@ -27,6 +27,30 @@
 #include <numeric>
 #include <omp.h>
 
+
+/**
+ * @brief RoundPow2
+ * @param iNumber
+ * @return
+ */
+static unsigned int RoundPow2(unsigned int n)
+{
+    // next highest power of 2
+    // (cf: http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2)
+    unsigned int val = n - 1u;
+    val |= val >> 1;
+    val |= val >> 2;
+    val |= val >> 4;
+    val |= val >> 8;
+    val |= val >> 16;
+    val++;
+    // previous power of 2
+    unsigned int x = val >> 1;
+    // round to nearest of the two
+    return (val - n) > (n - x) ? x : val;
+}
+
+
 /**
  * @brief VolumeRenderCL::VolumeRenderCL
  */
@@ -113,6 +137,7 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel.setArg(AO, 1);                   // ambient occlusion on by default
 
         _genBricksKernel = cl::Kernel(program, "generateBricks");
+        _downsamplingKernel = cl::Kernel(program, "downsampling");
     }
     catch (cl::Error err)
     {
@@ -148,6 +173,109 @@ void VolumeRenderCL::setMemObjectsBrickGen(const int t)
     _genBricksKernel.setArg(VOLUME, _volumesMem.at(t));
     _genBricksKernel.setArg(TFF, _tffMem);
     _genBricksKernel.setArg(BRICKS, _bricksMem.at(t));
+}
+
+
+/**
+ * @brief VolumeRenderCL::setMemObjectsDownsampling
+ */
+void VolumeRenderCL::volumeDownsampling(const int t, const int factor)
+{
+    if (!_dr.has_data() || factor < 2)
+        return;
+
+    std::array<unsigned int, 3> texSize = {1u, 1u, 1u};
+    texSize.at(0) = ceil(_dr.properties().volume_res.at(0)/(double)factor);
+    texSize.at(1) = ceil(_dr.properties().volume_res.at(1)/(double)factor);
+    texSize.at(2) = ceil(_dr.properties().volume_res.at(2)/(double)factor);
+
+    if (texSize.at(0) < 64)
+    {
+        std::cerr << "Error: Down sampled volume size would be smaller than 64. Aborting."
+                  << std::endl;
+        return;
+    }
+
+    cl::ImageFormat format;
+    format.image_channel_order = CL_R;
+
+    if (_dr.properties().format == "UCHAR")
+        format.image_channel_data_type = CL_UNORM_INT8;
+    // FIXME: format
+    else if (_dr.properties().format == "USHORT")
+        format.image_channel_data_type = CL_UNORM_INT8; //CL_UNORM_INT16
+    else if (_dr.properties().format == "FLOAT")
+        format.image_channel_data_type = CL_FLOAT;
+    else
+        throw std::invalid_argument("Unknown or invalid volume data format.");
+
+    try
+    {
+        cl::Image3D lowResVol = cl::Image3D(_contextCL,
+                                            CL_MEM_WRITE_ONLY,
+                                            format,
+                                            texSize.at(0),
+                                            texSize.at(1),
+                                            texSize.at(2),
+                                            0, 0,
+                                            NULL);
+
+        _downsamplingKernel.setArg(VOLUME, _volumesMem.at(t));
+        _downsamplingKernel.setArg(1, lowResVol);
+
+        cl::NDRange globalThreads(texSize.at(0), texSize.at(1), texSize.at(2));
+        cl::Event ndrEvt;
+        _queueCL.enqueueNDRangeKernel(_downsamplingKernel, cl::NullRange,
+                                      globalThreads, cl::NullRange, NULL, &ndrEvt);
+        _queueCL.finish();    // global sync
+
+        // read back volume data
+        // TODO: format selection
+        std::vector<unsigned char> outputData(texSize.at(0)*texSize.at(1)*texSize.at(2));
+        std::array<size_t, 3> origin = {{0, 0, 0}};
+        std::array<size_t, 3> region = {{texSize.at(0), texSize.at(1), texSize.at(2)}};
+        _queueCL.enqueueReadImage(lowResVol,
+                                  CL_TRUE,
+                                  origin,
+                                  region,
+                                  0, 0,
+                                  outputData.data());
+        _queueCL.flush();    // global sync
+
+        // dump to file
+        size_t lastindex = _dr.properties().dat_file_name.find_last_of(".");
+        std::string rawname = _dr.properties().dat_file_name.substr(0, lastindex);
+        rawname += "_";
+        rawname += std::to_string(texSize.at(0));
+        std::ofstream file(rawname + ".raw", std::ios::out|std::ios::binary);
+        std::cout << "Writing downsampled volume data to "
+                  << rawname << "_" << std::to_string(texSize.at(0)) << ".raw ...";
+        std::copy(outputData.cbegin(), outputData.cend(),
+                  std::ostream_iterator<unsigned char>(file));
+        file.close();
+
+        // Generate .dat file and write out
+        std::ofstream datFile(rawname + ".dat", std::ios::out);
+//        lastindex = _dr.properties().raw_file_names.at(0).find_last_of(".");
+        lastindex = rawname.find_last_of(".");
+        size_t firstindex = rawname.find_last_of("/\\");
+        rawname = rawname.substr(firstindex + 1, lastindex);
+        datFile << "ObjectFileName: \t" << rawname << ".raw\n";
+        datFile << "Resolution: \t\t" << texSize.at(0) << " " << texSize.at(1) << " "
+                                      << texSize.at(2) << "\n";
+        datFile << "SliceThickness: \t" << _dr.properties().slice_thickness.at(0) << " "
+                << _dr.properties().slice_thickness.at(1) << " "
+                << _dr.properties().slice_thickness.at(2)
+                << "\n";
+        // FIXME: format
+        datFile << "Format: \t\t\t" << "UCHAR" << "\n"; //_dr.properties().format << "\n";
+        datFile.close();
+        std::cout << " Done." << std::endl;
+    }
+    catch (cl::Error err)
+    {
+        logCLerror(err);
+    }
 }
 
 
@@ -305,28 +433,6 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const i
     }
 }
 
-
-/**
- * @brief RoundPow2
- * @param iNumber
- * @return
- */
-static unsigned int RoundPow2(unsigned int n)
-{
-    // next highest power of 2
-    // (cf: http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2)
-	unsigned int val = n - 1u;
-    val |= val >> 1;
-    val |= val >> 2;
-    val |= val >> 4;
-    val |= val >> 8;
-    val |= val >> 16;
-    val++;
-    // previous power of 2
-	unsigned int x = val >> 1;
-    // round to nearest of the two
-    return (val - n) > (n - x) ? x : val;
-}
 
 /**
  * @brief VolumeRenderCL::generateBricks

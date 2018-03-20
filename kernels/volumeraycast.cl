@@ -25,7 +25,7 @@
 #define ERT_THRESHOLD 0.98
 
 constant sampler_t linearSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP_TO_EDGE |
-                                CLK_FILTER_LINEAR;
+                               CLK_FILTER_LINEAR;
 constant sampler_t nearestSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
                                 CLK_FILTER_NEAREST;
 
@@ -516,4 +516,37 @@ __kernel void generateBricks(  __read_only image3d_t volData
     }
 
     write_imagef(volBrickData, (int4)(coord, 0), (float4)(minVal, maxVal, 0, 0));
+}
+
+
+//************************** Downsample volume ***************************
+
+__kernel void downsampling(  __read_only image3d_t volData
+                           , __write_only image3d_t volDataLowRes
+                          )
+{
+    int3 coord = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+    if(any(coord >= get_image_dim(volDataLowRes).xyz))
+        return;
+
+    int3 voxPerCell = convert_int3(ceil(convert_float4(get_image_dim(volData))/
+                                          convert_float4(get_image_dim(volDataLowRes))).xyz);
+    int3 volCoordLower = voxPerCell * coord;
+    int3 volCoordUpper = clamp(volCoordLower + voxPerCell, (int3)(0), get_image_dim(volData).xyz);
+
+    float value = 0.f;
+
+    for (int k = volCoordLower.z; k < volCoordUpper.z; ++k)
+    {
+        for (int j = volCoordLower.y; j < volCoordUpper.y; ++j)
+        {
+            for (int i = volCoordLower.x; i < volCoordUpper.x; ++i)
+            {
+                value += read_imagef(volData, nearestSmp, (int4)(i, j, k, 0)).x;  // [0; 1]
+            }
+        }
+    }
+    value /= voxPerCell.x * voxPerCell.y * voxPerCell.z;
+
+    write_imagef(volDataLowRes, (int4)(coord, 0), (float4)(value));
 }

@@ -188,6 +188,13 @@ public:
      */
     void setAmbientOcclusion(bool ao);
 
+    /**
+     * @brief Generate a downsampling of the currently loaded volume file.
+     * @param t Timestep
+     * @param factor downsampling factor, uniform for all 3 dimensions
+     */
+    void volumeDownsampling(const int t, const int factor);
+
 #ifdef NO_GL
     std::vector<float> getOutputData() {return _outputData;}
 #endif
@@ -254,6 +261,7 @@ private:
     cl::CommandQueue _queueCL;
     cl::Kernel _raycastKernel;
     cl::Kernel _genBricksKernel;
+    cl::Kernel _downsamplingKernel;
 
     std::vector<cl::Image3D> _volumesMem;
     std::vector<cl::Image3D> _bricksMem;

@@ -27,6 +27,7 @@
 #include <QImage>
 #include <QCoreApplication>
 #include <QScreen>
+#include <QInputDialog>
 
 const static double Z_NEAR = 1.0;
 const static double Z_FAR = 500.0;
@@ -687,7 +688,7 @@ void VolumeRenderWidget::setCamOrtho(bool camOrtho)
     _volumerender.setCamOrtho(camOrtho);
     _overlayProjMX.setToIdentity();
     if (camOrtho)
-        _overlayProjMX.ortho(QRect(0, 0, width(), height())); // TODO: fix
+        _overlayProjMX.ortho(QRect(0, 0, width(), height())); // FIXME
     else
         _overlayProjMX.perspective(53.14f, qreal(width())/qreal(height() ? height() : 1), Z_NEAR, Z_FAR);
     this->updateView();
@@ -786,4 +787,18 @@ double VolumeRenderWidget::calcFPS()
 
 //    qDebug() << fps;
     return fps;
+}
+
+
+/**
+ * @brief VolumeRenderWidget::generateLowResVolume
+ * @param factor
+ */
+void VolumeRenderWidget::generateLowResVolume()
+{
+    bool ok;
+    int factor = QInputDialog::getInt(this, tr("Factor"),
+                                         tr("Select downsampling factor:"), 2, 2, 64, 1, &ok);
+    if (ok)
+        _volumerender.volumeDownsampling(_timestep, factor);
 }
