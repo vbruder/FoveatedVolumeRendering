@@ -26,17 +26,32 @@
      <x>0</x>
      <y>0</y>
      <width>1298</width>
-     <height>19</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
+    <widget class="QMenu" name="menuLoad_transfer_function">
+     <property name="title">
+      <string>Load transfer function</string>
+     </property>
+     <addaction name="actionLoadRawTff"/>
+     <addaction name="actionLoadCpTff"/>
+    </widget>
+    <widget class="QMenu" name="menuSave_transfer_function">
+     <property name="title">
+      <string>Save transfer function</string>
+     </property>
+     <addaction name="actionSaveRawTff_2"/>
+     <addaction name="actionSaveCpTff"/>
+    </widget>
     <addaction name="actionOpen"/>
-    <addaction name="actionLoadTff"/>
-    <addaction name="actionSaveTff"/>
-    <addaction name="actionSaveRawTff"/>
+    <addaction name="separator"/>
+    <addaction name="menuLoad_transfer_function"/>
+    <addaction name="menuSave_transfer_function"/>
+    <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -289,22 +304,6 @@
     <string>Ctrl+O</string>
    </property>
   </action>
-  <action name="actionLoadTff">
-   <property name="text">
-    <string>Load transfer function...</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+T</string>
-   </property>
-  </action>
-  <action name="actionSaveTff">
-   <property name="text">
-    <string>Save transfer function...</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+S</string>
-   </property>
-  </action>
   <action name="actionQuit">
    <property name="icon">
     <iconset theme="application-exit">
@@ -331,6 +330,32 @@
    </property>
    <property name="text">
     <string>Settings</string>
+   </property>
+  </action>
+  <action name="actionLoadRawTff">
+   <property name="text">
+    <string>From raw values...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="actionLoadCpTff">
+   <property name="text">
+    <string>From control points...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
+   </property>
+  </action>
+  <action name="actionSaveRawTff_2">
+   <property name="text">
+    <string>As raw values...</string>
+   </property>
+  </action>
+  <action name="actionSaveCpTff">
+   <property name="text">
+    <string>As control points...</string>
    </property>
   </action>
  </widget>

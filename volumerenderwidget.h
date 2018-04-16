@@ -84,6 +84,7 @@ public slots:
     void updateSamplingRate(double samplingRate);
     void updateTransferFunction(QGradientStops stops);
     std::vector<unsigned char> getRawTransferFunction(QGradientStops stops) const;
+    void setRawTransferFunction(std::vector<unsigned char> tff);
 
 #undef Bool
     void setTffInterpolation(const QString method);

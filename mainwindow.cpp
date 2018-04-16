@@ -64,9 +64,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // menu bar actions
     connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::openVolumeFile);
-    connect(ui->actionSaveTff, &QAction::triggered, this, &MainWindow::saveTff);
-    connect(ui->actionSaveRawTff, &QAction::triggered, this, &MainWindow::saveRawTff);
-    connect(ui->actionLoadTff, &QAction::triggered, this, &MainWindow::loadTff);
+    connect(ui->actionSaveCpTff, &QAction::triggered, this, &MainWindow::saveTff);
+    connect(ui->actionSaveRawTff_2, &QAction::triggered, this, &MainWindow::saveRawTff);
+    connect(ui->actionLoadCpTff, &QAction::triggered, this, &MainWindow::loadTff);
+    connect(ui->actionLoadRawTff, &QAction::triggered, this, &MainWindow::loadRawTff);
 
     // future watcher for concurrent data loading
     _watcher = new QFutureWatcher<void>(this);
@@ -351,6 +352,42 @@ void MainWindow::saveRawTff()
             }
             file.close();
         }
+    }
+}
+
+
+/**
+ * @brief MainWindow::saveRawTff
+ */
+void MainWindow::loadRawTff()
+{
+    QFileDialog dia;
+    QString defaultPath = _settings->value( "LastTffFile" ).toString();
+    QString pickedFile = dia.getOpenFileName(
+                this, tr("Open Transfer Function"),
+                defaultPath, tr("Transfer function files (*.tff)"));
+    if (!pickedFile.isEmpty())
+    {
+        qDebug() << "Loading transfer funtion data defined in" << pickedFile;
+        std::ifstream tff_file(pickedFile.toStdString(), std::ios::in);
+        float value = 0;
+        std::vector<unsigned char> values;
+
+        // read lines from file and split on whitespace
+        if (tff_file.is_open())
+        {
+            while (tff_file >> value)
+            {
+                values.push_back((char)value);
+            }
+            tff_file.close();
+            ui->volumeRenderWidget->setRawTransferFunction(values);
+        }
+        else
+        {
+            qDebug() << "Could not open transfer function file " + pickedFile;
+        }
+        _settings->setValue( "LastTffFile", pickedFile );
     }
 }
 

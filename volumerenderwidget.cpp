@@ -449,6 +449,15 @@ void VolumeRenderWidget::setTffInterpolation(const QString method)
         _tffInterpol = QEasingCurve::Linear;
 }
 
+/**
+ * @brief VolumeRenderWidget::setRawTransferFunction
+ * @param tff
+ */
+void VolumeRenderWidget::setRawTransferFunction(std::vector<unsigned char> tff)
+{
+    _volumerender.setTransferFunction(tff);
+    update();
+}
 
 /**
  * @brief VolumeRenderWidget::updateTransferFunction

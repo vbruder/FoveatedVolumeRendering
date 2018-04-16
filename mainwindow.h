@@ -59,6 +59,7 @@ protected slots:
     void finishedLoading();
 
     void loadTff();
+    void loadRawTff();
     void saveTff();
     void saveRawTff();
 
