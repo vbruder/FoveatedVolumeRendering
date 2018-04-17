@@ -39,8 +39,8 @@ public:
     enum kernel_arg
     {
           VOLUME     = 0 // volume data set                          image3d_t
-        , TFF        = 1 // transfer function array                  image1d_t
-        , BRICKS         // low resolution brick volume              image3d_t
+        , BRICKS     = 1 // low resolution brick volume              image3d_t
+        , TFF        = 2 // transfer function array                  image1d_t
         , OUTPUT         // output image                             image2d_t
         , SAMPLING_RATE  // step size factor                         cl_float
         , VIEW           // view matrix                              float16

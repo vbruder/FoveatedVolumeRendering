@@ -256,8 +256,8 @@ float calcAO(float3 n, uint4 *taus, image3d_t volData, float3 pos, float stepSiz
  * direct volume raycasting kernel
  */
 __kernel void volumeRender(  __read_only image3d_t volData
-                           , __read_only image1d_t tffData     // constant transfer function values
                            , __read_only image3d_t volBrickData
+                           , __read_only image1d_t tffData     // constant transfer function values
                            , __write_only image2d_t outData
                            , const float samplingRate
                            , const float16 viewMat
@@ -390,7 +390,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
                         (int3)(0), convert_int3(bricksRes.xyz) - 1);
 
     // add +1 to cells if ray dir component is negative: rayDir >= 0 ? (-1) : 0
-    float3 tv = tnear + (convert_float(cell - isgreaterequal(rayDir, (float3)(0))) * (2.f*brickLen) - rayOrigCell) * invRay;
+    float3 tv = tnear + (convert_float3(cell - isgreaterequal(rayDir, (float3)(0))) * (2.f*brickLen) - rayOrigCell) * invRay;
     int3 exit = step * bricksRes.xyz;
     if (exit.x < 0) exit.x = -1;
     if (exit.y < 0) exit.y = -1;
@@ -416,8 +416,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
         float alphaMax = read_imagef(tffData, linearSmp, minMaxDensity.y).w;
         if (alphaMax < 1e-6f)
         {
-            uint prefixMin = read_imageui(tffPrefix, nearestSmp, minMaxDensity.x).x;
-            uint prefixMax = read_imageui(tffPrefix, nearestSmp, minMaxDensity.y).x;
+            uint prefixMin = read_imageui(tffPrefix, minMaxDensity.x).x;
+            uint prefixMax = read_imageui(tffPrefix, minMaxDensity.y).x;
             if (prefixMin == prefixMax)
             {
                 t = t_exit;
@@ -490,7 +490,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
 //************************** Generate brick volume ***************************
 
 __kernel void generateBricks(  __read_only image3d_t volData
-                             , __read_only image1d_t tffData     // constant transfer function values
                              , __write_only image3d_t volBrickData
                             )
 {
@@ -504,7 +503,7 @@ __kernel void generateBricks(  __read_only image3d_t volData
     int3 volCoordUpper = clamp(volCoordLower + voxPerCell, (int3)(0), get_image_dim(volData).xyz);
 
     float maxVal = 0.f;
-    float minVal = FLT_MAX;
+    float minVal = 1.f;
     float value = 0.f;
 
     for (int k = volCoordLower.z; k < volCoordUpper.z; ++k)
@@ -520,7 +519,7 @@ __kernel void generateBricks(  __read_only image3d_t volData
         }
     }
 
-    write_imagef(volBrickData, (int4)(coord, 0), (float4)(minVal, maxVal, 0, 0));
+    write_imagef(volBrickData, (int4)(coord, 0), (float4)(minVal, maxVal, 0, 1.f));
 }
 
 

@@ -152,8 +152,8 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
 void VolumeRenderCL::setMemObjectsRaycast(const int t)
 {
     _raycastKernel.setArg(VOLUME, _volumesMem.at(t));
-    _raycastKernel.setArg(TFF, _tffMem);
     _raycastKernel.setArg(BRICKS, _bricksMem.at(t));
+    _raycastKernel.setArg(TFF, _tffMem);
 #ifdef NO_GL
     _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
 #else
@@ -171,7 +171,6 @@ void VolumeRenderCL::setMemObjectsRaycast(const int t)
 void VolumeRenderCL::setMemObjectsBrickGen(const int t)
 {
     _genBricksKernel.setArg(VOLUME, _volumesMem.at(t));
-    _genBricksKernel.setArg(TFF, _tffMem);
     _genBricksKernel.setArg(BRICKS, _bricksMem.at(t));
 }
 
