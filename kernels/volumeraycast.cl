@@ -133,7 +133,7 @@ int intersectPlane(const float3 rayOrigin, const float3 rayDir,
 }
 
 // Compute gradient using central difference: f' = ( f(x+h)-f(x-h) ) / 2*h
-float3 gradientCentralDiff(read_only image3d_t vol, const float4 pos)
+float4 gradientCentralDiff(read_only image3d_t vol, const float4 pos)
 {
     float3 volResf = convert_float3(get_image_dim(vol).xyz);
     float3 offset = native_divide((float3)(1.0f), volResf);
@@ -150,7 +150,7 @@ float3 gradientCentralDiff(read_only image3d_t vol, const float4 pos)
     if (length(normal) == 0.0f) // TODO: zero correct
         normal = (float3)(1.f, 0.f, 0.f);
 
-    return normal;
+    return (float4)(normal, fast_length(s2 - s1));
 }
 
 // specular part of blinn-phong shading model
@@ -170,7 +170,7 @@ float3 specularBlinnPhong(float3 lightColor, float specularExp, float3 materialC
 // simple illumination based on central differences
 float3 illumination(read_only image3d_t vol, const float4 pos, float3 color, float3 toLightDir)
 {
-    float3 n = fast_normalize(-gradientCentralDiff(vol, pos));
+    float3 n = fast_normalize(-gradientCentralDiff(vol, pos).xyz);
     float3 l = fast_normalize(toLightDir.xyz);
 
     float3 amb = color * 0.2f;
@@ -426,7 +426,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
         }
 #endif
 
-        // standard raycast loop
+        // standard raycasting loop
         while (t < t_exit)
         {
             pos = camPos + (t-offset)*rayDir;
@@ -438,6 +438,11 @@ __kernel void volumeRender(  __read_only image3d_t volData
             tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
             if (useIllum)
                 tfColor.xyz = illumination(volData, as_float4(pos), tfColor.xyz, -rayDir);
+            else
+            {
+                float magnitude = gradientCentralDiff(volData, as_float4(pos)).w;
+                tfColor = read_imagef(tffData, linearSmp, magnitude);
+            }
             tfColor.xyz = background.xyz - tfColor.xyz;
 
             // Taylor expansion approximation
@@ -450,7 +455,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
             {
                 if (useAO)
                 {
-                    float3 n = fast_normalize(-gradientCentralDiff(volData, as_float4(pos)));
+                    float3 n = fast_normalize(-gradientCentralDiff(volData, as_float4(pos)).xyz);
                     // TODO remove magic number
                     result.xyz *= 1.f - opacity*calcAO(n, &taus, volData, pos, length(voxLen), length(voxLen)*5.f);
                 }

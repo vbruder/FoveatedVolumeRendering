@@ -327,7 +327,7 @@ void MainWindow::saveTff()
 void MainWindow::saveRawTff()
 {
     QFileDialog dia;
-    QString defaultPath = _settings->value( "LastTffFile" ).toString();
+    QString defaultPath = _settings->value( "LastRawTffFile" ).toString();
     QString pickedFile = dia.getSaveFileName(
                 this, tr("Save Transfer Function"),
                 defaultPath, tr("Transfer function files (*.tff)"));
@@ -362,7 +362,7 @@ void MainWindow::saveRawTff()
 void MainWindow::loadRawTff()
 {
     QFileDialog dia;
-    QString defaultPath = _settings->value( "LastTffFile" ).toString();
+    QString defaultPath = _settings->value( "LastRawTffFile" ).toString();
     QString pickedFile = dia.getOpenFileName(
                 this, tr("Open Transfer Function"),
                 defaultPath, tr("Transfer function files (*.tff)"));
@@ -387,7 +387,7 @@ void MainWindow::loadRawTff()
         {
             qDebug() << "Could not open transfer function file " + pickedFile;
         }
-        _settings->setValue( "LastTffFile", pickedFile );
+        _settings->setValue( "LastRawTffFile", pickedFile );
     }
 }
 
