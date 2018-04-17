@@ -163,13 +163,6 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::keyPressEvent(QKeyEvent *event)
 {
-    if (event->key() == Qt::Key_P && event->modifiers() == Qt::CTRL)
-        ui->volumeRenderWidget->saveFrame();
-    else if (event->key() == Qt::Key_V && event->modifiers() == Qt::CTRL)
-        ui->volumeRenderWidget->toggleVideoRecording();
-    else if (event->key() == Qt::Key_D && event->modifiers() == Qt::CTRL)
-        ui->volumeRenderWidget->generateLowResVolume();
-
     event->accept();
 }
 

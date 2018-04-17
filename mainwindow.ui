@@ -372,10 +372,16 @@
    <property name="text">
     <string>Generate low resolution volume...</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+D</string>
+   </property>
   </action>
   <action name="actionScreenshot">
    <property name="text">
     <string>Save current screen</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
    </property>
   </action>
   <action name="actionRecord">
@@ -384,6 +390,9 @@
    </property>
    <property name="text">
     <string>Record rendered images</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+V</string>
    </property>
   </action>
  </widget>

@@ -208,7 +208,7 @@ void VolumeRenderWidget::saveFrame()
  */
 void VolumeRenderWidget::toggleVideoRecording()
 {
-    qInfo() << (_recordVideo ? "Starting to record..." : "Stopping to record.");
+    qInfo() << (_recordVideo ? "Stopped recording." : "Started recording...");
 
     _recordVideo = !_recordVideo;
     _writeImage = true;
