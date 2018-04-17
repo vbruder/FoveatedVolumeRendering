@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Basic Volume Raycaster</string>
+   <string>Volume Raycaster</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout_3">
@@ -60,7 +60,17 @@
     </property>
     <addaction name="actionSettings"/>
    </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionGenerateLowResVo"/>
+    <addaction name="separator"/>
+    <addaction name="actionScreenshot"/>
+    <addaction name="actionRecord"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
    <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
@@ -356,6 +366,24 @@
   <action name="actionSaveCpTff">
    <property name="text">
     <string>As control points...</string>
+   </property>
+  </action>
+  <action name="actionGenerateLowResVo">
+   <property name="text">
+    <string>Generate low resolution volume...</string>
+   </property>
+  </action>
+  <action name="actionScreenshot">
+   <property name="text">
+    <string>Save current screen</string>
+   </property>
+  </action>
+  <action name="actionRecord">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Record rendered images</string>
    </property>
   </action>
  </widget>

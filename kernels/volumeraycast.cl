@@ -453,7 +453,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
             if (t >= tfar) break;
             if (alpha > ERT_THRESHOLD)   // early ray termination check
             {
-                if (useAO)
+                if (useAO)  // ambient occlusion only on solid surfaces
                 {
                     float3 n = fast_normalize(-gradientCentralDiff(volData, as_float4(pos)).xyz);
                     // TODO remove magic number

@@ -68,6 +68,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSaveRawTff_2, &QAction::triggered, this, &MainWindow::saveRawTff);
     connect(ui->actionLoadCpTff, &QAction::triggered, this, &MainWindow::loadTff);
     connect(ui->actionLoadRawTff, &QAction::triggered, this, &MainWindow::loadRawTff);
+    connect(ui->actionScreenshot, &QAction::triggered,
+            ui->volumeRenderWidget, &VolumeRenderWidget::saveFrame);
+    connect(ui->actionRecord, &QAction::triggered,
+            ui->volumeRenderWidget, &VolumeRenderWidget::toggleVideoRecording);
+    connect(ui->actionGenerateLowResVo, &QAction::triggered,
+            ui->volumeRenderWidget, &VolumeRenderWidget::generateLowResVolume);
 
     // future watcher for concurrent data loading
     _watcher = new QFutureWatcher<void>(this);
