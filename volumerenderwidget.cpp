@@ -558,6 +558,15 @@ void VolumeRenderWidget::mouseReleaseEvent(QMouseEvent *event)
     event->accept();
 }
 
+/**
+ * @brief VolumeRenderWidget::resetCam
+ */
+void VolumeRenderWidget::resetCam()
+{
+    _rotQuat = QQuaternion(1, 0, 0, 0);
+    _translation = QVector3D(0, 0, 2.0);
+    updateView();
+}
 
 /**
  * @brief update camera view
@@ -700,22 +709,6 @@ void VolumeRenderWidget::setCamOrtho(bool camOrtho)
         _overlayProjMX.ortho(QRect(0, 0, width(), height())); // FIXME
     else
         _overlayProjMX.perspective(53.14f, qreal(width())/qreal(height() ? height() : 1), Z_NEAR, Z_FAR);
-    this->updateView();
-}
-
-
-/**
- * @brief VolumeRenderWidget::resetCam
- */
-void VolumeRenderWidget::resetCam()
-{
-    _rotQuat = QQuaternion(1, 0, 0, 0);
-    QVector3D rotAxis = QVector3D(0.f, 0.f, 1.0f).normalized();
-    _rotQuat = _rotQuat * QQuaternion::fromAxisAndAngle(rotAxis, -180.0);
-    rotAxis = QVector3D(1.f, 0.f, 0.0f).normalized();
-    _rotQuat = _rotQuat * QQuaternion::fromAxisAndAngle(rotAxis, -180.0);
-
-    _translation = QVector3D(0, 0, 2.0);
     this->updateView();
 }
 

@@ -74,6 +74,8 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->volumeRenderWidget, &VolumeRenderWidget::toggleVideoRecording);
     connect(ui->actionGenerateLowResVo, &QAction::triggered,
             ui->volumeRenderWidget, &VolumeRenderWidget::generateLowResVolume);
+    connect(ui->actionResetCam, &QAction::triggered,
+            ui->volumeRenderWidget, &VolumeRenderWidget::resetCam);
 
     // future watcher for concurrent data loading
     _watcher = new QFutureWatcher<void>(this);
@@ -153,6 +155,24 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::keyPressEvent(QKeyEvent *event)
 {
+    float factor = 0.01f;
+    if (event->modifiers() & Qt::ShiftModifier)
+        factor = 0.001f;
+
+    switch (event->key())
+    {
+        case Qt::Key_Up:
+        case Qt::Key_W: ui->volumeRenderWidget->updateView(+0.000f,-factor); break;
+        case Qt::Key_Left:
+        case Qt::Key_A: ui->volumeRenderWidget->updateView(-factor, 0.000f); break;
+        case Qt::Key_Down:
+        case Qt::Key_S: ui->volumeRenderWidget->updateView(+0.000f,+factor); break;
+        case Qt::Key_Right:
+        case Qt::Key_D: ui->volumeRenderWidget->updateView(+factor, 0.000f); break;
+        // TODO: zoom
+    }
+
+
     event->accept();
 }
 

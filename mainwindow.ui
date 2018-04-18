@@ -59,6 +59,7 @@
      <string>View</string>
     </property>
     <addaction name="actionSettings"/>
+    <addaction name="actionResetCam"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -86,11 +87,52 @@
    </attribute>
    <widget class="QWidget" name="dockWidgetContents">
     <layout class="QGridLayout" name="gridLayout_2">
-     <item row="4" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Interpolation</string>
+     <item row="3" column="0" colspan="2">
+      <widget class="TransferFunctionWidget" name="transferFunctionEditor" native="true"/>
+     </item>
+     <item row="1" column="0" colspan="2">
+      <widget class="QGroupBox" name="gbTimeSeries">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="title">
+        <string>Time series</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="0" column="0">
+         <widget class="QSlider" name="sldTimeStep">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="sbTimeStep"/>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QComboBox" name="cbInterpolation">
+       <item>
+        <property name="text">
+         <string>Linear</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Quad</string>
+        </property>
+       </item>
       </widget>
      </item>
      <item row="0" column="0" colspan="2">
@@ -264,61 +306,6 @@
        </layout>
       </widget>
      </item>
-     <item row="4" column="1">
-      <widget class="QComboBox" name="cbInterpolation">
-       <item>
-        <property name="text">
-         <string>Linear</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Quad</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="1" column="0" colspan="2">
-      <widget class="QGroupBox" name="gbTimeSeries">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="title">
-        <string>Time series</string>
-       </property>
-       <layout class="QGridLayout" name="gridLayout_4">
-        <item row="0" column="0">
-         <widget class="QSlider" name="sldTimeStep">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QSpinBox" name="sbTimeStep"/>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item row="3" column="0" colspan="2">
-      <widget class="TransferFunctionWidget" name="transferFunctionEditor" native="true"/>
-     </item>
-     <item row="5" column="0" colspan="2">
-      <widget class="QPushButton" name="pbResetTff">
-       <property name="text">
-        <string>Reset transfer function</string>
-       </property>
-      </widget>
-     </item>
      <item row="2" column="0" colspan="2">
       <widget class="colorwidgets::ColorWheel" name="colorWheel" native="true">
        <property name="sizePolicy">
@@ -332,6 +319,13 @@
          <width>16777215</width>
          <height>200</height>
         </size>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QPushButton" name="pbResetTff">
+       <property name="text">
+        <string>Reset</string>
        </property>
       </widget>
      </item>
@@ -427,6 +421,14 @@
     <string>Ctrl+V</string>
    </property>
   </action>
+  <action name="actionResetCam">
+   <property name="text">
+    <string>Reset camera</string>
+   </property>
+   <property name="shortcut">
+    <string>Home</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
@@ -448,6 +450,20 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>dsbImgSampling</tabstop>
+  <tabstop>dsbSamplingRate</tabstop>
+  <tabstop>pbBgColor</tabstop>
+  <tabstop>cbIllum</tabstop>
+  <tabstop>sldTimeStep</tabstop>
+  <tabstop>sbTimeStep</tabstop>
+  <tabstop>cbInterpolation</tabstop>
+  <tabstop>chbAmbientOcclusion</tabstop>
+  <tabstop>chbBox</tabstop>
+  <tabstop>chbOrtho</tabstop>
+  <tabstop>chbLinear</tabstop>
+  <tabstop>pbResetTff</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

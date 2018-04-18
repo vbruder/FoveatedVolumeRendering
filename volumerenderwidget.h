@@ -74,6 +74,7 @@ public:
 
     void updateView(float dx = 0, float dy = 0);
 
+
     bool getLoadingFinished() const;
     void setLoadingFinished(bool loadingFinished);
 
