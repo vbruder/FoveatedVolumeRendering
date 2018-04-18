@@ -159,7 +159,7 @@ public:
      * @brief setIllumination
      * @param illum
      */
-    void setIllumination(bool illum);
+    void setIllumination(unsigned int illum);
     /**
      * @brief setBoundingBox
      * @param boundingBox

@@ -89,7 +89,7 @@ public slots:
 #undef Bool
     void setTffInterpolation(const QString method);
     void setCamOrtho(bool camOrtho);
-    void setIllumination(bool illum);
+    void setIllumination(int illum);
     void setLinearInterpolation(bool linear);
     void setDrawBox(bool box);
     void setBackgroundColor(const QColor col);

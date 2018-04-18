@@ -132,7 +132,7 @@ int intersectPlane(const float3 rayOrigin, const float3 rayDir,
     return false;
 }
 
-// Compute gradient using central difference: f' = ( f(x+h)-f(x-h) ) / 2*h
+// Compute gradient using central difference: f' = ( f(x+h)-f(x-h) )
 float4 gradientCentralDiff(read_only image3d_t vol, const float4 pos)
 {
     float3 volResf = convert_float3(get_image_dim(vol).xyz);
@@ -140,17 +140,117 @@ float4 gradientCentralDiff(read_only image3d_t vol, const float4 pos)
     float3 s1;
     float3 s2;
     s1.x = read_imagef(vol, linearSmp, pos + (float4)(-offset.x, 0, 0, 0)).x;
-    s2.x = read_imagef(vol, linearSmp, pos + (float4)(+offset.x, 0, 0, 0)).x;
     s1.y = read_imagef(vol, linearSmp, pos + (float4)(0, -offset.y, 0, 0)).x;
-    s2.y = read_imagef(vol, linearSmp, pos + (float4)(0, +offset.y, 0, 0)).x;
     s1.z = read_imagef(vol, linearSmp, pos + (float4)(0, 0, -offset.z, 0)).x;
+
+    s2.x = read_imagef(vol, linearSmp, pos + (float4)(+offset.x, 0, 0, 0)).x;
+    s2.y = read_imagef(vol, linearSmp, pos + (float4)(0, +offset.y, 0, 0)).x;
     s2.z = read_imagef(vol, linearSmp, pos + (float4)(0, 0, +offset.z, 0)).x;
 
     float3 normal = fast_normalize(s2 - s1).xyz;
     if (length(normal) == 0.0f) // TODO: zero correct
-        normal = (float3)(1.f, 0.f, 0.f);
+        normal = (float3)(0.57735f);
 
     return (float4)(normal, fast_length(s2 - s1));
+}
+
+// Compute gradient using central difference: f' = ( f(x+h)-f(x-h) )
+float4 gradientCentralDiffTff(read_only image3d_t vol, const float4 pos, read_only image1d_t tff)
+{
+    float3 volResf = convert_float3(get_image_dim(vol).xyz);
+    float3 offset = native_divide((float3)(1.0f), volResf);
+    float3 s1;
+    float3 s2;
+    s1.x = read_imagef(tff, linearSmp,
+                       read_imagef(vol, linearSmp, pos + (float4)(-offset.x, 0, 0, 0)).x).w;
+    s1.y = read_imagef(tff, linearSmp,
+                       read_imagef(vol, linearSmp, pos + (float4)(0, -offset.y, 0, 0)).x).w;
+    s1.z = read_imagef(tff, linearSmp,
+                       read_imagef(vol, linearSmp, pos + (float4)(0, 0, -offset.z, 0)).x).w;
+
+    s2.x = read_imagef(tff, linearSmp,
+                       read_imagef(vol, linearSmp, pos + (float4)(+offset.x, 0, 0, 0)).x).w;
+    s2.y = read_imagef(tff, linearSmp,
+                       read_imagef(vol, linearSmp, pos + (float4)(0, +offset.y, 0, 0)).x).w;
+    s2.z = read_imagef(tff, linearSmp,
+                       read_imagef(vol, linearSmp, pos + (float4)(0, 0, +offset.z, 0)).x).w;
+
+    float3 normal = fast_normalize(s2 - s1).xyz;
+    if (length(normal) == 0.0f) // TODO: zero correct
+        normal = (float3)(0.57735f);
+
+    return (float4)(normal, fast_length(s2 - s1));
+}
+
+float getf4(float4 v, int id)
+{
+    if (id == 0) return v.x;
+    if (id == 1) return v.y;
+    if (id == 2) return v.z;
+    if (id == 3) return v.w;
+}
+
+// Compute gradient using central difference: f' = ( f(x+h)-f(x-h) )
+float4 gradientSobel(read_only image3d_t vol, const float4 pos)
+{
+    float sobelWeights[3][3][3][3] = {
+            {{{-1, -2, -1},
+              {-2, -4, -2},
+              {-1, -2, -1}},
+             {{ 0,  0,  0},
+              { 0,  0,  0},
+              { 0,  0,  0}},
+             {{ 1,  2,  1},
+              { 2,  4,  2},
+              { 1,  2,  1}}},
+            {{{-1, -2, -1},
+              { 0,  0,  0},
+              { 1,  2,  1}},
+             {{-2, -4, -2},
+              { 0,  0,  0},
+              { 2,  4,  2}},
+             {{-1, -2, -1},
+              { 0,  0,  0},
+              { 1,  2,  1}}},
+            {{{-1,  0,  1},
+              {-2,  0,  2},
+              {-1,  0,  1}},
+             {{-2,  0,  2},
+              {-4,  0,  4},
+              {-2,  0,  2}},
+             {{-1,  0,  1},
+              {-2,  0,  2},
+              {-1,  0,  1}}}
+    };
+    float3 volResf = convert_float3(get_image_dim(vol).xyz);
+    float3 offset = native_divide((float3)(1.0f), volResf);
+
+    float4 gradient = (float4)(0.f);
+    for (int dir = 0; dir < 3; dir++)   // partial derivatives in xyz directions
+    {
+        for (int i = -1; i < 2; i++)
+        {
+            for (int j = -1; j < 2; j++)
+            {
+                for (int k = -1; k < 2; k++)
+                {
+                    float4 samplePos = pos + (float4)(offset*(float3)(i,j,k), 0);
+                    float weight = sobelWeights[dir][i + 1][j + 1][k + 1]
+                                        * read_imagef(vol, linearSmp, samplePos).x;
+                    if (dir == 0) gradient.x += weight;
+                    else if (dir == 1) gradient.y += weight;
+                    else if (dir == 2) gradient.z += weight;
+                }
+            }
+        }
+    }
+    gradient.xyz /= 27.f;
+    gradient.w = fast_length(gradient.xyz);
+    if (gradient.w == 0)    // TODO
+        gradient.xyz = (float3)(1.f);
+    gradient.xyz = fast_normalize(gradient.xyz);
+
+    return gradient;
 }
 
 // specular part of blinn-phong shading model
@@ -167,10 +267,10 @@ float3 specularBlinnPhong(float3 lightColor, float specularExp, float3 materialC
     return materialColor * lightColor * native_powr(max(dot(normal, h), 0.f), specularExp);
 }
 
-// simple illumination based on central differences
-float3 illumination(read_only image3d_t vol, const float4 pos, float3 color, float3 toLightDir)
+// blinn phong illumination based gradients evaluating density values
+float3 illumination(read_only image3d_t vol, const float4 pos, float3 color, float3 toLightDir,
+                    float3 n)
 {
-    float3 n = fast_normalize(-gradientCentralDiff(vol, pos).xyz);
     float3 l = fast_normalize(toLightDir.xyz);
 
     float3 amb = color * 0.2f;
@@ -226,11 +326,11 @@ float3 getUniformRandomSampleDirectionUpper(float3 n, uint4 *taus)
 }
 
 
-// Calculate ambient occlusion factor
+// Calculate ambient occlusion factor with monte carlo sampling
 float calcAO(float3 n, uint4 *taus, image3d_t volData, float3 pos, float stepSize, float r)
 {
     float ao = 0.f;
-    int rays = 16;
+    int rays = 12;
     // rays
     for (int i = 0; i < rays; ++i)
     {
@@ -241,7 +341,7 @@ float calcAO(float3 n, uint4 *taus, image3d_t volData, float3 pos, float stepSiz
         while (cnt*stepSize < r)
         {
             ++cnt;
-            sample += read_imagef(volData, linearSmp, as_float4(pos + dir*cnt*stepSize)).x;;
+            sample += read_imagef(volData, linearSmp, as_float4(pos + dir*cnt*stepSize)).x;
         }
         sample /= cnt;
         ao += sample;
@@ -262,7 +362,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , const float samplingRate
                            , const float16 viewMat
                            , const uint orthoCam
-                           , const uint useIllum
+                           , const uint illumType
                            , const uint useBox
                            , const uint useLinear
                            , const float4 background
@@ -294,8 +394,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
     imgCoords -= get_global_size(0) > get_global_size(1) ?
                         (float2)(1.0f, aspectRatio) : (float2)(aspectRatio, 1.0);
     imgCoords.y *= -1.f;   // flip y coord
-    
-    // z position of view plane is -1.0 to fit the cube to the screen quad when axes are aligned, 
+
+    // z position of view plane is -1.0 to fit the cube to the screen quad when axes are aligned,
     // zoom is -1 and the data set is uniform in each dimension
     // (with FoV of 90° and near plane in range [-1,+1]).
     float3 nearPlanePos = fast_normalize((float3)(imgCoords, -1.0f));
@@ -304,7 +404,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     rayDir.x = dot(viewMat.s012, nearPlanePos);
     rayDir.y = dot(viewMat.s456, nearPlanePos);
     rayDir.z = dot(viewMat.s89a, nearPlanePos);
-    
+
     // camera position in world space (ray origin) is translation vector of view matrix
     float3 camPos = viewMat.s37b*modelScale;
 
@@ -432,17 +532,32 @@ __kernel void volumeRender(  __read_only image3d_t volData
             pos = camPos + (t-offset)*rayDir;
             pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
 
-            density = useLinear ? read_imagef(volData,  linearSmp, as_float4(pos)).x :
-                                  read_imagef(volData, nearestSmp, as_float4(pos)).x;
-            density = clamp(density, 0.f, 1.f);
-            tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
-            if (useIllum)
-                tfColor.xyz = illumination(volData, as_float4(pos), tfColor.xyz, -rayDir);
-            else
+            if (illumType == 4)   // gradient magnitude based shading
             {
                 float magnitude = gradientCentralDiff(volData, as_float4(pos)).w;
                 tfColor = read_imagef(tffData, linearSmp, magnitude);
             }
+            else    // density based shading and optional illumination
+            {
+                density = useLinear ? read_imagef(volData,  linearSmp, as_float4(pos)).x :
+                                      read_imagef(volData, nearestSmp, as_float4(pos)).x;
+                density = clamp(density, 0.f, 1.f);
+                tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
+                if (tfColor.w > 0.1f && illumType)
+                {
+                    float4 gradient;
+                    if (illumType == 1)
+                        gradient = -gradientCentralDiff(volData, as_float4(pos));
+                    else if (illumType == 2)
+                        gradient = -gradientCentralDiffTff(volData, as_float4(pos), tffData);
+                    else if (illumType == 3)
+                        gradient = -gradientSobel(volData, as_float4(pos));
+
+                    tfColor.xyz = illumination(volData, as_float4(pos), tfColor.xyz, -rayDir,
+                                               gradient.xyz);
+                }
+            }
+
             tfColor.xyz = background.xyz - tfColor.xyz;
 
             // Taylor expansion approximation
@@ -455,9 +570,9 @@ __kernel void volumeRender(  __read_only image3d_t volData
             {
                 if (useAO)  // ambient occlusion only on solid surfaces
                 {
-                    float3 n = fast_normalize(-gradientCentralDiff(volData, as_float4(pos)).xyz);
-                    // TODO remove magic number
-                    result.xyz *= 1.f - opacity*calcAO(n, &taus, volData, pos, length(voxLen), length(voxLen)*5.f);
+                    float3 n = -gradientCentralDiff(volData, as_float4(pos)).xyz;
+                    float ao = calcAO(n, &taus, volData, pos, length(voxLen), length(voxLen)*5.f);
+                    result.xyz *= 1.f - 0.3f*ao;
                 }
                 break;
             }

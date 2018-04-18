@@ -93,7 +93,7 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->volumeRenderWidget, &VolumeRenderWidget::setImageSamplingRate);
     connect(ui->chbLinear, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setLinearInterpolation);
-    connect(ui->chbIllum, &QCheckBox::toggled,
+    connect(ui->cbIllum, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
             ui->volumeRenderWidget, &VolumeRenderWidget::setIllumination);
     connect(ui->chbAmbientOcclusion, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setAmbientOcclusion);

@@ -86,19 +86,10 @@
    </attribute>
    <widget class="QWidget" name="dockWidgetContents">
     <layout class="QGridLayout" name="gridLayout_2">
-     <item row="2" column="0" colspan="2">
-      <widget class="colorwidgets::ColorWheel" name="colorWheel" native="true">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>200</height>
-        </size>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Interpolation</string>
        </property>
       </widget>
      </item>
@@ -120,18 +111,30 @@
         <string>Raycasting settings</string>
        </property>
        <layout class="QGridLayout" name="gridLayout">
-        <item row="2" column="0" colspan="5">
-         <widget class="QPushButton" name="pbBgColor">
-          <property name="autoFillBackground">
-           <bool>false</bool>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">QPushButton:default {
-   background: yellow;
-}</string>
+        <item row="6" column="0" colspan="5">
+         <widget class="QCheckBox" name="chbAmbientOcclusion">
+          <property name="enabled">
+           <bool>true</bool>
           </property>
           <property name="text">
-           <string>Background color</string>
+           <string>Ambient occlusion</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Image</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QLabel" name="label_4">
+          <property name="text">
+           <string>Ray</string>
           </property>
          </widget>
         </item>
@@ -148,33 +151,6 @@
           </property>
           <property name="value">
            <double>1.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="0" colspan="5">
-         <widget class="QCheckBox" name="chbIllum">
-          <property name="text">
-           <string>Local illumination</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="0" colspan="5">
-         <widget class="QCheckBox" name="chbBox">
-          <property name="text">
-           <string>Show bounding box</string>
-          </property>
-          <property name="checked">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0" colspan="5">
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>Sampling rate</string>
           </property>
          </widget>
         </item>
@@ -197,7 +173,70 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="0" colspan="5">
+        <item row="0" column="0" colspan="5">
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>Sampling rate</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0" colspan="5">
+         <widget class="QComboBox" name="cbIllum">
+          <property name="currentIndex">
+           <number>1</number>
+          </property>
+          <item>
+           <property name="text">
+            <string>Off</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Central differences gradients</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Central differences &amp; transfer function</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Sobel filter gradients</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Gradient magnitude</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="7" column="0" colspan="5">
+         <widget class="QCheckBox" name="chbBox">
+          <property name="text">
+           <string>Show bounding box</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0" colspan="2">
+         <widget class="QLabel" name="label_5">
+          <property name="text">
+           <string>Local illumination</string>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="0" colspan="5">
+         <widget class="QCheckBox" name="chbOrtho">
+          <property name="text">
+           <string>Orthographic projection</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0" colspan="5">
          <widget class="QCheckBox" name="chbLinear">
           <property name="text">
            <string>Linear interpolation</string>
@@ -207,42 +246,23 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>Image</string>
+        <item row="3" column="2" colspan="3">
+         <widget class="QPushButton" name="pbBgColor">
+          <property name="autoFillBackground">
+           <bool>false</bool>
           </property>
-         </widget>
-        </item>
-        <item row="7" column="0" colspan="5">
-         <widget class="QCheckBox" name="chbOrtho">
-          <property name="text">
-           <string>Orthographic projection</string>
+          <property name="styleSheet">
+           <string notr="true">QPushButton:default {
+   background: yellow;
+}</string>
           </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
-         <widget class="QLabel" name="label_4">
           <property name="text">
-           <string>Ray</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="0" colspan="5">
-         <widget class="QCheckBox" name="chbAmbientOcclusion">
-          <property name="text">
-           <string>Ambiennt occlusion</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
+           <string>Background color</string>
           </property>
          </widget>
         </item>
        </layout>
       </widget>
-     </item>
-     <item row="3" column="0" colspan="2">
-      <widget class="TransferFunctionWidget" name="transferFunctionEditor" native="true"/>
      </item>
      <item row="4" column="1">
       <widget class="QComboBox" name="cbInterpolation">
@@ -256,20 +276,6 @@
          <string>Quad</string>
         </property>
        </item>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Interpolation</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="0" colspan="2">
-      <widget class="QPushButton" name="pbResetTff">
-       <property name="text">
-        <string>Reset transfer function</string>
-       </property>
       </widget>
      </item>
      <item row="1" column="0" colspan="2">
@@ -301,6 +307,32 @@
          <widget class="QSpinBox" name="sbTimeStep"/>
         </item>
        </layout>
+      </widget>
+     </item>
+     <item row="3" column="0" colspan="2">
+      <widget class="TransferFunctionWidget" name="transferFunctionEditor" native="true"/>
+     </item>
+     <item row="5" column="0" colspan="2">
+      <widget class="QPushButton" name="pbResetTff">
+       <property name="text">
+        <string>Reset transfer function</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0" colspan="2">
+      <widget class="colorwidgets::ColorWheel" name="colorWheel" native="true">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>200</height>
+        </size>
+       </property>
       </widget>
      </item>
     </layout>

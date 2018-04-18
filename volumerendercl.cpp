@@ -134,7 +134,7 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel.setArg(LINEAR, 1);
         cl_float4 bgColor = {{1.f, 1.f, 1.f, 1.f}};
         _raycastKernel.setArg(BACKGROUND, bgColor);
-        _raycastKernel.setArg(AO, 1);                   // ambient occlusion on by default
+        _raycastKernel.setArg(AO, 0);                   // ambient occlusion off by default
 
         _genBricksKernel = cl::Kernel(program, "generateBricks");
         _downsamplingKernel = cl::Kernel(program, "downsampling");
@@ -672,7 +672,7 @@ void VolumeRenderCL::setCamOrtho(bool setCamOrtho)
  * @brief VolumeRenderCL::setIllumination
  * @param illum
  */
-void VolumeRenderCL::setIllumination(bool illum)
+void VolumeRenderCL::setIllumination(unsigned int illum)
 {
     try {
         _raycastKernel.setArg(ILLUMINATION, (cl_uint)illum);

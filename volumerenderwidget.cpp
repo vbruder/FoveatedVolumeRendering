@@ -724,7 +724,7 @@ void VolumeRenderWidget::resetCam()
  * @brief VolumeRenderWidget::setIllumination
  * @param illum
  */
-void VolumeRenderWidget::setIllumination(bool illum)
+void VolumeRenderWidget::setIllumination(int illum)
 {
     _volumerender.setIllumination(illum);
     this->updateView();
