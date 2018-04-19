@@ -92,6 +92,8 @@ public slots:
     void setCamOrtho(bool camOrtho);
     void setIllumination(int illum);
     void setLinearInterpolation(bool linear);
+    void setContours(bool contours);
+    void setAerial(bool aerial);
     void setDrawBox(bool box);
     void setBackgroundColor(const QColor col);
     void setImageSamplingRate(const double samplingRate);

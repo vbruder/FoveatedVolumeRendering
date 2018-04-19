@@ -135,6 +135,8 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         cl_float4 bgColor = {{1.f, 1.f, 1.f, 1.f}};
         _raycastKernel.setArg(BACKGROUND, bgColor);
         _raycastKernel.setArg(AO, 0);                   // ambient occlusion off by default
+        _raycastKernel.setArg(CONTOURS, 0);             // contour lines off by default
+        _raycastKernel.setArg(AERIAL, 0);               // aerial perspective off by defualt
 
         _genBricksKernel = cl::Kernel(program, "generateBricks");
         _downsamplingKernel = cl::Kernel(program, "downsampling");
@@ -712,6 +714,28 @@ void VolumeRenderCL::setLinearInterpolation(bool linearSampling)
 {
     try {
         _raycastKernel.setArg(LINEAR, (cl_uint)linearSampling);
+    } catch (cl::Error err) { logCLerror(err); }
+}
+
+/**
+ * @brief VolumeRenderCL::setContours
+ * @param contours
+ */
+void VolumeRenderCL::setContours(bool contours)
+{
+    try {
+        _raycastKernel.setArg(CONTOURS, (cl_uint)contours);
+    } catch (cl::Error err) { logCLerror(err); }
+}
+
+/**
+ * @brief VolumeRenderCL::setAerial
+ * @param aerial
+ */
+void VolumeRenderCL::setAerial(bool aerial)
+{
+    try {
+        _raycastKernel.setArg(AERIAL, (cl_uint)aerial);
     } catch (cl::Error err) { logCLerror(err); }
 }
 

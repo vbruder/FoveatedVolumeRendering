@@ -734,7 +734,6 @@ void VolumeRenderWidget::setAmbientOcclusion(bool ao)
     this->updateView();
 }
 
-
 /**
  * @brief VolumeRenderWidget::setLinearInterpolation
  * @param linear
@@ -742,6 +741,26 @@ void VolumeRenderWidget::setAmbientOcclusion(bool ao)
 void VolumeRenderWidget::setLinearInterpolation(bool linear)
 {
     _volumerender.setLinearInterpolation(linear);
+    this->updateView();
+}
+
+/**
+ * @brief VolumeRenderWidget::setContours
+ * @param contours
+ */
+void VolumeRenderWidget::setContours(bool contours)
+{
+    _volumerender.setContours(contours);
+    this->updateView();
+}
+
+/**
+ * @brief VolumeRenderWidget::setAerial
+ * @param aerial
+ */
+void VolumeRenderWidget::setAerial(bool aerial)
+{
+    _volumerender.setAerial(aerial);
     this->updateView();
 }
 

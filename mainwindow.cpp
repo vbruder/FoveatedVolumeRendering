@@ -93,17 +93,22 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->dsbImgSampling, 
             static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
             ui->volumeRenderWidget, &VolumeRenderWidget::setImageSamplingRate);
-    connect(ui->chbLinear, &QCheckBox::toggled,
-            ui->volumeRenderWidget, &VolumeRenderWidget::setLinearInterpolation);
     connect(ui->cbIllum, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
             ui->volumeRenderWidget, &VolumeRenderWidget::setIllumination);
+    connect(ui->pbBgColor, &QPushButton::released, this, &MainWindow::chooseBackgroundColor);
+    // check boxes
+    connect(ui->chbLinear, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setLinearInterpolation);
     connect(ui->chbAmbientOcclusion, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setAmbientOcclusion);
+    connect(ui->chbContours, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setContours);
+    connect(ui->chbAerial, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setAerial);
     connect(ui->chbBox, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setDrawBox);
     connect(ui->chbOrtho, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setCamOrtho);
-    connect(ui->pbBgColor, &QPushButton::released, this, &MainWindow::chooseBackgroundColor);
     // connect tff editor
     connect(ui->transferFunctionEditor->getEditor(), &TransferFunctionEditor::gradientStopsChanged,
             ui->volumeRenderWidget, &VolumeRenderWidget::updateTransferFunction);
@@ -171,8 +176,6 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         case Qt::Key_D: ui->volumeRenderWidget->updateView(+factor, 0.000f); break;
         // TODO: zoom
     }
-
-
     event->accept();
 }
 

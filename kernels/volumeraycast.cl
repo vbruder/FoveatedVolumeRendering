@@ -369,6 +369,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , __read_only image1d_t tffPrefix
                            , const uint useAO
                            , const float3 modelScale
+                           , const uint contours
+                           , const uint aerial
                            )
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
@@ -490,7 +492,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
                         (int3)(0), convert_int3(bricksRes.xyz) - 1);
 
     // add +1 to cells if ray dir component is negative: rayDir >= 0 ? (-1) : 0
-    float3 tv = tnear + (convert_float3(cell - isgreaterequal(rayDir, (float3)(0))) * (2.f*brickLen) - rayOrigCell) * invRay;
+    float3 tv = tnear + (convert_float3(cell - isgreaterequal(rayDir, (float3)(0)))
+                            * (2.f*brickLen) - rayOrigCell) * invRay;
     int3 exit = step * bricksRes.xyz;
     if (exit.x < 0) exit.x = -1;
     if (exit.y < 0) exit.y = -1;
@@ -532,10 +535,11 @@ __kernel void volumeRender(  __read_only image3d_t volData
             pos = camPos + (t-offset)*rayDir;
             pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
 
+            float4 gradient = (float4)(0.f);
             if (illumType == 4)   // gradient magnitude based shading
             {
-                float magnitude = gradientCentralDiff(volData, as_float4(pos)).w;
-                tfColor = read_imagef(tffData, linearSmp, magnitude);
+                gradient = -gradientCentralDiff(volData, as_float4(pos));
+                tfColor = read_imagef(tffData, linearSmp, -gradient.w);
             }
             else    // density based shading and optional illumination
             {
@@ -543,9 +547,9 @@ __kernel void volumeRender(  __read_only image3d_t volData
                                       read_imagef(volData, nearestSmp, as_float4(pos)).x;
                 density = clamp(density, 0.f, 1.f);
                 tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
+
                 if (tfColor.w > 0.1f && illumType)
                 {
-                    float4 gradient;
                     if (illumType == 1)
                         gradient = -gradientCentralDiff(volData, as_float4(pos));
                     else if (illumType == 2)
@@ -556,9 +560,19 @@ __kernel void volumeRender(  __read_only image3d_t volData
                     tfColor.xyz = illumination(volData, as_float4(pos), tfColor.xyz, -rayDir,
                                                gradient.xyz);
                 }
+                if (tfColor.w > 0.1f && contours) // edge enhancement
+                {
+                    if (!illumType)
+                        gradient = -gradientCentralDiff(volData, as_float4(pos));
+                    tfColor.xyz *= fabs(dot(rayDir, gradient.xyz));
+                }
             }
-
             tfColor.xyz = background.xyz - tfColor.xyz;
+            if (aerial) // depth cue as aerial perspective
+            {
+                float depthCue = 1.f - (t - tnear)/sampleDist; // [0..1]
+                tfColor.w *= depthCue;
+            }
 
             // Taylor expansion approximation
             opacity = 1.f - native_powr(1.f - tfColor.w, refSamplingInterval);

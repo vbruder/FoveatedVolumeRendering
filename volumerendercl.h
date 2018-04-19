@@ -45,13 +45,15 @@ public:
         , SAMPLING_RATE  // step size factor                         cl_float
         , VIEW           // view matrix                              float16
         , ORTHO          // use orthographic camera                  cl_uint (bool)
-        , ILLUMINATION   // use illumination (per view)              cl_uint (bool)
+        , ILLUMINATION   // use illumination                         cl_uint
         , BOX            // show bounding box aroud volume           cl_uint (bool)
         , LINEAR         // use linear interpolation, not nearest    cl_uint (bool)
         , BACKGROUND     // background color RGBA                    cl_float4
         , TFF_PREFIX     // prefix sum of transfer function          image1d_t
         , AO             // use ambient occlusion                    cl_uint (bool)
         , MODEL_SCALE    // model scaling factor                     cl_float3
+        , CONTOURS       // show contour lines                       cl_uint (bool)
+        , AERIAL         // use aerial perspective                   cl_uint (bool)
     };
 
     // mipmap down-scaling metric
@@ -170,6 +172,16 @@ public:
      * @param linearSampling
      */
     void setLinearInterpolation(bool linearSampling);
+    /**
+     * @brief setContours
+     * @param contours
+     */
+    void setContours(bool contours);
+    /**
+     * @brief setAerial
+     * @param aerial
+     */
+    void setAerial(bool aerial);
     /**
      * @brief setBackground
      * @param color
