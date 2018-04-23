@@ -78,6 +78,12 @@ public:
     bool getLoadingFinished() const;
     void setLoadingFinished(bool loadingFinished);
 
+    QVector3D getCamTranslation() const;
+    void setCamTranslation(const QVector3D &translation);
+
+    QQuaternion getCamRotation() const;
+    void setCamRotation(const QQuaternion &rotQuat);
+
 public slots:
     void cleanup();
     void resetCam();
@@ -104,6 +110,10 @@ public slots:
     void setAmbientOcclusion(bool ao);
 
     void generateLowResVolume();
+
+    void read(const QJsonObject &json);
+    void write(QJsonObject &json) const;
+
 signals:
     void fpsChanged(double);
     void frameSizeChanged(QSize);

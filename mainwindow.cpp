@@ -35,6 +35,8 @@
 #include <QtGlobal>
 #include <QDoubleSpinBox>
 #include <QComboBox>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 /**
  * @brief MainWindow::MainWindow
@@ -76,6 +78,8 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->volumeRenderWidget, &VolumeRenderWidget::generateLowResVolume);
     connect(ui->actionResetCam, &QAction::triggered,
             ui->volumeRenderWidget, &VolumeRenderWidget::resetCam);
+    connect(ui->actionSaveState, &QAction::triggered, this, &MainWindow::saveCamState);
+    connect(ui->actionLoadState, &QAction::triggered, this, &MainWindow::loadCamState);
 
     // future watcher for concurrent data loading
     _watcher = new QFutureWatcher<void>(this);
@@ -186,8 +190,8 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 void MainWindow::writeSettings()
 {
     _settings->beginGroup("MainWindow");
-    _settings->setValue("size", size());
-    _settings->setValue("pos", pos());
+    _settings->setValue("geometry", saveGeometry());
+    _settings->setValue("windowState", saveState());
     _settings->endGroup();
 
     _settings->beginGroup("Settings");
@@ -202,8 +206,8 @@ void MainWindow::writeSettings()
 void MainWindow::readSettings()
 {
     _settings->beginGroup("MainWindow");
-    resize(_settings->value("size", QSize(400, 400)).toSize());
-    move(_settings->value("pos", QPoint(200, 200)).toPoint());
+    restoreGeometry(_settings->value("geometry").toByteArray());
+    restoreState(_settings->value("windowState").toByteArray());
     _settings->endGroup();
 
     _settings->beginGroup("Settings");
@@ -219,6 +223,90 @@ void MainWindow::readSettings()
 void MainWindow::setVolumeData(const QString &fileName)
 {
     ui->volumeRenderWidget->setVolumeData(fileName);
+}
+
+
+/**
+ * @brief MainWindow::loadCamState
+ */
+void MainWindow::loadCamState()
+{
+    QFileDialog dialog;
+    QString defaultPath = _settings->value( "LastStateFile" ).toString();
+    QString pickedFile = dialog.getOpenFileName(this, tr("Save State"),
+                                                defaultPath, tr("JSON files (*.json)"));
+    if (pickedFile.isEmpty())
+        return;
+    _settings->setValue( "LastStateFile", pickedFile );
+
+    QFile loadFile(pickedFile);
+    if (!loadFile.open(QIODevice::ReadOnly))
+    {
+        qWarning() << "Couldn't open state file" << pickedFile;
+        return;
+    }
+
+    QByteArray saveData = loadFile.readAll();
+    QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
+    QJsonObject json = loadDoc.object();
+
+    if (json.contains("imgResFactor") && json["imgResFactor"].isDouble())
+            ui->dsbImgSampling->setValue(json["imgResFactor"].toDouble());
+    if (json.contains("rayStepSize") && json["rayStepSize"].isDouble())
+            ui->dsbSamplingRate->setValue(json["rayStepSize"].toDouble());
+
+    if (json.contains("useLerp") && json["useLerp"].isBool())
+            ui->chbLinear->setChecked(json["useLerp"].toBool());
+    if (json.contains("useAO") && json["useAO"].isBool())
+            ui->chbAmbientOcclusion->setChecked(json["useAO"].toBool());
+    if (json.contains("showContours") && json["showContours"].isBool())
+            ui->chbContours->setChecked(json["showContours"].toBool());
+    if (json.contains("useAerial") && json["useAerial"].isBool())
+            ui->chbAerial->setChecked(json["useAerial"].toBool());
+    if (json.contains("showBox") && json["showBox"].isBool())
+            ui->chbBox->setChecked(json["showBox"].toBool());
+    if (json.contains("useOrtho") && json["useOrtho"].isBool())
+            ui->chbOrtho->setChecked(json["useOrtho"].toBool());
+    // camera paramters
+    ui->volumeRenderWidget->read(json);
+}
+
+/**
+ * @brief MainWindow::saveCamState
+ */
+void MainWindow::saveCamState()
+{
+    QFileDialog dialog;
+    QString defaultPath = _settings->value( "LastStateFile" ).toString();
+    QString pickedFile = dialog.getSaveFileName(this, tr("Save State"),
+                                                defaultPath, tr("JSON files (*.json)"));
+    if (pickedFile.isEmpty())
+        return;
+    _settings->setValue( "LastStateFile", pickedFile );
+
+    QFile saveFile(pickedFile);
+    if (!saveFile.open(QIODevice::WriteOnly))
+    {
+        qWarning() << "Couldn't open save file" << pickedFile;
+        return;
+    }
+
+    QJsonObject stateObject;
+    // resolution
+    stateObject["imgResFactor"] = ui->dsbImgSampling->value();
+    stateObject["rayStepSize"] = ui->dsbSamplingRate->value();
+    // rendering flags
+    stateObject["useLerp"] = ui->chbLinear->isChecked();
+    stateObject["useAO"] = ui->chbAmbientOcclusion->isChecked();
+    stateObject["showContours"] = ui->chbContours->isChecked();
+    stateObject["useAerial"] = ui->chbAerial->isChecked();
+    stateObject["showBox"] = ui->chbBox->isChecked();
+    stateObject["useOrtho"] = ui->chbOrtho->isChecked();
+    // camera parameters
+    ui->volumeRenderWidget->write(stateObject);
+
+    QJsonDocument saveDoc(stateObject);
+    saveFile.write(saveDoc.toJson());
 }
 
 
@@ -439,7 +527,7 @@ void MainWindow::finishedLoading()
     _progBar.setValue(100);
     _progBar.hide();
     _timer.stop();
-    qDebug() << "finished.";
+    qInfo() << "finished.";
     this->setStatusText();
 
 //    const QVector3D volRes = ui->volumeRenderWidget->getVolumeResolution();

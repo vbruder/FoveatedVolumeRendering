@@ -52,6 +52,9 @@
     <addaction name="menuLoad_transfer_function"/>
     <addaction name="menuSave_transfer_function"/>
     <addaction name="separator"/>
+    <addaction name="actionLoadState"/>
+    <addaction name="actionSaveState"/>
+    <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -351,7 +354,7 @@
   </widget>
   <action name="actionOpen">
    <property name="text">
-    <string>Open...</string>
+    <string>Open volume dataset...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
@@ -444,6 +447,22 @@
    </property>
    <property name="shortcut">
     <string>Home</string>
+   </property>
+  </action>
+  <action name="actionSaveState">
+   <property name="text">
+    <string>Save state...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionLoadState">
+   <property name="text">
+    <string>Load state...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
    </property>
   </action>
  </widget>

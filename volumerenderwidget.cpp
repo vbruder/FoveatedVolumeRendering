@@ -28,6 +28,7 @@
 #include <QCoreApplication>
 #include <QScreen>
 #include <QInputDialog>
+#include <QJsonObject>
 
 const static double Z_NEAR = 1.0;
 const static double Z_FAR = 500.0;
@@ -369,6 +370,26 @@ void VolumeRenderWidget::generateOutputTextures(int width, int height)
     updateView(0, 0);
 }
 
+QQuaternion VolumeRenderWidget::getCamRotation() const
+{
+    return _rotQuat;
+}
+
+void VolumeRenderWidget::setCamRotation(const QQuaternion &rotQuat)
+{
+    _rotQuat = rotQuat;
+}
+
+QVector3D VolumeRenderWidget::getCamTranslation() const
+{
+    return _translation;
+}
+
+void VolumeRenderWidget::setCamTranslation(const QVector3D &translation)
+{
+    _translation = translation;
+}
+
 
 /**
  * @brief VolumeRenderWidget::setupVertexAttribs
@@ -706,7 +727,7 @@ void VolumeRenderWidget::setCamOrtho(bool camOrtho)
     _volumerender.setCamOrtho(camOrtho);
     _overlayProjMX.setToIdentity();
     if (camOrtho)
-        _overlayProjMX.ortho(QRect(0, 0, width(), height())); // FIXME
+        _overlayProjMX.ortho(QRect(0, 0, width(), height()));
     else
         _overlayProjMX.perspective(53.14f, qreal(width())/qreal(height() ? height() : 1), Z_NEAR, Z_FAR);
     this->updateView();
@@ -822,4 +843,49 @@ void VolumeRenderWidget::generateLowResVolume()
                                          tr("Select downsampling factor:"), 2, 2, 64, 1, &ok);
     if (ok)
         _volumerender.volumeDownsampling(_timestep, factor);
+}
+
+/**
+ * @brief VolumeRenderWidget::read
+ * @param json
+ */
+void VolumeRenderWidget::read(const QJsonObject &json)
+{
+    if (json.contains("camRotation"))
+    {
+        QStringList sl = json["camRotation"].toVariant().toString().split(' ');
+        if (sl.length() >= 4)
+        {
+            _rotQuat.setScalar(sl.at(0).toFloat());
+            _rotQuat.setX(sl.at(1).toFloat());
+            _rotQuat.setY(sl.at(2).toFloat());
+            _rotQuat.setZ(sl.at(3).toFloat());
+        }
+    }
+    if (json.contains("camTranslation"))
+    {
+        QStringList sl = json["camTranslation"].toVariant().toString().split(' ');
+        if (sl.length() >= 3)
+        {
+            _translation.setX(sl.at(0).toFloat());
+            _translation.setY(sl.at(1).toFloat());
+            _translation.setZ(sl.at(2).toFloat());
+        }
+    }
+
+    updateView();
+}
+
+/**
+ * @brief VolumeRenderWidget::write
+ * @param json
+ */
+void VolumeRenderWidget::write(QJsonObject &json) const
+{
+    QString sTmp = QString::number(_rotQuat.scalar()) + " " + QString::number(_rotQuat.x())
+                   + " " + QString::number(_rotQuat.y()) + " " + QString::number(_rotQuat.z());
+    json["camRotation"] = sTmp;
+    sTmp = QString::number(_translation.x()) + " " + QString::number(_translation.y())
+            + " " + QString::number(_translation.z());
+    json["camTranslation"] = sTmp;
 }

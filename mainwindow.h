@@ -64,6 +64,8 @@ protected slots:
     void saveRawTff();
 
     void chooseBackgroundColor();
+    void saveCamState();
+    void loadCamState();
 protected:
     void dragEnterEvent(QDragEnterEvent *ev) Q_DECL_OVERRIDE;
     void dropEvent(QDropEvent *ev) Q_DECL_OVERRIDE;
