@@ -78,12 +78,15 @@
    <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
-  <widget class="QDockWidget" name="dockWidget">
+  <widget class="QDockWidget" name="dockSettings">
    <property name="sizePolicy">
     <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
      <horstretch>1</horstretch>
      <verstretch>1</verstretch>
     </sizepolicy>
+   </property>
+   <property name="windowTitle">
+    <string>Settings</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -176,7 +179,7 @@
         </size>
        </property>
        <property name="title">
-        <string>Raycasting settings</string>
+        <string>Rendering</string>
        </property>
        <layout class="QGridLayout" name="gridLayout">
         <item row="3" column="0" colspan="2">
@@ -198,7 +201,7 @@
           </item>
           <item>
            <property name="text">
-            <string>Central differences gradients</string>
+            <string>Central differences</string>
            </property>
           </item>
           <item>
@@ -208,12 +211,12 @@
           </item>
           <item>
            <property name="text">
-            <string>Sobel filter gradients</string>
+            <string>Sobel filter</string>
            </property>
           </item>
           <item>
            <property name="text">
-            <string>Gradient magnitude</string>
+            <string>Magnitude</string>
            </property>
           </item>
          </widget>
@@ -288,7 +291,7 @@
         <item row="6" column="0" colspan="2">
          <widget class="QCheckBox" name="chbLinear">
           <property name="text">
-           <string>Lerp</string>
+           <string>Interpolation</string>
           </property>
           <property name="checked">
            <bool>true</bool>
@@ -543,6 +546,22 @@
     <hint type="destinationlabel">
      <x>1181</x>
      <y>342</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSettings</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>dockSettings</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1156</x>
+     <y>540</y>
     </hint>
    </hints>
   </connection>
