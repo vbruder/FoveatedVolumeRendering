@@ -185,6 +185,17 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 
 
 /**
+ * @brief MainWindow::showEvent
+ * @param event
+ */
+void MainWindow::showEvent(QShowEvent *event)
+{
+    ui->transferFunctionEditor->resetTransferFunction();
+    event->accept();
+}
+
+
+/**
  * @brief MainWindow::writeSettings
  */
 void MainWindow::writeSettings()
@@ -223,6 +234,9 @@ void MainWindow::readSettings()
 void MainWindow::setVolumeData(const QString &fileName)
 {
     ui->volumeRenderWidget->setVolumeData(fileName);
+    ui->volumeRenderWidget->updateTransferFunction(
+                ui->transferFunctionEditor->getEditor()->getGradientStops());
+    ui->volumeRenderWidget->updateView();
 }
 
 

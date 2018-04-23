@@ -373,8 +373,9 @@ TransferFunctionWidget::TransferFunctionWidget(QWidget *parent) : QWidget(parent
 void TransferFunctionWidget::resetTransferFunction()
 {
     QGradientStops stops;
-    stops << QGradientStop(0.00, QColor::fromRgba(0xff000000));
-    stops << QGradientStop(1.00, QColor::fromRgba(0xffffffff));
+    stops << QGradientStop(0.00, QColor(0,0,0,0));
+    stops << QGradientStop(0.10, QColor(125,125,125,0));
+    stops << QGradientStop(1.00, QColor(0,0,0,255));
     _pEditor->setGradientStops(stops);
     _pEditor->pointsUpdated();
 }
