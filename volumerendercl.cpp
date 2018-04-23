@@ -484,10 +484,10 @@ void VolumeRenderCL::generateBricks()
             setMemObjectsBrickGen(i);
             cl::NDRange globalThreads(bricksTexSize.at(0), bricksTexSize.at(1), bricksTexSize.at(2));
             cl::Event ndrEvt;
-            _queueCL.enqueueNDRangeKernel(
-                        _genBricksKernel, cl::NullRange, globalThreads, cl::NullRange, NULL, &ndrEvt);
-            _queueCL.finish();    // global sync
+            _queueCL.enqueueNDRangeKernel(_genBricksKernel, cl::NullRange, globalThreads,
+                                          cl::NullRange, NULL, &ndrEvt);
         }
+        _queueCL.finish();    // global sync
     }
     catch (cl::Error err)
     {
