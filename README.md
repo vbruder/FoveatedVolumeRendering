@@ -14,9 +14,9 @@ To compile/run the code you need:
 
 # Screenshots #
 
-![2017-12-19-nova](https://bytebucket.org/theVall/basicvolumeraycaster/raw/b29bb112fdde3784923e22f35ef56d7d9408b6f6/screenshots/2018-04-23-nova)
+![2017-12-19-nova](https://bytebucket.org/theVall/basicvolumeraycaster/raw/6d3ef5483cd67d8a6416620887a19d36ca6e4d67/screenshots/2018-04-23-nova.png)
 
-![2017-12-19-cham](https://bytebucket.org/theVall/basicvolumeraycaster/raw/b29bb112fdde3784923e22f35ef56d7d9408b6f6/screenshots/2018-04-23-cham.png)
+![2017-12-19-cham](https://bytebucket.org/theVall/basicvolumeraycaster/raw/6d3ef5483cd67d8a6416620887a19d36ca6e4d67/screenshots/2018-04-23-cham.png)
 
 # Planned changes/extensions #
 
