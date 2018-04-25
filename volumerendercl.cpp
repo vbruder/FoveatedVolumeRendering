@@ -489,17 +489,16 @@ void VolumeRenderCL::generateBricks()
                                       bricksTexSize.at(1) + (lDim - bricksTexSize.at(1) % lDim),
                                       bricksTexSize.at(2) + (lDim - bricksTexSize.at(2) % lDim));
             cl::NDRange localThreads(lDim, lDim);
-            cl::Event ndrEvt;
-
+//            cl::Event ndrEvt;
             _queueCL.enqueueNDRangeKernel(_genBricksKernel, cl::NullRange, globalThreads,
-                                          localThreads, NULL, &ndrEvt);
-            _queueCL.finish();
-            cl_ulong start = 0;
-            cl_ulong end = 0;
-            ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
-            ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
-            double execTime = static_cast<double>(end - start)*1e-9;
-            std::cout << "Build up time: " << execTime << std::endl;
+                                          localThreads); //, NULL, &ndrEvt);
+//            _queueCL.finish();
+//            cl_ulong start = 0;
+//            cl_ulong end = 0;
+//            ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
+//            ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
+//            double execTime = static_cast<double>(end - start)*1e-9;
+//            std::cout << "Build up time: " << execTime << std::endl;
         }
         _queueCL.finish();    // global sync
     }
@@ -652,7 +651,6 @@ void VolumeRenderCL::setTffPrefixSum(std::vector<unsigned int> &tffPrefixSum)
 {
     if (!_dr.has_data())
         return;
-
     try
     {
         cl::ImageFormat format;
@@ -661,7 +659,8 @@ void VolumeRenderCL::setTffPrefixSum(std::vector<unsigned int> &tffPrefixSum)
 
         cl_mem_flags flags = CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR;
         // divide size by 4 because of RGBA
-        _tffPrefixMem = cl::Image1D(_contextCL, flags, format, tffPrefixSum.size(), tffPrefixSum.data());
+        _tffPrefixMem = cl::Image1D(_contextCL, flags, format, tffPrefixSum.size(),
+                                    tffPrefixSum.data());
     }
     catch (cl::Error err)
     {

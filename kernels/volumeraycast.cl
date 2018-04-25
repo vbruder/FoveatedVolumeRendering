@@ -29,7 +29,7 @@ constant sampler_t linearSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP_TO
 constant sampler_t nearestSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
                                 CLK_FILTER_NEAREST;
 
-
+// init random number generator (hybrid tausworthy)
 uint4 initRNG()
 {
     uint4 taus;
@@ -71,10 +71,10 @@ float hybridTaus(uint4 *taus)
     return 2.3283064365387e-10 * (float)(tausStep(taus, 0, 13, 19, 12, 4294967294U) ^  // p1=2^31-1
                                          tausStep(taus, 1, 2, 25, 4, 4294967288U)   ^  // p2=2^30-1
                                          tausStep(taus, 2, 3, 11, 17, 4294967280U)  ^  // p3=2^28-1
-                                         lcgStep(taus, 1664525U, 1013904223U));     // p4=2^32
+                                         lcgStep(taus, 1664525U, 1013904223U));        // p4=2^32
 }
 
-// intersect ray with a box
+// intersect ray with the 'unit-box': (-1,-1,-1) to (1,1,1)
 // http://www.siggraph.org/education/materials/HyperGraph/raytrace/rtinter3.htm
 int intersectBox(float3 rayOrig, float3 rayDir, float *tnear, float *tfar)
 {
@@ -97,7 +97,9 @@ int intersectBox(float3 rayOrig, float3 rayDir, float *tnear, float *tfar)
     return (int)(minTmax > maxTmin);
 }
 
-int intersectBBox(float3 rayOrig, float3 rayDir, float3 lower, float3 upper, float *tnear, float *tfar)
+// intersect a ray with a defined box
+int intersectBBox(float3 rayOrig, float3 rayDir, float3 lower, float3 upper,
+                  float *tnear, float *tfar)
 {
     // compute intersection of ray with all six bbox planes
     float3 invRay = native_divide((float3)(1.0f), rayDir);
@@ -118,7 +120,7 @@ int intersectBBox(float3 rayOrig, float3 rayDir, float3 lower, float3 upper, flo
     return (int)(minTmax > maxTmin);
 }
 
-
+// ray-plane intersection
 int intersectPlane(const float3 rayOrigin, const float3 rayDir,
                    const float3 planeNormal, const float3 planePos, float *t)
 {
@@ -190,7 +192,7 @@ float getf4(float4 v, int id)
     if (id == 3) return v.w;
 }
 
-// Compute gradient using central difference: f' = ( f(x+h)-f(x-h) )
+// Compute gradient using a sobel filter (1,2,4)
 float4 gradientSobel(read_only image3d_t vol, const float4 pos)
 {
     float sobelWeights[3][3][3][3] = {
@@ -309,7 +311,6 @@ bool checkBoundingCell(int3 cell, int3 volRes, int size)
     else
         return false;
 }
-
 
 // Uniform Sampling of the hemisphere above the normal n
 float3 getUniformRandomSampleDirectionUpper(float3 n, uint4 *taus)
@@ -442,7 +443,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
                             (samplingRate*length(sampleDist*rayDir*convert_float3(volRes))));
     float samples = ceil(sampleDist/stepSize);
     stepSize = sampleDist/samples;
-    float offset = stepSize*rand*0.9f;
+    float offset = stepSize*rand*0.9f; // offset by 'random' distance to avoid moiré pattern
 
     // raycast parameters
     tnear = max(0.f, tnear);    // clamp to near plane
@@ -452,7 +453,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     float density = 0.f;
     float4 tfColor = (float4)(0);
     float opacity = 0.f;
-    float t = tnear;// + rand*stepSize;    // offset by 'random' distance to avoid moiré pattern
+    float t = tnear;
 
     float3 voxLen = (float3)(1.f) / convert_float3(volRes);
     float refSamplingInterval = 1.f / samplingRate;
@@ -519,8 +520,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
         float alphaMax = read_imagef(tffData, linearSmp, minMaxDensity.y).w;
         if (alphaMax < 1e-6f)
         {
-            uint prefixMin = read_imageui(tffPrefix, minMaxDensity.x).x;
-            uint prefixMax = read_imageui(tffPrefix, minMaxDensity.y).x;
+            uint prefixMin = read_imageui(tffPrefix, nearestSmp, minMaxDensity.x).x;
+            uint prefixMax = read_imageui(tffPrefix, nearestSmp, minMaxDensity.y).x;
             if (prefixMin == prefixMax)
             {
                 t = t_exit;
@@ -528,7 +529,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
             }
         }
 #endif
-
         // standard raycasting loop
         while (t < t_exit)
         {
@@ -600,7 +600,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     }
 #endif
 
-    // draw bounding box
+    // draw bounding box / empty space skipping
     if (useBox)
     {
         if (checkBoundingBox(pos, voxLen, (float2)(0.f, 1.f)))
@@ -679,7 +679,7 @@ __kernel void downsampling(  __read_only image3d_t volData
             }
         }
     }
-    value /= voxPerCell.x * voxPerCell.y * voxPerCell.z;
+    value /= (float)(voxPerCell.x * voxPerCell.y * voxPerCell.z);
 
     write_imagef(volDataLowRes, (int4)(coord, 0), (float4)(value));
 }
