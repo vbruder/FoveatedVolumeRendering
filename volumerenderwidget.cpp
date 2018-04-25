@@ -317,9 +317,6 @@ void VolumeRenderWidget::paintGL()
  */
 void VolumeRenderWidget::resizeGL(int w, int h)
 {
-    if (w < h)
-        qWarning() << "A frame width smaller than height might negatively impact performance!";
-
     _screenQuadProjMX.setToIdentity();
     _screenQuadProjMX.perspective(53.14f, 1.0f, Z_NEAR, Z_FAR);
 

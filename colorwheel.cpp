@@ -546,9 +546,6 @@ void ColorWheel::mousePressEvent(QMouseEvent *ev)
                 ++i;
             }
         }
-
-        // Update the color
-        mouseMoveEvent(ev);
     }
 }
 

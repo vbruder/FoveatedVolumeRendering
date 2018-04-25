@@ -391,7 +391,9 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const i
     try // opencl scope
     {
         setMemObjectsRaycast(t);
-        cl::NDRange globalThreads(width, height);
+        size_t lDim = 8;    // local work group dimension
+        cl::NDRange globalThreads(width + (lDim - width % lDim), height + (lDim - height % lDim));
+        cl::NDRange localThreads(lDim, lDim);
         cl::Event ndrEvt;
 #ifdef NO_GL
         _queueCL.enqueueNDRangeKernel(
@@ -414,7 +416,7 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const i
         memObj.push_back(_outputMem);
         _queueCL.enqueueAcquireGLObjects(&memObj);
         _queueCL.enqueueNDRangeKernel(
-                    _raycastKernel, cl::NullRange, globalThreads, cl::NullRange, NULL, &ndrEvt);
+                    _raycastKernel, cl::NullRange, globalThreads, localThreads, NULL, &ndrEvt);
         _queueCL.enqueueReleaseGLObjects(&memObj);
         _queueCL.finish();    // global sync
 #endif
@@ -482,10 +484,22 @@ void VolumeRenderCL::generateBricks()
                                              NULL));
             // run aggregation kernel
             setMemObjectsBrickGen(i);
-            cl::NDRange globalThreads(bricksTexSize.at(0), bricksTexSize.at(1), bricksTexSize.at(2));
+            size_t lDim = 4;    // local work group dimension
+            cl::NDRange globalThreads(bricksTexSize.at(0) + (lDim - bricksTexSize.at(0) % lDim),
+                                      bricksTexSize.at(1) + (lDim - bricksTexSize.at(1) % lDim),
+                                      bricksTexSize.at(2) + (lDim - bricksTexSize.at(2) % lDim));
+            cl::NDRange localThreads(lDim, lDim);
             cl::Event ndrEvt;
+
             _queueCL.enqueueNDRangeKernel(_genBricksKernel, cl::NullRange, globalThreads,
-                                          cl::NullRange, NULL, &ndrEvt);
+                                          localThreads, NULL, &ndrEvt);
+            _queueCL.finish();
+            cl_ulong start = 0;
+            cl_ulong end = 0;
+            ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
+            ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
+            double execTime = static_cast<double>(end - start)*1e-9;
+            std::cout << "Build up time: " << execTime << std::endl;
         }
         _queueCL.finish();    // global sync
     }

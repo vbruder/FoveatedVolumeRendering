@@ -72,7 +72,7 @@ HoverPoints::HoverPoints(QWidget *widget, PointShape shape)
     m_connectionPen = QPen(QColor(255, 255, 255, 127), 2);
     m_pointBrush = QBrush(QColor(191, 191, 191, 127));
     m_pointSize = QSize(15, 15);
-    m_currentIndex = -1;
+    m_currentIndex = 0;
     m_editable = true;
     m_enabled = true;
 
@@ -93,7 +93,8 @@ void HoverPoints::setEnabled(bool enabled)
 void HoverPoints::setColorSelected(const QColor color)
 {
     Q_ASSERT(m_currentIndex < m_colors.size());
-    m_colors.replace(m_currentIndex, color);
+    if (m_currentIndex >= 0)
+        m_colors.replace(m_currentIndex, color);
 //    firePointChange();
 //    emit selectionChanged(color);//m_colors.at(m_currentIndex));
 }

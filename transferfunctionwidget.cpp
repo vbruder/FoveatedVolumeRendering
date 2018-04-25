@@ -96,7 +96,7 @@ ShadeWidget::ShadeWidget(ShadeType type, QWidget *parent)
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
 
-    connect(_pHoverPoints.data(), &HoverPoints::pointsChanged, this, &ShadeWidget::colorsChanged);
+//    connect(_pHoverPoints.data(), &HoverPoints::pointsChanged, this, &ShadeWidget::colorsChanged);
     connect(_pHoverPoints.data(), &HoverPoints::selectionChanged,
             this, &ShadeWidget::selectedPointChanged);
 }
@@ -212,7 +212,7 @@ TransferFunctionEditor::TransferFunctionEditor(QWidget *parent) : QWidget(parent
         vbox->addWidget(s);
     }
 
-    connect(_pAlphaShade, &ShadeWidget::colorsChanged, this, &TransferFunctionEditor::pointsUpdated);
+//    connect(_pAlphaShade, &ShadeWidget::colorsChanged, this, &TransferFunctionEditor::pointsUpdated);
     connect(_pAlphaShade, &ShadeWidget::selectedPointChanged,
             this, &TransferFunctionEditor::selectedPointUpdated);
 }
@@ -388,7 +388,6 @@ void TransferFunctionWidget::resetTransferFunction()
 void TransferFunctionWidget::setInterpolation(QString method)
 {
     _pEditor->setInterpolation(method);
-    _pEditor->pointsUpdated();
 }
 
 
