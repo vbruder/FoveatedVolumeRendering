@@ -31,7 +31,7 @@
 
 #include <valarray>
 
-//#define NO_GL
+#define NO_GL
 
 class VolumeRenderCL
 {
@@ -72,7 +72,7 @@ public:
     /**
      * @brief Initialize the volume raycaster, i.e. the OpenCL context, queue and kernel.
      */
-    void initialize();
+    void initialize(bool useGL = false, bool useCPU = false, cl_vendor vendor = VENDOR_ANY);
 
     /**
      * @brief Update the view matrix argument for the raycasting kernel.
@@ -100,6 +100,16 @@ public:
      * @param t time series id, defaults to 0 if no time series
      */
      void runRaycast(const size_t width, const size_t height, const int t = 0);
+
+     /**
+      * @brief Run the actual OpenCL volume raycasting kernel without OpenGL context shring.
+      * @param width The image width in pixels, used as one dimension of the global thread size.
+      * @param height The image height in pixels, used as one dimension of the global thread size.
+      * @param t time series id, defaults to 0 if no time series
+      * @param pixel color output data of the frame
+      */
+     void runRaycastNoGL(const size_t width, const size_t height, const int t,
+                         std::vector<float> &output);
 
     /**
      * @brief Load volume data from a given .dat file name.
@@ -205,7 +215,7 @@ public:
      * @param t Timestep
      * @param factor downsampling factor, uniform for all 3 dimensions
      */
-    void volumeDownsampling(const int t, const int factor);
+    const std::string volumeDownsampling(const int t, const int factor);
 
 #ifdef NO_GL
     std::vector<float> getOutputData() {return _outputData;}
@@ -289,6 +299,8 @@ private:
     bool _volLoaded;
     double _lastExecTime;
     std::valarray<float> _modelScale;
+    bool _useGL;
+
     DatRawReader _dr;
 };
 

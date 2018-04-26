@@ -167,6 +167,7 @@ private:
     qint64 _imgCount;
     QVector<double> _times;
     double _imgSamplingRate;       // image oversampling rate
+    bool _useGL;
 };
 
 #endif // VOLUMERENDERWIDGET_H

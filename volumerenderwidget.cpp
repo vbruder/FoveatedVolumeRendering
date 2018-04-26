@@ -29,6 +29,8 @@
 #include <QScreen>
 #include <QInputDialog>
 #include <QJsonObject>
+#include <QErrorMessage>
+#include <QLoggingCategory>
 
 const static double Z_NEAR = 1.0;
 const static double Z_FAR = 500.0;
@@ -72,6 +74,7 @@ VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
     , _recordVideo(false)
     , _imgCount(0)
     , _imgSamplingRate(1)
+    , _useGL(true)
 {
     this->setMouseTracking(true);
 }
@@ -191,7 +194,25 @@ void VolumeRenderWidget::initializeGL()
     _spScreenQuad.release();
     _screenQuadVao.release();
 
-    _volumerender.initialize();
+    try
+    {
+        _volumerender.initialize(true, false);
+    }
+    catch (std::invalid_argument e)
+    {
+        qCritical() << e.what();
+    }
+    catch (std::runtime_error e)
+    {
+        qCritical() << e.what();
+        // TODO: CPU fallback
+//        _useGL = false;
+//        _volumerender.initialize(false, true);
+    }
+    catch (...)
+    {
+        qCritical() << "An unknown error occured.";
+    }
 }
 
 
@@ -209,7 +230,7 @@ void VolumeRenderWidget::saveFrame()
  */
 void VolumeRenderWidget::toggleVideoRecording()
 {
-    qInfo() << (_recordVideo ? "Stopped recording." : "Started recording...");
+    qInfo() << (_recordVideo ? "Stopped recording." : "Started recording.");
 
     _recordVideo = !_recordVideo;
     _writeImage = true;
@@ -245,8 +266,30 @@ void VolumeRenderWidget::paintGL()
     if (this->_loadingFinished && _volumerender.hasData() && !_noUpdate)
     {
         // OpenCL raycast
-        _volumerender.runRaycast(floor(this->size().width() * _imgSamplingRate),
-                                 floor(this->size().height()* _imgSamplingRate), _timestep);
+        try
+        {
+            if (_useGL)
+                _volumerender.runRaycast(floor(this->size().width() * _imgSamplingRate),
+                                         floor(this->size().height()* _imgSamplingRate), _timestep);
+            else
+            {
+                std::vector<float> d;
+                _volumerender.runRaycastNoGL(floor(this->size().width() * _imgSamplingRate),
+                                             floor(this->size().height()* _imgSamplingRate),
+                                             _timestep, d);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F,
+                             width(), height(), 0,
+                             GL_RGBA, GL_FLOAT,
+                             d.data());
+                glGenerateMipmap(GL_TEXTURE_2D);
+                _volumerender.updateOutputImg(static_cast<size_t>(width()),
+                                              static_cast<size_t>(height()), _outTexId);
+            }
+        }
+        catch (std::runtime_error e)
+        {
+            qCritical() << e.what();
+        }
         fps = calcFPS();
     }
 
@@ -285,12 +328,15 @@ void VolumeRenderWidget::paintGL()
         {
             QImage img = this->grabFramebuffer();
             QString number = QString("%1").arg(_imgCount++, 6, 10, QChar('0'));
+            if (!_recordVideo)
+            {
+                QLoggingCategory category("screenshot");
+                qCInfo(category, "Writing current frame img/frame_%s.png", number.toStdString().c_str());
+                _writeImage = false;
+            }
             if (!QDir("img").exists())
                 QDir().mkdir("img");
             img.save("img/frame_" + number + ".png");
-            qInfo() << "Writing frame: " << "frame_" + number + ".png";
-            if (!_recordVideo)
-                _writeImage = false;
         }
     }
     p.endNativePainting();
@@ -323,7 +369,15 @@ void VolumeRenderWidget::resizeGL(int w, int h)
     _overlayProjMX.setToIdentity();
     _overlayProjMX.perspective(53.14f, qreal(w)/qreal(h ? h : 1), Z_NEAR, Z_FAR);
 
-    generateOutputTextures(floor(w*_imgSamplingRate), floor(h*_imgSamplingRate));
+    try
+    {
+        generateOutputTextures(floor(w*_imgSamplingRate), floor(h*_imgSamplingRate));
+    }
+    catch (std::runtime_error e)
+    {
+        qCritical() << "An error occured while generating output texture." << e.what();
+    }
+
     emit frameSizeChanged(this->size());
 }
 
@@ -408,7 +462,15 @@ void VolumeRenderWidget::setupVertexAttribs()
 void VolumeRenderWidget::setVolumeData(const QString &fileName)
 {
     this->_noUpdate = true;
-    int timesteps = _volumerender.loadVolumeData(fileName.toStdString());
+    int timesteps = 0;
+    try
+    {
+        timesteps = _volumerender.loadVolumeData(fileName.toStdString());
+    }
+    catch (std::invalid_argument e)
+    {
+        qCritical() << e.what();
+    }
     emit timeSeriesLoaded(timesteps - 1);
 
     _overlayModelMX.setToIdentity();
@@ -614,7 +676,15 @@ void VolumeRenderWidget::updateView(float dx, float dy)
     {
         viewArray.at(i) = viewMat.transposed().constData()[i];
     }
-    _volumerender.updateView(viewArray);
+
+    try
+    {
+        _volumerender.updateView(viewArray);
+    }
+    catch (std::runtime_error e)
+    {
+        qCritical() << e.what();
+    }
     update();
 }
 
@@ -839,7 +909,23 @@ void VolumeRenderWidget::generateLowResVolume()
     int factor = QInputDialog::getInt(this, tr("Factor"),
                                          tr("Select downsampling factor:"), 2, 2, 64, 1, &ok);
     if (ok)
-        _volumerender.volumeDownsampling(_timestep, factor);
+    {
+        try
+        {
+            std::string name = _volumerender.volumeDownsampling(_timestep, factor);
+            QLoggingCategory category("volumeDownSampling");
+            qCInfo(category, "Successfully created down-sampled volume data set: '%s.raw'",
+                   name.c_str());
+        }
+        catch (std::invalid_argument e)
+        {
+            qCritical() << e.what();
+        }
+        catch (std::runtime_error e)
+        {
+            qCritical() << e.what();
+        }
+    }
 }
 
 /**

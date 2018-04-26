@@ -502,7 +502,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     // length of diagonal of a brick => longest distance through brick
     float brickDia = length(brickLen)*2.f;
 
-    // 3D DDA loop over low res grid for image order empty space skipping
+    // 3D DDA loop over low-res grid for image order empty space skipping
     while (t < tfar)
     {
         float2 minMaxDensity = read_imagef(volBrickData, (int4)(cell, 0)).xy;

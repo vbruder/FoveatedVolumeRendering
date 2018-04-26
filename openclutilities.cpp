@@ -155,7 +155,7 @@ cl::Program buildProgramFromSource(cl::Context context, const std::string &filen
         // Read source file
         std::ifstream sourceFile(filename.c_str());
         if(sourceFile.fail())
-            throw cl::Error(1, "Failed to open OpenCL source file");
+            throw std::invalid_argument("Failed to open OpenCL kernel file " + filename);
         std::string sourceCode(std::istreambuf_iterator<char>(sourceFile),
                                (std::istreambuf_iterator<char>()));
         //cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));

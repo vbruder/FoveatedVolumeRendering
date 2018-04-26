@@ -541,11 +541,8 @@ void MainWindow::finishedLoading()
     _progBar.setValue(100);
     _progBar.hide();
     _timer.stop();
-    qInfo() << "finished.";
+//    qDebug() << "finished.";
     this->setStatusText();
-
-//    const QVector3D volRes = ui->volumeRenderWidget->getVolumeResolution();
-
     ui->volumeRenderWidget->setLoadingFinished(true);
     ui->volumeRenderWidget->updateView();
 }

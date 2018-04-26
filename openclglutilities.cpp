@@ -72,16 +72,17 @@ cl::Context createCLGLContext(cl_device_type type, cl_vendor vendor)
 #endif
 #endif
 
-    try {
-
+    try
+    {
         // We need to check if there is more than one device first
         std::vector<cl::Device> devices;
         std::vector<cl::Device> singleDevice;
         platform.getDevices(type, &devices);
         cl::Context context;
 
-        // If more than one CL device find out which one is associated with GL context
-        if(devices.size() > 1) {
+        // If more than one CL device, find out which one is associated with GL context
+        if(devices.size() > 1)
+        {
 #if !(defined(__APPLE__) || defined(__MACOSX))
             cl::Device interopDevice = getValidGLCLInteropDevice(platform, cps);
             singleDevice.push_back(interopDevice);
@@ -89,12 +90,15 @@ cl::Context createCLGLContext(cl_device_type type, cl_vendor vendor)
 #else
             context = cl::Context(type,cps);
 #endif
-        } else {
+        }
+        else
+        {
             context = cl::Context(type, cps);
         }
-
         return context;
-    } catch(cl::Error error) {
+    }
+    catch(cl::Error error)
+    {
         throw error;
     }
 }
@@ -124,12 +128,14 @@ cl::Device getValidGLCLInteropDevice(cl::Platform platform, cl_context_propertie
                                      &interopDeviceId,
                                      &deviceSize);
 
-    if(deviceSize == 0) {
-        throw cl::Error(1,"No GLGL devices found for current platform");
+    if(deviceSize == 0)
+    {
+        throw cl::Error(1, "No OpenGL capable devices found for current platform.");
     }
-
-    if(status != CL_SUCCESS) {
-        throw cl::Error(1, "Could not get CLGL interop device for the current platform. Failure occured during call to clGetGLContextInfoKHR.");
+    if(status != CL_SUCCESS)
+    {
+        throw cl::Error(1, "Could not get CL-GL interop device for the current platform. \
+                            Failure occured during call to clGetGLContextInfoKHR.");
     }
 
     return cl::Device(interopDeviceId);

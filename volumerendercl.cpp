@@ -27,7 +27,6 @@
 #include <numeric>
 #include <omp.h>
 
-
 /**
  * @brief RoundPow2
  * @param iNumber
@@ -58,6 +57,7 @@ VolumeRenderCL::VolumeRenderCL() :
     _volLoaded(false)
   , _lastExecTime(0.0)
   , _modelScale{1.0, 1.0, 1.0}
+  , _useGL(true)
 {
 }
 
@@ -78,7 +78,6 @@ void VolumeRenderCL::logCLerror(cl::Error error)
 {
     std::cerr << "Error in " << error.what() << ": "
               << getCLErrorString(error.err()) << std::endl;
-    // TODO: logging
     throw std::runtime_error( "ERROR: " + std::string(error.what()) + "("
                               + getCLErrorString(error.err()) + ")");
 }
@@ -87,12 +86,25 @@ void VolumeRenderCL::logCLerror(cl::Error error)
 /**
  * @brief VolumeRenderCL::initialize
  */
-void VolumeRenderCL::initialize()
+void VolumeRenderCL::initialize(bool useGL, bool useCPU, cl_vendor vendor)
 {
     try // opencl scope
     {
-        // NOTE: replace if no NVIDIA GPU
-        _contextCL = createCLGLContext(CL_DEVICE_TYPE_GPU); // VENDOR_ANY
+        cl_device_type type = useCPU ? CL_DEVICE_TYPE_CPU : CL_DEVICE_TYPE_GPU;
+        if (useGL && !useCPU)
+        {
+            _useGL = useGL;
+            _contextCL = createCLGLContext(type, vendor);
+        }
+        else
+        {
+            if (useGL)
+                std::cout << "Cannot use OpenGL context shring with CPU devices. "
+                              << "Falling back to buffer generation." << std::endl;
+            _contextCL = createCLContext(type, vendor);
+            _useGL = false;
+        }
+
         cl_command_queue_properties cqp = 0;
 #ifdef CL_QUEUE_PROFILING_ENABLE
         cqp = CL_QUEUE_PROFILING_ENABLE;
@@ -105,12 +117,10 @@ void VolumeRenderCL::initialize()
     }
 
 #ifdef _WIN32
-    initKernel("kernels//volumeraycast.cl", "-DIMAGE_SUPPORT=1 -DCL_STD=CL1.2 -DESS");
+    initKernel("kernels//volumeraycast.cl", "-DCL_STD=CL1.2 -DESS");
 #else
-    initKernel("../RaycastLight/kernels/volumeraycast.cl", "-DIMAGE_SUPPORT=1 -DCL_STD=CL1.2 -DESS");
+    initKernel("../RaycastLight/kernels/volumeraycast.cl", "-DCL_STD=CL1.2 -DESS");
 #endif // _WIN32
-
-
 }
 
 
@@ -156,11 +166,10 @@ void VolumeRenderCL::setMemObjectsRaycast(const int t)
     _raycastKernel.setArg(VOLUME, _volumesMem.at(t));
     _raycastKernel.setArg(BRICKS, _bricksMem.at(t));
     _raycastKernel.setArg(TFF, _tffMem);
-#ifdef NO_GL
-    _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
-#else
-    _raycastKernel.setArg(OUTPUT, _outputMem);
-#endif
+    if (_useGL)
+        _raycastKernel.setArg(OUTPUT, _outputMem);
+    else
+        _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
     _raycastKernel.setArg(TFF_PREFIX, _tffPrefixMem);
     cl_float3 modelScale = {_modelScale[0], _modelScale[1], _modelScale[2]};
     _raycastKernel.setArg(MODEL_SCALE, modelScale);
@@ -180,10 +189,10 @@ void VolumeRenderCL::setMemObjectsBrickGen(const int t)
 /**
  * @brief VolumeRenderCL::setMemObjectsDownsampling
  */
-void VolumeRenderCL::volumeDownsampling(const int t, const int factor)
+const std::string VolumeRenderCL::volumeDownsampling(const int t, const int factor)
 {
     if (!_dr.has_data() || factor < 2)
-        return;
+        return std::string("");
 
     std::array<unsigned int, 3> texSize = {1u, 1u, 1u};
     texSize.at(0) = ceil(_dr.properties().volume_res.at(0)/(double)factor);
@@ -194,7 +203,8 @@ void VolumeRenderCL::volumeDownsampling(const int t, const int factor)
     {
         std::cerr << "Error: Down sampled volume size would be smaller than 64. Aborting."
                   << std::endl;
-        return;
+        throw std::invalid_argument("Could not create down-sampled volume data set, because \
+                                     the resolution would be smaller than the minimum (64x64x64).");
     }
 
     cl::ImageFormat format;
@@ -260,8 +270,8 @@ void VolumeRenderCL::volumeDownsampling(const int t, const int factor)
 //        lastindex = _dr.properties().raw_file_names.at(0).find_last_of(".");
         lastindex = rawname.find_last_of(".");
         size_t firstindex = rawname.find_last_of("/\\");
-        rawname = rawname.substr(firstindex + 1, lastindex);
-        datFile << "ObjectFileName: \t" << rawname << ".raw\n";
+        std::string rawnameShort = rawname.substr(firstindex + 1, lastindex);
+        datFile << "ObjectFileName: \t" << rawnameShort << ".raw\n";
         datFile << "Resolution: \t\t" << texSize.at(0) << " " << texSize.at(1) << " "
                                       << texSize.at(2) << "\n";
         datFile << "SliceThickness: \t" << _dr.properties().slice_thickness.at(0) << " "
@@ -272,11 +282,13 @@ void VolumeRenderCL::volumeDownsampling(const int t, const int factor)
         datFile << "Format: \t\t\t" << "UCHAR" << "\n"; //_dr.properties().format << "\n";
         datFile.close();
         std::cout << " Done." << std::endl;
+        return rawname;
     }
     catch (cl::Error err)
     {
         logCLerror(err);
     }
+    return std::string("");
 }
 
 
@@ -357,21 +369,14 @@ void VolumeRenderCL::updateOutputImg(const size_t width, const size_t height, GL
     format.image_channel_data_type = CL_FLOAT;
     try
     {
-#ifdef NO_GL
-        _outputMemNoGL = cl::Image2D(_contextCL,
-                                     CL_MEM_WRITE_ONLY,
-                                     format,
-                                     width,
-                                     height);
-        _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
-        _outputData.resize(width * height * 4, 0);
-#else
-        _outputMem = cl::ImageGL(_contextCL,
-                                 CL_MEM_WRITE_ONLY,
-                                 GL_TEXTURE_2D,
-                                 0,
-                                 texId);
-#endif
+        if (_useGL)
+            _outputMem = cl::ImageGL(_contextCL, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texId);
+        else
+        {
+            _outputMemNoGL = cl::Image2D(_contextCL, CL_MEM_WRITE_ONLY, format, width, height);
+            _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
+            _outputData.resize(width * height * 4, 0);
+        }
     }
     catch (cl::Error err)
     {
@@ -395,10 +400,54 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const i
         cl::NDRange globalThreads(width + (lDim - width % lDim), height + (lDim - height % lDim));
         cl::NDRange localThreads(lDim, lDim);
         cl::Event ndrEvt;
-#ifdef NO_GL
+
+        std::vector<cl::Memory> memObj;
+        memObj.push_back(_outputMem);
+        _queueCL.enqueueAcquireGLObjects(&memObj);
         _queueCL.enqueueNDRangeKernel(
-                    _raycastKernel, cl::NullRange, globalThreads, cl::NullRange, NULL, &ndrEvt);
-        _outputData.resize(width*height*4);
+                    _raycastKernel, cl::NullRange, globalThreads, localThreads, NULL, &ndrEvt);
+        _queueCL.enqueueReleaseGLObjects(&memObj);
+        _queueCL.finish();    // global sync
+
+#ifdef CL_QUEUE_PROFILING_ENABLE
+        cl_ulong start = 0;
+        cl_ulong end = 0;
+        ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
+        ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
+        _lastExecTime = static_cast<double>(end - start)*1e-9;
+//        std::cout << "Kernel time: " << _lastExecTime << std::endl << std::endl;
+#endif
+    }
+    catch (cl::Error err)
+    {
+        logCLerror(err);
+    }
+}
+
+
+/**
+ * @brief VolumeRenderCL::runRaycastNoGL
+ * @param width
+ * @param height
+ * @param t
+ * @param output
+ */
+void VolumeRenderCL::runRaycastNoGL(const size_t width, const size_t height, const int t,
+                                    std::vector<float> &output)
+{
+    if (!this->_volLoaded)
+        return;
+    try // opencl scope
+    {
+        setMemObjectsRaycast(t);
+        size_t lDim = 8;    // local work group dimension
+        cl::NDRange globalThreads(width + (lDim - width % lDim), height + (lDim - height % lDim));
+        cl::NDRange localThreads(lDim, lDim);
+        cl::Event ndrEvt;
+
+        _queueCL.enqueueNDRangeKernel(
+                    _raycastKernel, cl::NullRange, globalThreads, localThreads, NULL, &ndrEvt);
+        output.resize(width*height*4);
         cl::Event readEvt;
         std::array<size_t, 3> origin = {{0, 0, 0}};
         std::array<size_t, 3> region = {{width, height, 1}};
@@ -407,19 +456,10 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const i
                                   origin,
                                   region,
                                   0, 0,
-                                  _outputData.data(),
+                                  output.data(),
                                   NULL,
                                   &readEvt);
         _queueCL.flush();    // global sync
-#else
-        std::vector<cl::Memory> memObj;
-        memObj.push_back(_outputMem);
-        _queueCL.enqueueAcquireGLObjects(&memObj);
-        _queueCL.enqueueNDRangeKernel(
-                    _raycastKernel, cl::NullRange, globalThreads, localThreads, NULL, &ndrEvt);
-        _queueCL.enqueueReleaseGLObjects(&memObj);
-        _queueCL.finish();    // global sync
-#endif
 
 #ifdef CL_QUEUE_PROFILING_ENABLE
         cl_ulong start = 0;
@@ -568,11 +608,11 @@ int VolumeRenderCL::loadVolumeData(const std::string fileName)
         volDataToCLmem(_dr.data());
         calcScaling();
     }
-    catch (std::runtime_error e)
+    catch (std::invalid_argument e)
     {
-        std::cerr << e.what() << std::endl;
-        throw e;
+        throw std::runtime_error(e.what());
     }
+
     // set initally a simple linear transfer function
     std::vector<unsigned char> tff(256*4, 0);
     std::iota(tff.begin() + 3, tff.end(), 0);
@@ -647,6 +687,10 @@ void VolumeRenderCL::setTransferFunction(std::vector<unsigned char> &tff)
 }
 
 
+/**
+ * @brief VolumeRenderCL::setTffPrefixSum
+ * @param tffPrefixSum
+ */
 void VolumeRenderCL::setTffPrefixSum(std::vector<unsigned int> &tffPrefixSum)
 {
     if (!_dr.has_data())
