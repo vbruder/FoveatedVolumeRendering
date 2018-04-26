@@ -204,10 +204,10 @@ void VolumeRenderWidget::initializeGL()
     }
     catch (std::runtime_error e)
     {
-        qCritical() << e.what();
+        qCritical() << e.what() << "\nTrying to use CPU fallback.";
         // TODO: CPU fallback
-//        _useGL = false;
-//        _volumerender.initialize(false, true);
+        _useGL = false;
+        _volumerender.initialize(false, true);
     }
     catch (...)
     {
@@ -535,8 +535,15 @@ void VolumeRenderWidget::setTffInterpolation(const QString method)
  */
 void VolumeRenderWidget::setRawTransferFunction(std::vector<unsigned char> tff)
 {
-    _volumerender.setTransferFunction(tff);
-    update();
+    try
+    {
+        _volumerender.setTransferFunction(tff);
+        update();
+    }
+    catch (std::runtime_error e)
+    {
+        qCritical() << e.what();
+    }
 }
 
 /**
@@ -571,11 +578,19 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
         tff.at(i*4 + 3) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().alpha() - 3);
         prefixSum.at(i) = tff.at(i*4 + 3);
     }
-    _volumerender.setTransferFunction(tff);
 
-    // TODO: replace with std::exclusicve_scan(std::par, ... )
-    std::partial_sum(prefixSum.begin(), prefixSum.end(), prefixSum.begin());
-    _volumerender.setTffPrefixSum(prefixSum);
+    try
+    {
+        _volumerender.setTransferFunction(tff);
+
+        // TODO: replace with std::exclusicve_scan(std::par, ... )
+        std::partial_sum(prefixSum.begin(), prefixSum.end(), prefixSum.begin());
+        _volumerender.setTffPrefixSum(prefixSum);
+    }
+    catch (std::runtime_error e)
+    {
+        qCritical() << e.what();
+    }
 
     update();
 }

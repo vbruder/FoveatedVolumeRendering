@@ -524,15 +524,15 @@ void VolumeRenderCL::generateBricks()
                                              NULL));
             // run aggregation kernel
             setMemObjectsBrickGen(i);
-            size_t lDim = 4;    // local work group dimension
+            size_t lDim = 4;    // local work group dimension: 4*4*4=64
             cl::NDRange globalThreads(bricksTexSize.at(0) + (lDim - bricksTexSize.at(0) % lDim),
                                       bricksTexSize.at(1) + (lDim - bricksTexSize.at(1) % lDim),
                                       bricksTexSize.at(2) + (lDim - bricksTexSize.at(2) % lDim));
-            cl::NDRange localThreads(lDim, lDim);
+            cl::NDRange localThreads(lDim, lDim, lDim);
 //            cl::Event ndrEvt;
             _queueCL.enqueueNDRangeKernel(_genBricksKernel, cl::NullRange, globalThreads,
                                           localThreads); //, NULL, &ndrEvt);
-//            _queueCL.finish();
+            _queueCL.finish();
 //            cl_ulong start = 0;
 //            cl_ulong end = 0;
 //            ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
@@ -540,7 +540,6 @@ void VolumeRenderCL::generateBricks()
 //            double execTime = static_cast<double>(end - start)*1e-9;
 //            std::cout << "Build up time: " << execTime << std::endl;
         }
-        _queueCL.finish();    // global sync
     }
     catch (cl::Error err)
     {
@@ -661,7 +660,6 @@ void VolumeRenderCL::setTransferFunction(std::vector<unsigned char> &tff)
 {
     if (!_dr.has_data())
         return;
-
     try
     {
         cl::ImageFormat format;
