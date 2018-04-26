@@ -84,6 +84,7 @@ public:
     QQuaternion getCamRotation() const;
     void setCamRotation(const QQuaternion &rotQuat);
 
+
 public slots:
     void cleanup();
     void resetCam();
@@ -103,6 +104,7 @@ public slots:
     void setDrawBox(bool box);
     void setBackgroundColor(const QColor col);
     void setImageSamplingRate(const double samplingRate);
+    void setShowOverlay(bool showOverlay);
 
     void saveFrame();
     void toggleVideoRecording();
@@ -168,6 +170,7 @@ private:
     QVector<double> _times;
     double _imgSamplingRate;       // image oversampling rate
     bool _useGL;
+    bool _showOverlay;
 };
 
 #endif // VOLUMERENDERWIDGET_H

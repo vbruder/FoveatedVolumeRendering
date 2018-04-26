@@ -75,6 +75,7 @@ VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
     , _imgCount(0)
     , _imgSamplingRate(1)
     , _useGL(true)
+    , _showOverlay(true)
 {
     this->setMouseTracking(true);
 }
@@ -342,8 +343,11 @@ void VolumeRenderWidget::paintGL()
     p.endNativePainting();
 
     // render overlays
-    paintFPS(p, fps, _volumerender.getLastExecTime());
-    paintOrientationAxis(p);
+    if (_showOverlay)
+    {
+        paintFPS(p, fps, _volumerender.getLastExecTime());
+        paintOrientationAxis(p);
+    }
 
     // recover opengl texture
     p.beginNativePainting();
@@ -419,6 +423,12 @@ void VolumeRenderWidget::generateOutputTextures(int width, int height)
 
     _volumerender.updateOutputImg(static_cast<size_t>(width), static_cast<size_t>(height), _outTexId);
     updateView(0, 0);
+}
+
+void VolumeRenderWidget::setShowOverlay(bool showOverlay)
+{
+    _showOverlay = showOverlay;
+    updateView();
 }
 
 QQuaternion VolumeRenderWidget::getCamRotation() const

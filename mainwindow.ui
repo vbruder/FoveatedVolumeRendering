@@ -63,6 +63,8 @@
     </property>
     <addaction name="actionSettings"/>
     <addaction name="actionResetCam"/>
+    <addaction name="actionShowOverlay"/>
+    <addaction name="actionShowStatusBar"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -468,6 +470,36 @@
     <string>Ctrl+L</string>
    </property>
   </action>
+  <action name="actionShowOverlay">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show overlay</string>
+   </property>
+  </action>
+  <action name="actionFullscreen">
+   <property name="text">
+    <string>Fullscreen</string>
+   </property>
+   <property name="shortcut">
+    <string>F11</string>
+   </property>
+  </action>
+  <action name="actionShowStatusBar">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show status bar</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
@@ -562,6 +594,22 @@
     <hint type="destinationlabel">
      <x>1156</x>
      <y>540</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionShowStatusBar</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>statusBar</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>648</x>
+     <y>1069</y>
     </hint>
    </hints>
   </connection>
