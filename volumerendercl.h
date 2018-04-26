@@ -31,8 +31,6 @@
 
 #include <valarray>
 
-#define NO_GL
-
 class VolumeRenderCL
 {
 public:
@@ -293,9 +291,6 @@ private:
     cl::Image1D _tffPrefixMem;
     cl::Image2D _outputMemNoGL;
 
-#ifdef NO_GL
-    std::vector<float> _outputData;
-#endif
     bool _volLoaded;
     double _lastExecTime;
     std::valarray<float> _modelScale;

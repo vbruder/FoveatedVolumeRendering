@@ -90,6 +90,7 @@ void VolumeRenderCL::initialize(bool useGL, bool useCPU, cl_vendor vendor)
 {
     try // opencl scope
     {
+        // FIXME: Using CPU segfaults on most tff changes
         cl_device_type type = useCPU ? CL_DEVICE_TYPE_CPU : CL_DEVICE_TYPE_GPU;
         if (useGL && !useCPU)
         {
@@ -375,7 +376,6 @@ void VolumeRenderCL::updateOutputImg(const size_t width, const size_t height, GL
         {
             _outputMemNoGL = cl::Image2D(_contextCL, CL_MEM_WRITE_ONLY, format, width, height);
             _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
-            _outputData.resize(width * height * 4, 0);
         }
     }
     catch (cl::Error err)

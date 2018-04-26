@@ -279,8 +279,9 @@ void VolumeRenderWidget::paintGL()
                                              floor(this->size().height()* _imgSamplingRate),
                                              _timestep, d);
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F,
-                             width(), height(), 0,
-                             GL_RGBA, GL_FLOAT,
+                             floor(this->size().width() * _imgSamplingRate),
+                             floor(this->size().height()* _imgSamplingRate),
+                             0, GL_RGBA, GL_FLOAT,
                              d.data());
                 glGenerateMipmap(GL_TEXTURE_2D);
                 _volumerender.updateOutputImg(static_cast<size_t>(width()),
@@ -421,7 +422,9 @@ void VolumeRenderWidget::generateOutputTextures(int width, int height)
     }
     glGenerateMipmap(GL_TEXTURE_2D);
 
-    _volumerender.updateOutputImg(static_cast<size_t>(width), static_cast<size_t>(height), _outTexId);
+    _volumerender.updateOutputImg(static_cast<size_t>(width), static_cast<size_t>(height),
+                                      _outTexId);
+
     updateView(0, 0);
 }
 
@@ -588,11 +591,9 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
         tff.at(i*4 + 3) = (uchar)qMax(0, interpolator.currentValue().value<QColor>().alpha() - 3);
         prefixSum.at(i) = tff.at(i*4 + 3);
     }
-
     try
     {
         _volumerender.setTransferFunction(tff);
-
         // TODO: replace with std::exclusicve_scan(std::par, ... )
         std::partial_sum(prefixSum.begin(), prefixSum.end(), prefixSum.begin());
         _volumerender.setTffPrefixSum(prefixSum);
