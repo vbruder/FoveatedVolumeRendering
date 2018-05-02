@@ -31,6 +31,7 @@
 #include <QJsonObject>
 #include <QErrorMessage>
 #include <QLoggingCategory>
+#include <QMessageBox>
 
 const static double Z_NEAR = 1.0;
 const static double Z_FAR = 500.0;
@@ -205,14 +206,13 @@ void VolumeRenderWidget::initializeGL()
     }
     catch (std::runtime_error e)
     {
-        qCritical() << e.what() << "\nTrying to use CPU fallback.";
-        // TODO: CPU fallback
+        qCritical() << e.what() << "\nSwitching to CPU fallback mode.";
         _useGL = false;
         _volumerender.initialize(false, true);
     }
     catch (...)
     {
-        qCritical() << "An unknown error occured.";
+        qCritical() << "An unknown error occured initializing OpenCL/OpenGL.";
     }
 }
 
@@ -454,6 +454,115 @@ void VolumeRenderWidget::setCamTranslation(const QVector3D &translation)
     _translation = translation;
 }
 
+/**
+ * @brief VolumeRenderWidget::showSelectOpenCL
+ */
+void VolumeRenderWidget::showSelectOpenCL()
+{
+    std::vector<std::string> names;
+    try
+    {
+        names = _volumerender.getPlatformNames();
+    }
+    catch (std::runtime_error e)
+    {
+        qCritical() << "An error occured while trying to retrieve OpenCL platform information."
+                    << e.what();
+        return;
+    }
+
+    QStringList platforms;
+    for (std::string &s : names)
+        platforms.append(QString::fromStdString(s));
+
+    bool ok;
+    QString platform = QInputDialog::getItem(this, tr("Select platform"),
+                                             tr("Select OpenCL platform:"),
+                                             platforms, 0, false, &ok);
+    if (ok && !platform.isEmpty())
+    {
+        cl_vendor vendor = VENDOR_ANY;
+        QString type = "GPU";
+        _useGL = false;
+
+        // filter GPU only platforms
+        if (platform.contains("NVIDIA"))
+            vendor = VENDOR_NVIDIA;
+        else
+        {
+            if (!platform.contains("Graphics"))
+            {
+                QStringList types;
+                types << "GPU" << "CPU";
+                type = QInputDialog::getItem(this, tr("Select type"),
+                                             tr("Select device type:"), types, 0, false, &ok);
+            }
+            if (platform.contains("Advanced Micro Devices", Qt::CaseInsensitive))
+                vendor = VENDOR_AMD;
+            else if (platform.contains("Intel", Qt::CaseInsensitive))
+                vendor = VENDOR_INTEL;
+
+        }
+        if (!type.isEmpty())
+        {
+            if (type == "GPU")
+            {
+                QMessageBox msgBox;
+                msgBox.setText("Do you wish to try OpenGL context sharing using this platform?");
+                msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+                msgBox.setDefaultButton(QMessageBox::Yes);
+                int ret = msgBox.exec();
+                _useGL = ret == QMessageBox::Yes;
+            }
+
+            int platformId = platforms.indexOf(platform);
+            try
+            {
+                names = _volumerender.getDeviceNames(platformId, type.toStdString());
+            }
+            catch (std::runtime_error e)
+            {
+                qCritical() << "No capable device found on using the selected platform and type."
+                            << e.what();
+                return;
+            }
+            QStringList devices;
+            for (std::string &s : names)
+                devices.append(QString::fromStdString(s));
+
+            QString device;
+            if (devices.empty())
+                throw std::runtime_error("No capable device found on the selected platform.");
+            else if (devices.size() == 1)
+                device = devices.front();
+            else
+                device = QInputDialog::getItem(this, tr("Select device"),
+                                                   tr("Select OpenCL device:"),
+                                                   devices, 0, false, &ok);
+            if (!device.isEmpty())
+            {
+                try {
+                    _volumerender.initialize(_useGL, type == "CPU", vendor);
+                } catch (std::runtime_error e) {
+                    qCritical() << e.what() << "\nSwitching to CPU fallback mode.";
+                    _useGL = false;
+                    _volumerender.initialize(false, true);
+                }
+                catch (...) {
+                    qCritical() << "An unknown error occured initializing OpenCL/OpenGL.";
+                }
+
+                try {
+                    generateOutputTextures(floor(width()*_imgSamplingRate),
+                                           floor(height()*_imgSamplingRate));
+                } catch (std::runtime_error e) {
+                    qCritical() << "An error occured while generating output texture." << e.what();
+                }
+            }
+        }
+    }
+}
+
 
 /**
  * @brief VolumeRenderWidget::setupVertexAttribs
@@ -481,6 +590,10 @@ void VolumeRenderWidget::setVolumeData(const QString &fileName)
         timesteps = _volumerender.loadVolumeData(fileName.toStdString());
     }
     catch (std::invalid_argument e)
+    {
+        qCritical() << e.what();
+    }
+    catch (std::runtime_error e)
     {
         qCritical() << e.what();
     }

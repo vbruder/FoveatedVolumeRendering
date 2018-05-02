@@ -20,8 +20,7 @@
  *
  */
 
-#ifndef VOLUMERENDERWIDGET_H
-#define VOLUMERENDERWIDGET_H
+#pragma once
 
 #include <QObject>
 #include <QWidget>
@@ -116,6 +115,7 @@ public slots:
     void read(const QJsonObject &json);
     void write(QJsonObject &json) const;
 
+    void showSelectOpenCL();
 signals:
     void fpsChanged(double);
     void frameSizeChanged(QSize);
@@ -172,5 +172,3 @@ private:
     bool _useGL;
     bool _showOverlay;
 };
-
-#endif // VOLUMERENDERWIDGET_H

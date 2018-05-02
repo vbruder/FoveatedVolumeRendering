@@ -28,6 +28,8 @@ constant sampler_t linearSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP_TO
                                CLK_FILTER_LINEAR;
 constant sampler_t nearestSmp = CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP |
                                 CLK_FILTER_NEAREST;
+constant sampler_t nearestIntSmp = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP |
+                                   CLK_FILTER_NEAREST;
 
 // init random number generator (hybrid tausworthy)
 uint4 initRNG()
@@ -342,7 +344,7 @@ float calcAO(float3 n, uint4 *taus, image3d_t volData, float3 pos, float stepSiz
         while (cnt*stepSize < r)
         {
             ++cnt;
-            sample += read_imagef(volData, linearSmp, as_float4(pos + dir*cnt*stepSize)).x;
+            sample += read_imagef(volData, linearSmp, (float4)(pos + dir*cnt*stepSize, 1.f)).x;
         }
         sample /= cnt;
         ao += sample;
@@ -506,6 +508,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     while (t < tfar)
     {
         float2 minMaxDensity = read_imagef(volBrickData, (int4)(cell, 0)).xy;
+
         // increment to next brick
         voxIncr.x = (tv.x <= tv.y) && (tv.x <= tv.z) ? 1 : 0;
         voxIncr.y = (tv.y <= tv.x) && (tv.y <= tv.z) ? 1 : 0;
@@ -538,32 +541,32 @@ __kernel void volumeRender(  __read_only image3d_t volData
             float4 gradient = (float4)(0.f);
             if (illumType == 4)   // gradient magnitude based shading
             {
-                gradient = -gradientCentralDiff(volData, as_float4(pos));
+                gradient = -gradientCentralDiff(volData, (float4)(pos, 1.f));
                 tfColor = read_imagef(tffData, linearSmp, -gradient.w);
             }
             else    // density based shading and optional illumination
             {
-                density = useLinear ? read_imagef(volData,  linearSmp, as_float4(pos)).x :
-                                      read_imagef(volData, nearestSmp, as_float4(pos)).x;
+                density = useLinear ? read_imagef(volData,  linearSmp, (float4)(pos, 1.f)).x :
+                                      read_imagef(volData, nearestSmp, (float4)(pos, 1.f)).x;
                 density = clamp(density, 0.f, 1.f);
                 tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
 
                 if (tfColor.w > 0.1f && illumType)
                 {
                     if (illumType == 1)
-                        gradient = -gradientCentralDiff(volData, as_float4(pos));
+                        gradient = -gradientCentralDiff(volData, (float4)(pos, 1.f));
                     else if (illumType == 2)
-                        gradient = -gradientCentralDiffTff(volData, as_float4(pos), tffData);
+                        gradient = -gradientCentralDiffTff(volData, (float4)(pos, 1.f), tffData);
                     else if (illumType == 3)
-                        gradient = -gradientSobel(volData, as_float4(pos));
+                        gradient = -gradientSobel(volData, (float4)(pos, 1.f));
 
-                    tfColor.xyz = illumination(volData, as_float4(pos), tfColor.xyz, -rayDir,
+                    tfColor.xyz = illumination(volData, (float4)(pos, 1.f), tfColor.xyz, -rayDir,
                                                gradient.xyz);
                 }
                 if (tfColor.w > 0.1f && contours) // edge enhancement
                 {
                     if (!illumType)
-                        gradient = -gradientCentralDiff(volData, as_float4(pos));
+                        gradient = -gradientCentralDiff(volData, (float4)(pos, 1.f));
                     tfColor.xyz *= fabs(dot(rayDir, gradient.xyz));
                 }
             }
@@ -584,7 +587,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
             {
                 if (useAO)  // ambient occlusion only on solid surfaces
                 {
-                    float3 n = -gradientCentralDiff(volData, as_float4(pos)).xyz;
+                    float3 n = -gradientCentralDiff(volData, (float4)(pos, 1.f)).xyz;
                     float ao = calcAO(n, &taus, volData, pos, length(voxLen), length(voxLen)*5.f);
                     result.xyz *= 1.f - 0.3f*ao;
                 }
@@ -641,7 +644,7 @@ __kernel void generateBricks(  __read_only image3d_t volData
         {
             for (int i = volCoordLower.x; i < volCoordUpper.x; ++i)
             {
-                value = read_imagef(volData, nearestSmp, (int4)(i, j, k, 0)).x;  // [0; 1]
+                value = read_imagef(volData, nearestIntSmp, (int4)(i, j, k, 0)).x;  // [0; 1]
                 minVal = min(minVal, value);
                 maxVal = max(maxVal, value);
             }
@@ -675,7 +678,7 @@ __kernel void downsampling(  __read_only image3d_t volData
         {
             for (int i = volCoordLower.x; i < volCoordUpper.x; ++i)
             {
-                value += read_imagef(volData, nearestSmp, (int4)(i, j, k, 0)).x;  // [0; 1]
+                value += read_imagef(volData, nearestIntSmp, (int4)(i, j, k, 0)).x;  // [0; 1]
             }
         }
     }

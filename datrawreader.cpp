@@ -75,6 +75,10 @@ const std::vector<std::vector<char> > & DatRawReader::data() const
     return _raw_data;
 }
 
+/**
+ * @brief DatRawReader::properties
+ * @return
+ */
 const Properties &DatRawReader::properties() const
 {
     if (!has_data())
@@ -82,6 +86,14 @@ const Properties &DatRawReader::properties() const
         throw std::runtime_error("No properties available.");
     }
     return _prop;
+}
+
+/**
+ * @brief DatRawReader::clearData
+ */
+void DatRawReader::clearData()
+{
+    _raw_data.clear();
 }
 
 

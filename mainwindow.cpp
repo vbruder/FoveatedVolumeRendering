@@ -82,6 +82,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionLoadState, &QAction::triggered, this, &MainWindow::loadCamState);
     connect(ui->actionShowOverlay, &QAction::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setShowOverlay);
+    connect(ui->actionSelectOpenCL, &QAction::triggered,
+            ui->volumeRenderWidget, &VolumeRenderWidget::showSelectOpenCL);
 
     // future watcher for concurrent data loading
     _watcher = new QFutureWatcher<void>(this);

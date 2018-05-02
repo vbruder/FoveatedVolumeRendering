@@ -99,7 +99,11 @@ cl::Context createCLGLContext(cl_device_type type, cl_vendor vendor)
     }
     catch(cl::Error error)
     {
-        throw error;
+        std::cerr << "Error in " << error.what() << "(" << getCLErrorString(error.err()) << ")"
+                  << std::endl;
+        throw std::runtime_error("Failed to create an OpenCL context from the OpenGL context. Make \
+                                  sure the displaying device is your selected compute device, \
+                                  otherwise the context sharing won't work.");
     }
 }
 
@@ -113,10 +117,10 @@ cl::Device getValidGLCLInteropDevice(cl::Platform platform, cl_context_propertie
     int status;
     size_t deviceSize = 0;
 
-    // Load extension function call
     // TODO select desired platform (not just the first one)
     cl_platform_id platform_id;
     clGetPlatformIDs(1, &platform_id, NULL);
+    // Load extension function call
     clGetGLContextInfoKHR_fn glGetGLContextInfo_func =
             (clGetGLContextInfoKHR_fn)clGetExtensionFunctionAddressForPlatform(platform_id,
                                                                                "clGetGLContextInfoKHR");

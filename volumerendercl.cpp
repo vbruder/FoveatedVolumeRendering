@@ -78,7 +78,7 @@ void VolumeRenderCL::logCLerror(cl::Error error)
 {
     std::cerr << "Error in " << error.what() << ": "
               << getCLErrorString(error.err()) << std::endl;
-    throw std::runtime_error( "ERROR: " + std::string(error.what()) + "("
+    throw std::runtime_error( "ERROR: " + std::string(error.what()) + " ("
                               + getCLErrorString(error.err()) + ")");
 }
 
@@ -88,10 +88,10 @@ void VolumeRenderCL::logCLerror(cl::Error error)
  */
 void VolumeRenderCL::initialize(bool useGL, bool useCPU, cl_vendor vendor)
 {
+    cl_device_type type = useCPU ? CL_DEVICE_TYPE_CPU : CL_DEVICE_TYPE_GPU;
     try // opencl scope
     {
         // FIXME: Using CPU segfaults on most tff changes
-        cl_device_type type = useCPU ? CL_DEVICE_TYPE_CPU : CL_DEVICE_TYPE_GPU;
         if (useGL && !useCPU)
         {
             _useGL = useGL;
@@ -101,7 +101,7 @@ void VolumeRenderCL::initialize(bool useGL, bool useCPU, cl_vendor vendor)
         {
             if (useGL)
                 std::cout << "Cannot use OpenGL context shring with CPU devices. "
-                              << "Falling back to buffer generation." << std::endl;
+                          << "Falling back to buffer generation." << std::endl;
             _contextCL = createCLContext(type, vendor);
             _useGL = false;
         }
@@ -182,6 +182,8 @@ void VolumeRenderCL::setMemObjectsRaycast(const int t)
  */
 void VolumeRenderCL::setMemObjectsBrickGen(const int t)
 {
+    if (_volumesMem.size() <= static_cast<size_t>(t) || _bricksMem.size() <= static_cast<size_t>(t))
+        return;
     _genBricksKernel.setArg(VOLUME, _volumesMem.at(t));
     _genBricksKernel.setArg(BRICKS, _bricksMem.at(t));
 }
@@ -519,9 +521,7 @@ void VolumeRenderCL::generateBricks()
                                              format,
                                              bricksTexSize.at(0),
                                              bricksTexSize.at(1),
-                                             bricksTexSize.at(2),
-                                             0, 0,
-                                             NULL));
+                                             bricksTexSize.at(2)));
             // run aggregation kernel
             setMemObjectsBrickGen(i);
             size_t lDim = 4;    // local work group dimension: 4*4*4=64
@@ -573,6 +573,12 @@ void VolumeRenderCL::volDataToCLmem(const std::vector<std::vector<char>> &volume
         _volumesMem.clear();
         for (const auto &v : volumeData)
         {
+            if(_dr.properties().volume_res[0]*_dr.properties().volume_res[1]*
+                     _dr.properties().volume_res[2] != v.size())
+            {
+                throw std::runtime_error( "Volume size does not match size specified in dat file.");
+                _dr.clearData();
+            }
             _volumesMem.push_back(cl::Image3D(_contextCL,
                                               CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                                               format,
@@ -700,7 +706,6 @@ void VolumeRenderCL::setTffPrefixSum(std::vector<unsigned int> &tffPrefixSum)
         format.image_channel_data_type = CL_UNSIGNED_INT32;
 
         cl_mem_flags flags = CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR;
-        // divide size by 4 because of RGBA
         _tffPrefixMem = cl::Image1D(_contextCL, flags, format, tffPrefixSum.size(),
                                     tffPrefixSum.data());
     }
@@ -815,4 +820,56 @@ void VolumeRenderCL::setBackground(std::array<float, 4> color)
 double VolumeRenderCL::getLastExecTime()
 {
     return _lastExecTime;
+}
+
+
+/**
+ * @brief VolumeRenderCL::getPlatformNames
+ * @return
+ */
+const std::vector<std::string> VolumeRenderCL::getPlatformNames()
+{
+    std::vector<std::string> names;
+    try
+    {
+        std::vector<cl::Platform> platforms;
+
+        cl::Platform::get(&platforms);
+        for(unsigned int i = 0; i < platforms.size(); ++i)
+            names.push_back(platforms[i].getInfo<CL_PLATFORM_NAME>());
+    }
+    catch (cl::Error err) {
+        logCLerror(err);
+    }
+    return names;
+}
+
+/**
+ * @brief VolumeRenderCL::getDeviceNames
+ * @param platformId
+ * @param type
+ * @return
+ */
+const std::vector<std::string> VolumeRenderCL::getDeviceNames(int platformId,
+                                                              const std::string &type)
+{
+    std::vector<std::string> names;
+    cl_device_type t = CL_DEVICE_TYPE_ALL;
+    if (type == "GPU") t = CL_DEVICE_TYPE_GPU;
+    else if (type == "CPU") t = CL_DEVICE_TYPE_CPU;
+    try
+    {
+        std::vector<cl::Platform> platforms;
+        cl::Platform::get(&platforms);
+        std::vector<cl::Device> devices;
+        platforms[platformId].getDevices(t, &devices);
+
+        for(unsigned int i = 0; i < devices.size(); ++i)
+            names.push_back(devices[i].getInfo<CL_DEVICE_NAME>());
+    }
+    catch (cl::Error err) {
+        logCLerror(err);
+    }
+
+    return names;
 }

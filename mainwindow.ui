@@ -74,6 +74,7 @@
     <addaction name="separator"/>
     <addaction name="actionScreenshot"/>
     <addaction name="actionRecord"/>
+    <addaction name="actionSelectOpenCL"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -498,6 +499,11 @@
    </property>
    <property name="text">
     <string>Show status bar</string>
+   </property>
+  </action>
+  <action name="actionSelectOpenCL">
+   <property name="text">
+    <string>Select OpenCL platform/device...</string>
    </property>
   </action>
  </widget>

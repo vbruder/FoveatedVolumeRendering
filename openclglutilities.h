@@ -31,8 +31,7 @@
  *
  */
 
-#ifndef OPENCLGLUTILITIES_H
-#define OPENCLGLUTILITIES_H
+#pragma once
 
 #include "openclutilities.h"
 
@@ -67,4 +66,3 @@ cl::Context createCLGLContext(cl_device_type type = CL_DEVICE_TYPE_ALL,
 cl::Device getValidGLCLInteropDevice(cl::Platform platform, cl_context_properties* properties);
 #endif
 
-#endif // OPENCLGLUTILITIES_H

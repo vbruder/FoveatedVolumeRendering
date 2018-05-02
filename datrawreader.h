@@ -99,6 +99,11 @@ public:
     /// <throws>If no data has been read before.</throws>
     const Properties &properties() const;
 
+    ///
+    /// \brief clearData
+    ///
+    void clearData();
+
 private:
 
     /// <summary>

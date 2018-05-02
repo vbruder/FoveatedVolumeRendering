@@ -31,8 +31,7 @@
  *
  */
 
-#ifndef OPENCLUTILITIES_H
-#define OPENCLUTILITIES_H
+#pragma once
 
 #define CL_HPP_ENABLE_EXCEPTIONS    // cl2.h
 #define __CL_ENABLE_EXCEPTIONS      // cl.h
@@ -81,6 +80,3 @@ cl::Program buildProgramFromSource(cl::Context context, const std::string &filen
                                    const std::string &buildOptions = "");
 
 std::string getCLErrorString(cl_int err);
-
-
-#endif // OPENCLUTILITIES_H

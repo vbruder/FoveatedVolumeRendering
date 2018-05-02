@@ -19,13 +19,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-
-#ifndef VOLUMERENDERCL_H
-#define VOLUMERENDERCL_H
+#pragma once
 
 #define CL_QUEUE_PROFILING_ENABLE
 #define CL_HPP_ENABLE_EXCEPTIONS
 #include "openclglutilities.h"
+#include "openclutilities.h"
 
 #include "datrawreader.h"
 
@@ -203,6 +202,20 @@ public:
     double getLastExecTime();
 
     /**
+     * @brief getPlatformNames
+     * @return platform names
+     */
+    const std::vector<std::string> getPlatformNames();
+
+    /**
+     * @brief getDeviceNames
+     * @param platformId OpenCL platform id
+     * @param type string describing the OpenCL device type ('GPU' or 'CPU')
+     * @return device names
+     */
+    const std::vector<std::string> getDeviceNames(int platformId, const std::string &type);
+
+    /**
      * @brief setAmbientOcclusion
      * @param ao
      */
@@ -214,10 +227,6 @@ public:
      * @param factor downsampling factor, uniform for all 3 dimensions
      */
     const std::string volumeDownsampling(const int t, const int factor);
-
-#ifdef NO_GL
-    std::vector<float> getOutputData() {return _outputData;}
-#endif
 
 private:
     /**
@@ -298,5 +307,3 @@ private:
 
     DatRawReader _dr;
 };
-
-#endif // VOLUMERENDERCL_H

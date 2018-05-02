@@ -49,9 +49,11 @@ cl::Platform getPlatform(cl_device_type type, cl_vendor vendor)
         throw cl::Error(1, "No OpenCL platforms were found");
 
     int platformID = -1;
-    if(vendor != VENDOR_ANY) {
+    if(vendor != VENDOR_ANY)
+    {
         std::string find;
-        switch(vendor) {
+        switch(vendor)
+        {
             case VENDOR_NVIDIA:
                 find = "NVIDIA";
             break;
@@ -65,8 +67,16 @@ cl::Platform getPlatform(cl_device_type type, cl_vendor vendor)
                 throw cl::Error(1, "Invalid vendor specified");
             break;
         }
-        for(unsigned int i = 0; i < platforms.size(); i++) {
-            if(platforms[i].getInfo<CL_PLATFORM_VENDOR>().find(find) != std::string::npos) {
+
+        std::cout << platforms.size() << " OpenCL platforms found: " << std::endl;
+        for(unsigned int i = 1; i <= platforms.size(); i++)
+            std::cout << "    " << i << ") "
+                      << platforms[i-1].getInfo<CL_PLATFORM_NAME>() << std::endl;
+
+        for(unsigned int i = 0; i < platforms.size(); i++)
+        {
+            if(platforms[i].getInfo<CL_PLATFORM_VENDOR>().find(find) != std::string::npos)
+            {
                 try {
                     std::vector<cl::Device> devices;
                     platforms[i].getDevices(type, &devices);
@@ -77,9 +87,12 @@ cl::Platform getPlatform(cl_device_type type, cl_vendor vendor)
                 }
             }
         }
-    } else {
-        for(unsigned int i = 0; i < platforms.size(); i++) {
-            try {
+    } else
+    {
+        for(unsigned int i = 0; i < platforms.size(); i++)
+        {
+            try
+            {
                 std::vector<cl::Device> devices;
                 platforms[i].getDevices(type, &devices);
                 platformID = i;
@@ -94,7 +107,8 @@ cl::Platform getPlatform(cl_device_type type, cl_vendor vendor)
         throw cl::Error(1, "No compatible OpenCL platform found");
 
     cl::Platform platform = platforms[platformID];
-    std::cout << "Using platform vendor: " << platform.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
+    std::cout << "Using platform: " << platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
+    std::cout << "From vendor: " << platform.getInfo<CL_PLATFORM_VENDOR>() << std::endl;
     return platform;
 }
 
@@ -141,7 +155,6 @@ cl::Context createCLContext(cl_device_type type, cl_vendor vendor)
 
     try {
         cl::Context context = cl::Context(type, cps);
-
         return context;
     } catch(cl::Error error) {
         throw cl::Error(1, "Failed to create an OpenCL context!");
