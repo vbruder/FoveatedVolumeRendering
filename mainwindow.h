@@ -66,6 +66,7 @@ protected slots:
     void chooseBackgroundColor();
     void saveCamState();
     void loadCamState();
+    void showAboutDialog();
 protected:
     void dragEnterEvent(QDragEnterEvent *ev) Q_DECL_OVERRIDE;
     void dropEvent(QDropEvent *ev) Q_DECL_OVERRIDE;

@@ -84,6 +84,8 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->volumeRenderWidget, &VolumeRenderWidget::setShowOverlay);
     connect(ui->actionSelectOpenCL, &QAction::triggered,
             ui->volumeRenderWidget, &VolumeRenderWidget::showSelectOpenCL);
+    connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::showAboutDialog);
+
 
     // future watcher for concurrent data loading
     _watcher = new QFutureWatcher<void>(this);
@@ -287,6 +289,22 @@ void MainWindow::loadCamState()
             ui->chbOrtho->setChecked(json["useOrtho"].toBool());
     // camera paramters
     ui->volumeRenderWidget->read(json);
+}
+
+/**
+ * @brief MainWindow::showAboutDialog
+ */
+void MainWindow::showAboutDialog()
+{
+    QMessageBox::about(this, "About Volume Raycaster",
+"<b>Volume Raycaster 2018</b><br><br>\
+Check out the \
+<a href='https://bitbucket.org/theVall/basicvolumeraycaster/overview'>Bitbucket repository</a> \
+for more information.<br><br>\
+Copyright 2017-2018 Valentin Bruder. All rights reserved. <br><br>\
+The program is provided AS IS with NO WARRANTY OF ANY KIND, \
+INCLUDING THE WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS \
+FOR A PARTICULAR PURPOSE.");
 }
 
 /**
