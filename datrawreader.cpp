@@ -83,7 +83,7 @@ const Properties &DatRawReader::properties() const
 {
     if (!has_data())
     {
-        throw std::runtime_error("No properties available.");
+        throw std::runtime_error("No properties of volume data set available.");
     }
     return _prop;
 }

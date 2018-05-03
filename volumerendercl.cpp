@@ -560,13 +560,20 @@ void VolumeRenderCL::volDataToCLmem(const std::vector<std::vector<char>> &volume
     {
         cl::ImageFormat format;
         format.image_channel_order = CL_R;
+        int formatMultiplier = 1;
 
         if (_dr.properties().format == "UCHAR")
             format.image_channel_data_type = CL_UNORM_INT8;
         else if (_dr.properties().format == "USHORT")
+        {
             format.image_channel_data_type = CL_UNORM_INT16;
+            formatMultiplier = 2;
+        }
         else if (_dr.properties().format == "FLOAT")
+        {
             format.image_channel_data_type = CL_FLOAT;
+            formatMultiplier = 4;
+        }
         else
             throw std::invalid_argument("Unknown or invalid volume data format.");
 
@@ -574,10 +581,10 @@ void VolumeRenderCL::volDataToCLmem(const std::vector<std::vector<char>> &volume
         for (const auto &v : volumeData)
         {
             if(_dr.properties().volume_res[0]*_dr.properties().volume_res[1]*
-                     _dr.properties().volume_res[2] != v.size())
+                     _dr.properties().volume_res[2]*formatMultiplier > v.size())
             {
-                throw std::runtime_error( "Volume size does not match size specified in dat file.");
                 _dr.clearData();
+                throw std::runtime_error( "Volume size does not match size specified in dat file.");
             }
             _volumesMem.push_back(cl::Image3D(_contextCL,
                                               CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,

@@ -353,6 +353,7 @@ void MainWindow::saveCamState()
  */
 bool MainWindow::readVolumeFile(const QString &fileName)
 {
+    ui->volumeRenderWidget->setLoadingFinished(false);
     _progBar.setFormat("Loading volume file: " + fileName);
     _progBar.setValue(1);
     _progBar.show();

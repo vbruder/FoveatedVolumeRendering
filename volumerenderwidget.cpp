@@ -920,6 +920,7 @@ bool VolumeRenderWidget::getLoadingFinished() const
  */
 void VolumeRenderWidget::setLoadingFinished(bool loadingFinished)
 {
+    this->setTimeStep(0);
     _loadingFinished = loadingFinished;
 }
 
