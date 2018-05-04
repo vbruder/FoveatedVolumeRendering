@@ -85,7 +85,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSelectOpenCL, &QAction::triggered,
             ui->volumeRenderWidget, &VolumeRenderWidget::showSelectOpenCL);
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::showAboutDialog);
-
+    connect(ui->actionRealoadKernel, &QAction::triggered,
+            ui->volumeRenderWidget, &VolumeRenderWidget::reloadKernels);
+    connect(ui->actionRealoadKernel, &QAction::triggered,
+            this, &MainWindow::updateTransferFunctionFromGradientStops);
 
     // future watcher for concurrent data loading
     _watcher = new QFutureWatcher<void>(this);
@@ -243,6 +246,16 @@ void MainWindow::setVolumeData(const QString &fileName)
     ui->volumeRenderWidget->updateTransferFunction(
                 ui->transferFunctionEditor->getEditor()->getGradientStops());
     ui->volumeRenderWidget->updateView();
+}
+
+
+/**
+ * @brief MainWindow::updateTransferFunction
+ */
+void MainWindow::updateTransferFunctionFromGradientStops()
+{
+    ui->volumeRenderWidget->updateTransferFunction(
+                ui->transferFunctionEditor->getEditor()->getGradientStops());
 }
 
 

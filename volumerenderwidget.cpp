@@ -196,9 +196,17 @@ void VolumeRenderWidget::initializeGL()
     _spScreenQuad.release();
     _screenQuadVao.release();
 
+    initVolumeRenderer();
+}
+
+/**
+ * @brief VolumeRenderWidget::initVolumeRenderer
+ */
+void VolumeRenderWidget::initVolumeRenderer(bool useGL, bool useCPU)
+{
     try
     {
-        _volumerender.initialize(true, false);
+        _volumerender.initialize(useGL, useCPU);
     }
     catch (std::invalid_argument e)
     {
@@ -215,7 +223,6 @@ void VolumeRenderWidget::initializeGL()
         qCritical() << "An unknown error occured initializing OpenCL/OpenGL.";
     }
 }
-
 
 /**
  * @brief VolumeRenderWidget::saveFrame
@@ -551,13 +558,7 @@ void VolumeRenderWidget::showSelectOpenCL()
                 catch (...) {
                     qCritical() << "An unknown error occured initializing OpenCL/OpenGL.";
                 }
-
-                try {
-                    generateOutputTextures(floor(width()*_imgSamplingRate),
-                                           floor(height()*_imgSamplingRate));
-                } catch (std::runtime_error e) {
-                    qCritical() << "An error occured while generating output texture." << e.what();
-                }
+                this->resizeGL(this->width(), this->height());
             }
         }
     }
@@ -715,7 +716,6 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
     {
         qCritical() << e.what();
     }
-
     update();
 }
 
@@ -812,9 +812,7 @@ void VolumeRenderWidget::updateView(float dx, float dy)
 
     std::array<float, 16> viewArray;
     for (size_t i = 0; i < viewArray.size(); ++i)
-    {
         viewArray.at(i) = viewMat.transposed().constData()[i];
-    }
 
     try
     {
@@ -1095,7 +1093,6 @@ void VolumeRenderWidget::read(const QJsonObject &json)
             _translation.setZ(sl.at(2).toFloat());
         }
     }
-
     updateView();
 }
 
@@ -1111,4 +1108,13 @@ void VolumeRenderWidget::write(QJsonObject &json) const
     sTmp = QString::number(_translation.x()) + " " + QString::number(_translation.y())
             + " " + QString::number(_translation.z());
     json["camTranslation"] = sTmp;
+}
+
+/**
+ * @brief VolumeRenderWidget::reloadKernels
+ */
+void VolumeRenderWidget::reloadKernels()
+{
+    initVolumeRenderer();
+    resizeGL(width(), height());
 }

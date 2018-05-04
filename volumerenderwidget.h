@@ -116,6 +116,8 @@ public slots:
     void write(QJsonObject &json) const;
 
     void showSelectOpenCL();
+    void reloadKernels();
+
 signals:
     void fpsChanged(double);
     void frameSizeChanged(QSize);
@@ -132,6 +134,7 @@ private:
     void paintFPS(QPainter &p, const double fps, const double lastTime);
     double calcFPS();
 
+    void initVolumeRenderer(bool useGL = true, bool useCPU = false);
     void generateOutputTextures(int width, int height);
 
     // -------Members--------

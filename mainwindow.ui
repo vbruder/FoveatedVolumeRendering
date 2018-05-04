@@ -81,6 +81,7 @@
     <addaction name="actionRecord"/>
     <addaction name="separator"/>
     <addaction name="actionSelectOpenCL"/>
+    <addaction name="actionRealoadKernel"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -538,6 +539,18 @@
    </property>
    <property name="text">
     <string>About...</string>
+   </property>
+  </action>
+  <action name="actionRealoadKernel">
+   <property name="icon">
+    <iconset theme="view-refresh">
+     <normaloff>.</normaloff>.</iconset>
+   </property>
+   <property name="text">
+    <string>Reaload kernel</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+K</string>
    </property>
   </action>
  </widget>

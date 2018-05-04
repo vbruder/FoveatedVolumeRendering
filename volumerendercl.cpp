@@ -122,6 +122,12 @@ void VolumeRenderCL::initialize(bool useGL, bool useCPU, cl_vendor vendor)
 #else
     initKernel("../RaycastLight/kernels/volumeraycast.cl", "-DCL_STD=CL1.2 -DESS");
 #endif // _WIN32
+
+    // upload volume data if already loaded
+    if (_dr.has_data())
+    {
+        volDataToCLmem(_dr.data());
+    }
 }
 
 
@@ -455,12 +461,9 @@ void VolumeRenderCL::runRaycastNoGL(const size_t width, const size_t height, con
         std::array<size_t, 3> region = {{width, height, 1}};
         _queueCL.enqueueReadImage(_outputMemNoGL,
                                   CL_TRUE,
-                                  origin,
-                                  region,
-                                  0, 0,
+                                  origin, region, 0, 0,
                                   output.data(),
-                                  NULL,
-                                  &readEvt);
+                                  NULL, &readEvt);
         _queueCL.flush();    // global sync
 
 #ifdef CL_QUEUE_PROFILING_ENABLE
