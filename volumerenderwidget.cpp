@@ -198,7 +198,7 @@ void VolumeRenderWidget::initializeGL()
 
     try
     {
-        _volumerender.initialize(true, false);
+        _volumerender.initialize(false, false);
     }
     catch (std::invalid_argument e)
     {
@@ -392,7 +392,8 @@ void VolumeRenderWidget::resizeGL(int w, int h)
  */
 void VolumeRenderWidget::generateOutputTextures(int width, int height)
 {
-    glGenTextures(1, &_outTexId);
+	glDeleteTextures(1, &_outTexId);
+	glGenTextures(1, &_outTexId);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, _outTexId);
