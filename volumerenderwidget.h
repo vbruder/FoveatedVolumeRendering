@@ -48,8 +48,8 @@ class VolumeRenderWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_3_
     Q_OBJECT
 
 public:
-    explicit VolumeRenderWidget(QWidget *parent = 0);
-    virtual ~VolumeRenderWidget();
+    explicit VolumeRenderWidget(QWidget *parent = nullptr);
+    virtual ~VolumeRenderWidget() override;
 
     void setupVertexAttribs();
 
@@ -107,6 +107,7 @@ public slots:
 
     void saveFrame();
     void toggleVideoRecording();
+    void toggleViewRecording();
     void setTimeStep(int timestep);
     void setAmbientOcclusion(bool ao);
 
@@ -136,6 +137,7 @@ private:
 
     void initVolumeRenderer(bool useGL = true, bool useCPU = false);
     void generateOutputTextures(int width, int height);
+    void recordViewConfig();
 
     // -------Members--------
     //
@@ -174,4 +176,6 @@ private:
     double _imgSamplingRate;       // image oversampling rate
     bool _useGL;
     bool _showOverlay;
+    bool _recordView;
+    QString _recordViewFile;
 };

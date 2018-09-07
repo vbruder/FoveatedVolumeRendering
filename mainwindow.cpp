@@ -74,6 +74,8 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->volumeRenderWidget, &VolumeRenderWidget::saveFrame);
     connect(ui->actionRecord, &QAction::triggered,
             ui->volumeRenderWidget, &VolumeRenderWidget::toggleVideoRecording);
+    connect(ui->actionRecordCamera, &QAction::triggered,
+            ui->volumeRenderWidget, &VolumeRenderWidget::toggleViewRecording);
     connect(ui->actionGenerateLowResVo, &QAction::triggered,
             ui->volumeRenderWidget, &VolumeRenderWidget::generateLowResVolume);
     connect(ui->actionResetCam, &QAction::triggered,

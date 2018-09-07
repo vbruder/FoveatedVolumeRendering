@@ -26,7 +26,7 @@
      <x>0</x>
      <y>0</y>
      <width>1298</width>
-     <height>22</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -79,6 +79,7 @@
     <addaction name="separator"/>
     <addaction name="actionScreenshot"/>
     <addaction name="actionRecord"/>
+    <addaction name="actionRecordCamera"/>
     <addaction name="separator"/>
     <addaction name="actionSelectOpenCL"/>
     <addaction name="actionRealoadKernel"/>
@@ -547,10 +548,18 @@
      <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Reaload kernel</string>
+    <string>Reaload kernels</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+K</string>
+   </property>
+  </action>
+  <action name="actionRecordCamera">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Record camera configuration</string>
    </property>
   </action>
  </widget>

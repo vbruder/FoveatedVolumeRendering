@@ -178,7 +178,7 @@ void VolumeRenderCL::setMemObjectsRaycast(const int t)
     else
         _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
     _raycastKernel.setArg(TFF_PREFIX, _tffPrefixMem);
-    cl_float3 modelScale = {_modelScale[0], _modelScale[1], _modelScale[2]};
+    cl_float3 modelScale = {{_modelScale[0], _modelScale[1], _modelScale[2]}};
     _raycastKernel.setArg(MODEL_SCALE, modelScale);
 }
 
@@ -238,7 +238,7 @@ const std::string VolumeRenderCL::volumeDownsampling(const int t, const int fact
                                             texSize.at(1),
                                             texSize.at(2),
                                             0, 0,
-                                            NULL);
+                                            nullptr);
 
         _downsamplingKernel.setArg(VOLUME, _volumesMem.at(t));
         _downsamplingKernel.setArg(1, lowResVol);
@@ -404,7 +404,7 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const i
     try // opencl scope
     {
         setMemObjectsRaycast(t);
-        size_t lDim = 8;    // local work group dimension
+        size_t lDim = 8;    // 8*8=64 is wavefront size or 2*warp size
         cl::NDRange globalThreads(width + (lDim - width % lDim), height + (lDim - height % lDim));
         cl::NDRange localThreads(lDim, lDim);
         cl::Event ndrEvt;
@@ -413,7 +413,7 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const i
         memObj.push_back(_outputMem);
         _queueCL.enqueueAcquireGLObjects(&memObj);
         _queueCL.enqueueNDRangeKernel(
-                    _raycastKernel, cl::NullRange, globalThreads, localThreads, NULL, &ndrEvt);
+                    _raycastKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
         _queueCL.enqueueReleaseGLObjects(&memObj);
         _queueCL.finish();    // global sync
 
@@ -495,9 +495,9 @@ void VolumeRenderCL::generateBricks()
         // calculate brick size
         const unsigned int numBricks = 64u;
         std::array<unsigned int, 3> brickRes = {1u, 1u, 1u};
-        brickRes.at(0) = RoundPow2(_dr.properties().volume_res.at(0)/numBricks);
-        brickRes.at(1) = RoundPow2(_dr.properties().volume_res.at(1)/numBricks);
-        brickRes.at(2) = RoundPow2(_dr.properties().volume_res.at(2)/numBricks);
+        brickRes.at(0) = std::max(1u, RoundPow2(_dr.properties().volume_res.at(0)/numBricks));
+        brickRes.at(1) = std::max(1u, RoundPow2(_dr.properties().volume_res.at(1)/numBricks));
+        brickRes.at(2) = std::max(1u, RoundPow2(_dr.properties().volume_res.at(2)/numBricks));
         std::array<unsigned int, 3> bricksTexSize = {1u, 1u, 1u};
         bricksTexSize.at(0) = ceil(_dr.properties().volume_res.at(0)/(double)brickRes.at(0));
         bricksTexSize.at(1) = ceil(_dr.properties().volume_res.at(1)/(double)brickRes.at(1));
@@ -683,7 +683,7 @@ void VolumeRenderCL::setTransferFunction(std::vector<unsigned char> &tff)
         format.image_channel_data_type = CL_UNORM_INT8;
 
         cl_mem_flags flags = CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR;
-        // divide size by 4 because of RGBA
+        // divide size by 4 because of RGBA channels
         _tffMem = cl::Image1D(_contextCL, flags, format, tff.size() / 4, tff.data());
         generateBricks();
 
