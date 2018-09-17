@@ -200,6 +200,13 @@
         <string>Rendering</string>
        </property>
        <layout class="QGridLayout" name="gridLayout">
+        <item row="9" column="0" colspan="2">
+         <widget class="QCheckBox" name="chbOrtho">
+          <property name="text">
+           <string>Orthographic</string>
+          </property>
+         </widget>
+        </item>
         <item row="3" column="0" colspan="2">
          <widget class="QLabel" name="label_5">
           <property name="text">
@@ -296,16 +303,6 @@
           </property>
          </widget>
         </item>
-        <item row="10" column="0" colspan="2">
-         <widget class="QCheckBox" name="chbBox">
-          <property name="text">
-           <string>Show skipped</string>
-          </property>
-          <property name="checked">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
         <item row="6" column="0" colspan="2">
          <widget class="QCheckBox" name="chbLinear">
           <property name="text">
@@ -333,17 +330,37 @@
           </property>
          </widget>
         </item>
-        <item row="10" column="2" colspan="3">
-         <widget class="QCheckBox" name="chbOrtho">
-          <property name="text">
-           <string>Orthographic</string>
-          </property>
-         </widget>
-        </item>
         <item row="8" column="2" colspan="3">
          <widget class="QCheckBox" name="chbAerial">
           <property name="text">
            <string>Aerial perspective</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Image</string>
+          </property>
+         </widget>
+        </item>
+        <item row="11" column="0" colspan="2">
+         <widget class="QCheckBox" name="chbObjectESS">
+          <property name="text">
+           <string>Obejct ESS</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="12" column="0" colspan="3">
+         <widget class="QCheckBox" name="chbBox">
+          <property name="text">
+           <string>Show skipped</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -360,10 +377,17 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_2">
+        <item row="11" column="2" colspan="2">
+         <widget class="QCheckBox" name="chbImageESS">
           <property name="text">
-           <string>Image</string>
+           <string>Image ESS</string>
+          </property>
+         </widget>
+        </item>
+        <item row="9" column="2" colspan="3">
+         <widget class="QCheckBox" name="chbContRendering">
+          <property name="text">
+           <string>Cont. rendering</string>
           </property>
          </widget>
         </item>

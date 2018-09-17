@@ -79,6 +79,7 @@ VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
     , _useGL(true)
     , _showOverlay(true)
     , _recordView(false)
+    , _contRendering(false)
 {
     this->setMouseTracking(true);
 }
@@ -393,6 +394,9 @@ void VolumeRenderWidget::paintGL()
     }
     p.endNativePainting();
     p.end();
+
+    if (_contRendering)
+        update();
 }
 
 
@@ -993,6 +997,11 @@ void VolumeRenderWidget::setCamOrtho(bool camOrtho)
     this->updateView();
 }
 
+void VolumeRenderWidget::setContRendering(bool contRendering)
+{
+    _contRendering = contRendering;
+    this->updateView();
+}
 
 /**
  * @brief VolumeRenderWidget::setIllumination
@@ -1045,6 +1054,28 @@ void VolumeRenderWidget::setAerial(bool aerial)
     this->updateView();
 }
 
+/**
+ * @brief VolumeRenderWidget::setImgEss
+ * @param useEss
+ */
+void VolumeRenderWidget::setImgEss(bool useEss)
+{
+    if (useEss)
+        _volumerender.updateOutputImg(static_cast<size_t>(width() * _imgSamplingRate),
+                                      static_cast<size_t>(height() * _imgSamplingRate), _outTexId);
+    _volumerender.setImgEss(useEss);
+    this->updateView();
+}
+
+/**
+ * @brief VolumeRenderWidget::setImgEss
+ * @param useEss
+ */
+void VolumeRenderWidget::setObjEss(bool useEss)
+{
+    _volumerender.setObjEss(useEss);
+    this->updateView();
+}
 
 /**
  * @brief VolumeRenderWidget::setDrawBox

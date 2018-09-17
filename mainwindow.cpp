@@ -120,10 +120,16 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->volumeRenderWidget, &VolumeRenderWidget::setContours);
     connect(ui->chbAerial, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setAerial);
+    connect(ui->chbImageESS, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setImgEss);
+    connect(ui->chbObjectESS, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setObjEss);
     connect(ui->chbBox, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setDrawBox);
     connect(ui->chbOrtho, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setCamOrtho);
+    connect(ui->chbContRendering, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setContRendering);
     // connect tff editor
     connect(ui->transferFunctionEditor->getEditor(), &TransferFunctionEditor::gradientStopsChanged,
             ui->volumeRenderWidget, &VolumeRenderWidget::updateTransferFunction);

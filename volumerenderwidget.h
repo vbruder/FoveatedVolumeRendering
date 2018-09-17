@@ -96,10 +96,13 @@ public slots:
 #undef Bool
     void setTffInterpolation(const QString method);
     void setCamOrtho(bool camOrtho);
+    void setContRendering(bool setContRendering);
     void setIllumination(int illum);
     void setLinearInterpolation(bool linear);
     void setContours(bool contours);
     void setAerial(bool aerial);
+    void setImgEss(bool useEss);
+    void setObjEss(bool useEss);
     void setDrawBox(bool box);
     void setBackgroundColor(const QColor col);
     void setImageSamplingRate(const double samplingRate);
@@ -178,4 +181,5 @@ private:
     bool _showOverlay;
     bool _recordView;
     QString _recordViewFile;
+    bool _contRendering;
 };
