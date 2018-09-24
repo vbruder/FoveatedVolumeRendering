@@ -26,7 +26,7 @@
      <x>0</x>
      <y>0</y>
      <width>1298</width>
-     <height>22</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -79,8 +79,10 @@
     <addaction name="separator"/>
     <addaction name="actionScreenshot"/>
     <addaction name="actionRecord"/>
+    <addaction name="actionRecordCamera"/>
     <addaction name="separator"/>
     <addaction name="actionSelectOpenCL"/>
+    <addaction name="actionRealoadKernel"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -198,6 +200,13 @@
         <string>Rendering</string>
        </property>
        <layout class="QGridLayout" name="gridLayout">
+        <item row="9" column="0" colspan="2">
+         <widget class="QCheckBox" name="chbOrtho">
+          <property name="text">
+           <string>Orthographic</string>
+          </property>
+         </widget>
+        </item>
         <item row="3" column="0" colspan="2">
          <widget class="QLabel" name="label_5">
           <property name="text">
@@ -294,16 +303,6 @@
           </property>
          </widget>
         </item>
-        <item row="10" column="0" colspan="2">
-         <widget class="QCheckBox" name="chbBox">
-          <property name="text">
-           <string>Show skipped</string>
-          </property>
-          <property name="checked">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
         <item row="6" column="0" colspan="2">
          <widget class="QCheckBox" name="chbLinear">
           <property name="text">
@@ -331,17 +330,37 @@
           </property>
          </widget>
         </item>
-        <item row="10" column="2" colspan="3">
-         <widget class="QCheckBox" name="chbOrtho">
-          <property name="text">
-           <string>Orthographic</string>
-          </property>
-         </widget>
-        </item>
         <item row="8" column="2" colspan="3">
          <widget class="QCheckBox" name="chbAerial">
           <property name="text">
            <string>Aerial perspective</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Image</string>
+          </property>
+         </widget>
+        </item>
+        <item row="11" column="0" colspan="2">
+         <widget class="QCheckBox" name="chbObjectESS">
+          <property name="text">
+           <string>Obejct ESS</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="12" column="0" colspan="3">
+         <widget class="QCheckBox" name="chbBox">
+          <property name="text">
+           <string>Show skipped</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -358,10 +377,17 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_2">
+        <item row="11" column="2" colspan="2">
+         <widget class="QCheckBox" name="chbImageESS">
           <property name="text">
-           <string>Image</string>
+           <string>Image ESS</string>
+          </property>
+         </widget>
+        </item>
+        <item row="9" column="2" colspan="3">
+         <widget class="QCheckBox" name="chbContRendering">
+          <property name="text">
+           <string>Continued rendering</string>
           </property>
          </widget>
         </item>
@@ -540,24 +566,44 @@
     <string>About...</string>
    </property>
   </action>
+  <action name="actionRealoadKernel">
+   <property name="icon">
+    <iconset theme="view-refresh">
+     <normaloff>.</normaloff>.</iconset>
+   </property>
+   <property name="text">
+    <string>Reaload kernels</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+K</string>
+   </property>
+  </action>
+  <action name="actionRecordCamera">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Record camera configuration</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
    <class>VolumeRenderWidget</class>
    <extends>QOpenGLWidget</extends>
-   <header>volumerenderwidget.h</header>
+   <header>src/qt/volumerenderwidget.h</header>
   </customwidget>
   <customwidget>
    <class>TransferFunctionWidget</class>
    <extends>QWidget</extends>
-   <header>transferfunctionwidget.h</header>
+   <header>src/qt/transferfunctionwidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>colorwidgets::ColorWheel</class>
    <extends>QWidget</extends>
-   <header>colorwheel.h</header>
+   <header>src/qt/colorwheel.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

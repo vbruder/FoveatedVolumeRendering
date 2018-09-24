@@ -31,7 +31,7 @@
  *
  */
 
-#include "openclutilities.h"
+#include "src/oclutil/openclutilities.h"
 
 #ifdef WIN32
 #else

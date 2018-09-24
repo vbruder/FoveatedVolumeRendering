@@ -20,7 +20,7 @@
  *
  */
 
-#include "mainwindow.h"
+#include "src/qt/mainwindow.h"
 #include "ui_mainwindow.h"
 
 #include <QFileDialog>
@@ -49,7 +49,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     QCoreApplication::setOrganizationName("VISUS");
     QCoreApplication::setOrganizationDomain("www.visus.uni-stuttgart.de");
-    QCoreApplication::setApplicationName("Lightweight Volume Raycaster");
+    QCoreApplication::setApplicationName("VolumeRaycasterCL");
     _settings = new QSettings();
 
     setAcceptDrops( true );
@@ -74,6 +74,8 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->volumeRenderWidget, &VolumeRenderWidget::saveFrame);
     connect(ui->actionRecord, &QAction::triggered,
             ui->volumeRenderWidget, &VolumeRenderWidget::toggleVideoRecording);
+    connect(ui->actionRecordCamera, &QAction::triggered,
+            ui->volumeRenderWidget, &VolumeRenderWidget::toggleViewRecording);
     connect(ui->actionGenerateLowResVo, &QAction::triggered,
             ui->volumeRenderWidget, &VolumeRenderWidget::generateLowResVolume);
     connect(ui->actionResetCam, &QAction::triggered,
@@ -85,7 +87,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSelectOpenCL, &QAction::triggered,
             ui->volumeRenderWidget, &VolumeRenderWidget::showSelectOpenCL);
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::showAboutDialog);
-
+    connect(ui->actionRealoadKernel, &QAction::triggered,
+            ui->volumeRenderWidget, &VolumeRenderWidget::reloadKernels);
+    connect(ui->actionRealoadKernel, &QAction::triggered,
+            this, &MainWindow::updateTransferFunctionFromGradientStops);
 
     // future watcher for concurrent data loading
     _watcher = new QFutureWatcher<void>(this);
@@ -115,10 +120,16 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->volumeRenderWidget, &VolumeRenderWidget::setContours);
     connect(ui->chbAerial, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setAerial);
+    connect(ui->chbImageESS, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setImgEss);
+    connect(ui->chbObjectESS, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setObjEss);
     connect(ui->chbBox, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setDrawBox);
     connect(ui->chbOrtho, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setCamOrtho);
+    connect(ui->chbContRendering, &QCheckBox::toggled,
+            ui->volumeRenderWidget, &VolumeRenderWidget::setContRendering);
     // connect tff editor
     connect(ui->transferFunctionEditor->getEditor(), &TransferFunctionEditor::gradientStopsChanged,
             ui->volumeRenderWidget, &VolumeRenderWidget::updateTransferFunction);
@@ -243,6 +254,16 @@ void MainWindow::setVolumeData(const QString &fileName)
     ui->volumeRenderWidget->updateTransferFunction(
                 ui->transferFunctionEditor->getEditor()->getGradientStops());
     ui->volumeRenderWidget->updateView();
+}
+
+
+/**
+ * @brief MainWindow::updateTransferFunction
+ */
+void MainWindow::updateTransferFunctionFromGradientStops()
+{
+    ui->volumeRenderWidget->updateTransferFunction(
+                ui->transferFunctionEditor->getEditor()->getGradientStops());
 }
 
 

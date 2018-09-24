@@ -33,7 +33,7 @@
 
 #pragma once
 
-#include "openclutilities.h"
+#include "src/oclutil/openclutilities.h"
 
 #if defined (__APPLE__) || defined(MACOSX)
     #define GL_SHARING_EXTENSION "cl_APPLE_gl_sharing"

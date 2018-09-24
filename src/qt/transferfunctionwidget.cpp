@@ -48,8 +48,8 @@
 **
 ****************************************************************************/
 
-#include "transferfunctionwidget.h"
-#include "hoverpoints.h"
+#include "src/qt/transferfunctionwidget.h"
+#include "src/qt/hoverpoints.h"
 
 #include <algorithm>
 

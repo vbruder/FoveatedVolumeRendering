@@ -20,7 +20,7 @@
  *
  */
 
-#include "volumerenderwidget.h"
+#include "src/qt/volumerenderwidget.h"
 
 #include <QPainter>
 #include <QGradient>
@@ -32,6 +32,7 @@
 #include <QErrorMessage>
 #include <QLoggingCategory>
 #include <QMessageBox>
+#include <QFileDialog>
 
 const static double Z_NEAR = 1.0;
 const static double Z_FAR = 500.0;
@@ -77,6 +78,8 @@ VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
     , _imgSamplingRate(1)
     , _useGL(true)
     , _showOverlay(true)
+    , _recordView(false)
+    , _contRendering(false)
 {
     this->setMouseTracking(true);
 }
@@ -196,6 +199,14 @@ void VolumeRenderWidget::initializeGL()
     _spScreenQuad.release();
     _screenQuadVao.release();
 
+    initVolumeRenderer();
+}
+
+/**
+ * @brief VolumeRenderWidget::initVolumeRenderer
+ */
+void VolumeRenderWidget::initVolumeRenderer(bool useGL, bool useCPU)
+{
     try
     {
         _volumerender.initialize(false, false);
@@ -215,7 +226,6 @@ void VolumeRenderWidget::initializeGL()
         qCritical() << "An unknown error occured initializing OpenCL/OpenGL.";
     }
 }
-
 
 /**
  * @brief VolumeRenderWidget::saveFrame
@@ -237,6 +247,30 @@ void VolumeRenderWidget::toggleVideoRecording()
     _writeImage = true;
     update();
 }
+
+/**
+ * @brief VolumeRenderWidget::toggleViewRecording
+ * Toggle writing camera configuration (rotation as quaternion and translation as a vecor)
+ * into two files every time camera parameters change.
+ */
+void VolumeRenderWidget::toggleViewRecording()
+{
+    qInfo() << (_recordView ? "Stopped view config recording." : "Started view config recording.");
+
+    _recordView = !_recordView;
+
+    if (_recordView)
+    {
+        QFileDialog dialog;
+        _recordViewFile= dialog.getSaveFileName(this, tr("Save camera path"),
+                                                QDir::currentPath(), tr("All files"));
+        if (_recordViewFile.isEmpty())
+            return;
+    }
+
+    updateView();
+}
+
 
 /**
  * @brief VolumeRenderWidget::setTimeStep
@@ -307,7 +341,7 @@ void VolumeRenderWidget::paintGL()
         //
         _screenQuadVao.bind();
         _quadVbo.bind();
-        glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, 0, 0 );
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 
         // render screen quad
         //
@@ -333,12 +367,14 @@ void VolumeRenderWidget::paintGL()
             if (!_recordVideo)
             {
                 QLoggingCategory category("screenshot");
-                qCInfo(category, "Writing current frame img/frame_%s.png", number.toStdString().c_str());
+                qCInfo(category, "Writing current frame img/frame_%s.png",
+                       number.toStdString().c_str());
                 _writeImage = false;
             }
             if (!QDir("img").exists())
                 QDir().mkdir("img");
-            img.save("img/frame_" + number + ".png");
+            img.save("img/frame_" + number + "_"
+                     + QString::number(_volumerender.getLastExecTime()) + ".png");
         }
     }
     p.endNativePainting();
@@ -358,6 +394,9 @@ void VolumeRenderWidget::paintGL()
     }
     p.endNativePainting();
     p.end();
+
+    if (_contRendering)
+        update();
 }
 
 
@@ -419,7 +458,7 @@ void VolumeRenderWidget::generateOutputTextures(int width, int height)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
                      width, height, 0,
                      GL_RGBA, GL_UNSIGNED_BYTE,
-                     NULL);
+                     nullptr);
     }
     glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -552,13 +591,7 @@ void VolumeRenderWidget::showSelectOpenCL()
                 catch (...) {
                     qCritical() << "An unknown error occured initializing OpenCL/OpenGL.";
                 }
-
-                try {
-                    generateOutputTextures(floor(width()*_imgSamplingRate),
-                                           floor(height()*_imgSamplingRate));
-                } catch (std::runtime_error e) {
-                    qCritical() << "An error occured while generating output texture." << e.what();
-                }
+                this->resizeGL(this->width(), this->height());
             }
         }
     }
@@ -573,7 +606,7 @@ void VolumeRenderWidget::setupVertexAttribs()
     // screen quad
     _quadVbo.bind();
     glEnableVertexAttribArray( 0 );
-    glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, 0, 0 );
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
     _quadVbo.release();
 }
 
@@ -716,7 +749,6 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
     {
         qCritical() << e.what();
     }
-
     update();
 }
 
@@ -778,6 +810,30 @@ void VolumeRenderWidget::mouseReleaseEvent(QMouseEvent *event)
     event->accept();
 }
 
+
+/**
+ * @brief VolumeRenderWidget::recordView
+ */
+void VolumeRenderWidget::recordViewConfig()
+{
+    QFile saveQuat(_recordViewFile + "_quat.txt");
+    QFile saveTrans(_recordViewFile + "_trans.txt");
+    if (!saveQuat.open(QFile::WriteOnly | QFile::Append)
+            || !saveTrans.open(QFile::WriteOnly | QFile::Append))
+    {
+        qWarning() << "Couldn't open file for saving the camera configurations: "
+                   << _recordViewFile;
+        return;
+    }
+
+    QTextStream quatStream(&saveQuat);
+    quatStream << _rotQuat.toVector4D().w() << " " << _rotQuat.x() << " " << _rotQuat.y() << " "
+               << _rotQuat.z() << "; ";
+    QTextStream transStream(&saveTrans);
+    transStream << _translation.x() << " " << _translation.y() << " " << _translation.z() << "; ";
+}
+
+
 /**
  * @brief VolumeRenderWidget::resetCam
  */
@@ -813,9 +869,7 @@ void VolumeRenderWidget::updateView(float dx, float dy)
 
     std::array<float, 16> viewArray;
     for (size_t i = 0; i < viewArray.size(); ++i)
-    {
         viewArray.at(i) = viewMat.transposed().constData()[i];
-    }
 
     try
     {
@@ -826,6 +880,9 @@ void VolumeRenderWidget::updateView(float dx, float dy)
         qCritical() << e.what();
     }
     update();
+
+    if (_recordView)
+        recordViewConfig();
 }
 
 
@@ -941,6 +998,11 @@ void VolumeRenderWidget::setCamOrtho(bool camOrtho)
     this->updateView();
 }
 
+void VolumeRenderWidget::setContRendering(bool contRendering)
+{
+    _contRendering = contRendering;
+    this->updateView();
+}
 
 /**
  * @brief VolumeRenderWidget::setIllumination
@@ -993,6 +1055,28 @@ void VolumeRenderWidget::setAerial(bool aerial)
     this->updateView();
 }
 
+/**
+ * @brief VolumeRenderWidget::setImgEss
+ * @param useEss
+ */
+void VolumeRenderWidget::setImgEss(bool useEss)
+{
+    if (useEss)
+        _volumerender.updateOutputImg(static_cast<size_t>(width() * _imgSamplingRate),
+                                      static_cast<size_t>(height() * _imgSamplingRate), _outTexId);
+    _volumerender.setImgEss(useEss);
+    this->updateView();
+}
+
+/**
+ * @brief VolumeRenderWidget::setImgEss
+ * @param useEss
+ */
+void VolumeRenderWidget::setObjEss(bool useEss)
+{
+    _volumerender.setObjEss(useEss);
+    this->updateView();
+}
 
 /**
  * @brief VolumeRenderWidget::setDrawBox
@@ -1011,8 +1095,10 @@ void VolumeRenderWidget::setDrawBox(bool box)
  */
 void VolumeRenderWidget::setBackgroundColor(const QColor col)
 {
-    std::array<float, 4> color = {{(float)col.redF(), (float)col.greenF(),
-                                   (float)col.blueF(), (float)col.alphaF()}};
+    std::array<float, 4> color = {{ static_cast<float>(col.redF()),
+                                    static_cast<float>(col.greenF()),
+                                    static_cast<float>(col.blueF()),
+                                    static_cast<float>(col.alphaF()) }};
     _volumerender.setBackground(color);
     this->updateView();
 }
@@ -1096,7 +1182,6 @@ void VolumeRenderWidget::read(const QJsonObject &json)
             _translation.setZ(sl.at(2).toFloat());
         }
     }
-
     updateView();
 }
 
@@ -1112,4 +1197,14 @@ void VolumeRenderWidget::write(QJsonObject &json) const
     sTmp = QString::number(_translation.x()) + " " + QString::number(_translation.y())
             + " " + QString::number(_translation.z());
     json["camTranslation"] = sTmp;
+}
+
+/**
+ * @brief VolumeRenderWidget::reloadKernels
+ */
+void VolumeRenderWidget::reloadKernels()
+{
+    // NOTE: this reload resets all previously defined rendering settings to default values
+    initVolumeRenderer();
+    resizeGL(width(), height());
 }

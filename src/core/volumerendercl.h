@@ -23,10 +23,10 @@
 
 #define CL_QUEUE_PROFILING_ENABLE
 #define CL_HPP_ENABLE_EXCEPTIONS
-#include "openclglutilities.h"
-#include "openclutilities.h"
+#include "src/oclutil/openclglutilities.h"
+#include "src/oclutil/openclutilities.h"
 
-#include "datrawreader.h"
+#include "src/io/datrawreader.h"
 
 #include <valarray>
 
@@ -35,22 +35,25 @@ class VolumeRenderCL
 public:
     enum kernel_arg
     {
-          VOLUME     = 0 // volume data set                          image3d_t
-        , BRICKS     = 1 // low resolution brick volume              image3d_t
-        , TFF        = 2 // transfer function array                  image1d_t
-        , OUTPUT         // output image                             image2d_t
-        , SAMPLING_RATE  // step size factor                         cl_float
-        , VIEW           // view matrix                              float16
-        , ORTHO          // use orthographic camera                  cl_uint (bool)
-        , ILLUMINATION   // use illumination                         cl_uint
-        , BOX            // show bounding box aroud volume           cl_uint (bool)
-        , LINEAR         // use linear interpolation, not nearest    cl_uint (bool)
-        , BACKGROUND     // background color RGBA                    cl_float4
-        , TFF_PREFIX     // prefix sum of transfer function          image1d_t
-        , AO             // use ambient occlusion                    cl_uint (bool)
-        , MODEL_SCALE    // model scaling factor                     cl_float3
-        , CONTOURS       // show contour lines                       cl_uint (bool)
-        , AERIAL         // use aerial perspective                   cl_uint (bool)
+          VOLUME     = 0 // volume data set                         image3d_t
+        , BRICKS     = 1 // low resolution brick volume             image3d_t
+        , TFF        = 2 // transfer function array                 image1d_t
+        , OUTPUT         // output image                            image2d_t
+        , SAMPLING_RATE  // step size factor                        cl_float
+        , VIEW           // view matrix                             float16
+        , ORTHO          // use orthographic camera                 cl_uint (bool)
+        , ILLUMINATION   // use illumination                        cl_uint
+        , BOX            // show bounding box aroud volume          cl_uint (bool)
+        , LINEAR         // use linear interpolation, not nearest   cl_uint (bool)
+        , BACKGROUND     // background color RGBA                   cl_float4
+        , TFF_PREFIX     // prefix sum of transfer function         image1d_t
+        , AO             // use ambient occlusion                   cl_uint (bool)
+        , MODEL_SCALE    // model scaling factor                    cl_float3
+        , CONTOURS       // show contour lines                      cl_uint (bool)
+        , AERIAL         // use aerial perspective                  cl_uint (bool)
+        , IN_HIT_IMG     // input image for image order ESS         image2d_t (UINT)
+        , OUT_HIT_IMG    // output image for image order ESS        image2d_t (UINT)
+        , IMG_ESS        // image order empty space skipping        cl_uint (bool)
     };
 
     // mipmap down-scaling metric
@@ -190,6 +193,16 @@ public:
      */
     void setAerial(bool aerial);
     /**
+     * @brief setImgEss
+     * @param useEss
+     */
+    void setImgEss(bool useEss);
+    /**
+     * @brief setObjEss
+     * @param useEss
+     */
+    void setObjEss(bool useEss);
+    /**
      * @brief setBackground
      * @param color
      */
@@ -263,14 +276,14 @@ private:
             format.image_channel_order = CL_R;
             format.image_channel_data_type = CL_UNORM_INT8;
 
-            _volumesMem = cl::Image3D(_contextCL,
-                                     CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                                     format,
-                                     _dr.properties().volume_res[0],
-                                     _dr.properties().volume_res[1],
-                                     _dr.properties().volume_res[2],
-                                     0, 0,
-                                     (void *)convertedData.data());
+            _volumesMem.push_back(cl::Image3D(_contextCL,
+                                              CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                              format,
+                                              _dr.properties().volume_res[0],
+                                              _dr.properties().volume_res[1],
+                                              _dr.properties().volume_res[2],
+                                              0, 0,
+                                              (void *)convertedData.data()));
         }
         catch (cl::Error err)
         {
@@ -299,11 +312,14 @@ private:
     cl::Image1D _tffMem;
     cl::Image1D _tffPrefixMem;
     cl::Image2D _outputMemNoGL;
+    cl::Image2D _outputHitMem;
+    cl::Image2D _inputHitMem;
 
     bool _volLoaded;
     double _lastExecTime;
     std::valarray<float> _modelScale;
     bool _useGL;
+    bool _useImgESS;
 
     DatRawReader _dr;
 };

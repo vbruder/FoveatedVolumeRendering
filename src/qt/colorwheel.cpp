@@ -20,8 +20,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#include "colorwheel.h"
-#include "colorutils.h"
+#include "src/qt/colorwheel.h"
+#include "src/qt/colorutils.h"
 
 #include <cmath>
 #include <QMouseEvent>
@@ -138,8 +138,8 @@ public:
      */
     void init_buffer(QSize size)
     {
-        auto linear_size = size.width() * size.height();
-        if ( inner_selector_buffer.size() == linear_size )
+        size_t linear_size = static_cast<size_t>(size.width() * size.height());
+        if (inner_selector_buffer.size() == linear_size)
             return;
         inner_selector_buffer.resize(linear_size);
         inner_selector = QImage(

@@ -35,8 +35,8 @@ struct Properties
     std::vector<std::string> raw_file_names;
     size_t raw_file_size = 0;
 
-    std::array<unsigned int, 3> volume_res= {0, 0, 0};
-    std::array<double, 3> slice_thickness = {1.0, 1.0, 1.0};
+    std::array<unsigned int, 3> volume_res= {{0, 0, 0}};
+    std::array<double, 3> slice_thickness = {{1.0, 1.0, 1.0}};
     std::string format = {"UCHAR"};                     // UCHAR, USHORT,...
     std::string node_file_name;
     unsigned int time_series = {1};

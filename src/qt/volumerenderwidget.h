@@ -41,15 +41,15 @@
 #include <qopenglfunctions_4_3_core.h>
 #include <QPainter>
 
-#include "volumerendercl.h"
+#include "src/core/volumerendercl.h"
 
 class VolumeRenderWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_3_Core
 {
     Q_OBJECT
 
 public:
-    explicit VolumeRenderWidget(QWidget *parent = 0);
-    virtual ~VolumeRenderWidget();
+    explicit VolumeRenderWidget(QWidget *parent = nullptr);
+    virtual ~VolumeRenderWidget() override;
 
     void setupVertexAttribs();
 
@@ -96,10 +96,13 @@ public slots:
 #undef Bool
     void setTffInterpolation(const QString method);
     void setCamOrtho(bool camOrtho);
+    void setContRendering(bool setContRendering);
     void setIllumination(int illum);
     void setLinearInterpolation(bool linear);
     void setContours(bool contours);
     void setAerial(bool aerial);
+    void setImgEss(bool useEss);
+    void setObjEss(bool useEss);
     void setDrawBox(bool box);
     void setBackgroundColor(const QColor col);
     void setImageSamplingRate(const double samplingRate);
@@ -107,6 +110,7 @@ public slots:
 
     void saveFrame();
     void toggleVideoRecording();
+    void toggleViewRecording();
     void setTimeStep(int timestep);
     void setAmbientOcclusion(bool ao);
 
@@ -116,6 +120,8 @@ public slots:
     void write(QJsonObject &json) const;
 
     void showSelectOpenCL();
+    void reloadKernels();
+
 signals:
     void fpsChanged(double);
     void frameSizeChanged(QSize);
@@ -132,7 +138,9 @@ private:
     void paintFPS(QPainter &p, const double fps, const double lastTime);
     double calcFPS();
 
+    void initVolumeRenderer(bool useGL = true, bool useCPU = false);
     void generateOutputTextures(int width, int height);
+    void recordViewConfig();
 
     // -------Members--------
     //
@@ -171,4 +179,7 @@ private:
     double _imgSamplingRate;       // image oversampling rate
     bool _useGL;
     bool _showOverlay;
+    bool _recordView;
+    QString _recordViewFile;
+    bool _contRendering;
 };

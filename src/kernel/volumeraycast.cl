@@ -158,7 +158,7 @@ float4 gradientCentralDiff(read_only image3d_t vol, const float4 pos)
     return (float4)(normal, fast_length(s2 - s1));
 }
 
-// Compute gradient using central difference: f' = ( f(x+h)-f(x-h) )
+// Compute gradient using central difference: f' = ( f(x+h)-f(x-h) ) and the transfer funciton
 float4 gradientCentralDiffTff(read_only image3d_t vol, const float4 pos, read_only image1d_t tff)
 {
     float3 volResf = convert_float3(get_image_dim(vol).xyz);
@@ -250,7 +250,7 @@ float4 gradientSobel(read_only image3d_t vol, const float4 pos)
     }
     gradient.xyz /= 27.f;
     gradient.w = fast_length(gradient.xyz);
-    if (gradient.w == 0)    // TODO
+    if (gradient.w == 0)    // FIXME: normal in length 0 case?
         gradient.xyz = (float3)(1.f);
     gradient.xyz = fast_normalize(gradient.xyz);
 
@@ -361,7 +361,7 @@ float calcAO(float3 n, uint4 *taus, image3d_t volData, float3 pos, float stepSiz
 __kernel void volumeRender(  __read_only image3d_t volData
                            , __read_only image3d_t volBrickData
                            , __read_only image1d_t tffData     // constant transfer function values
-                           , __write_only image2d_t outData
+                           , __write_only image2d_t outImg
                            , const float samplingRate
                            , const float16 viewMat
                            , const uint orthoCam
@@ -374,11 +374,36 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , const float3 modelScale
                            , const uint contours
                            , const uint aerial
+                           , __read_only image2d_t inHitImg
+                           , __write_only image2d_t outHitImg
+                           , const uint img_ESS
                            )
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
-    if(any(globalId >= get_image_dim(outData)))
+    if(any(globalId >= get_image_dim(outImg)))
         return;
+    int2 texCoords = globalId;
+
+    local uint hits;
+    if (img_ESS)
+    {
+        hits = 0;
+        uint4 lastHit = read_imageui(inHitImg, (int2)(get_group_id(0)  , get_group_id(1)  ));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)+1, get_group_id(1)  ));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)-1, get_group_id(1)  ));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)  , get_group_id(1)+1));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)  , get_group_id(1)-1));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)+1, get_group_id(1)+1));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)-1, get_group_id(1)-1));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)-1, get_group_id(1)+1));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)+1, get_group_id(1)-1));
+        if (!lastHit.x)
+        {
+            write_imagef(outImg, texCoords, useBox ? (float4)(1.f) - background : background);
+            write_imageui(outHitImg, (int2)(get_group_id(0), get_group_id(1)), (uint4)(0u));
+            return;
+        }
+    }
 
     uint4 taus = initRNG();
     // pseudo random number [0,1] for ray offsets to avoid moire patterns
@@ -388,7 +413,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
 
     float maxRes = (float)max(get_image_dim(volData).x, get_image_dim(volData).z);
 
-    int2 texCoords = globalId;
     float aspectRatio = native_divide((float)get_global_size(1), (float)(get_global_size(0)));
     aspectRatio = min(aspectRatio, native_divide((float)get_global_size(0), (float)(get_global_size(1))));
     int maxSize = max(get_global_size(0), get_global_size(1));
@@ -433,7 +457,9 @@ __kernel void volumeRender(  __read_only image3d_t volData
     hit = intersectBox(camPos, rayDir, &tnear, &tfar);
     if (!hit || tfar < 0)
     {
-        write_imagef(outData, texCoords, background);
+        write_imagef(outImg, texCoords, background);
+        if (img_ESS)
+            write_imageui(outHitImg, (int2)(get_group_id(0), get_group_id(1)), (uint4)(0u));
         return;
     }
 
@@ -531,7 +557,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
                 continue;
             }
         }
-#endif
+#endif  // ESS
+
         // standard raycasting loop
         while (t < t_exit)
         {
@@ -553,11 +580,11 @@ __kernel void volumeRender(  __read_only image3d_t volData
 
                 if (tfColor.w > 0.1f && illumType)
                 {
-                    if (illumType == 1)
+                    if (illumType == 1)         // central diff
                         gradient = -gradientCentralDiff(volData, (float4)(pos, 1.f));
-                    else if (illumType == 2)
+                    else if (illumType == 2)    // central diff & transfer function
                         gradient = -gradientCentralDiffTff(volData, (float4)(pos, 1.f), tffData);
-                    else if (illumType == 3)
+                    else if (illumType == 3)    // sobel filter
                         gradient = -gradientSobel(volData, (float4)(pos, 1.f));
 
                     tfColor.xyz = illumination(volData, (float4)(pos, 1.f), tfColor.xyz, -rayDir,
@@ -601,7 +628,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
         if (any(cell == exit)) break;
         t = t_exit;
     }
-#endif
+#endif  // ESS
 
     // draw bounding box / empty space skipping
     if (useBox)
@@ -614,7 +641,22 @@ __kernel void volumeRender(  __read_only image3d_t volData
     }
 
     result.w = alpha;
-    write_imagef(outData, texCoords, result);
+    write_imagef(outImg, texCoords, result);
+
+    if (img_ESS)
+    {
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if (all(result.xyz != background.xyz))
+            ++hits;
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if (get_local_id(0) + get_local_id(1) == 0)
+        {
+            if (hits == 0)
+                write_imageui(outHitImg, (int2)(get_group_id(0), get_group_id(1)), (uint4)(0u));
+            else
+                write_imageui(outHitImg, (int2)(get_group_id(0), get_group_id(1)), (uint4)(1u));
+        }
+    }
 }
 
 #pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable

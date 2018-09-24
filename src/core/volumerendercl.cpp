@@ -20,12 +20,14 @@
  *
  */
 
-#include "volumerendercl.h"
+#include "src/core/volumerendercl.h"
 
 #include <functional>
 #include <algorithm>
 #include <numeric>
 #include <omp.h>
+
+static const size_t LOCAL_SIZE = 8;    // 8*8=64 is wavefront size or 2*warp size
 
 /**
  * @brief RoundPow2
@@ -58,6 +60,7 @@ VolumeRenderCL::VolumeRenderCL() :
   , _lastExecTime(0.0)
   , _modelScale{1.0, 1.0, 1.0}
   , _useGL(true)
+  , _useImgESS(false)
 {
 }
 
@@ -120,8 +123,14 @@ void VolumeRenderCL::initialize(bool useGL, bool useCPU, cl_vendor vendor)
 #ifdef _WIN32
     initKernel("kernels//volumeraycast.cl", "-DCL_STD=CL1.2 -DESS");
 #else
-    initKernel("../RaycastLight/kernels/volumeraycast.cl", "-DCL_STD=CL1.2 -DESS");
+    initKernel("kernels/volumeraycast.cl", "-DCL_STD=CL1.2 -DESS");
 #endif // _WIN32
+
+    // upload volume data if already loaded
+    if (_dr.has_data())
+    {
+        volDataToCLmem(_dr.data());
+    }
 }
 
 
@@ -138,7 +147,7 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel = cl::Kernel(program, "volumeRender");
         cl_float16 view = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
         _raycastKernel.setArg(VIEW, view);
-        _raycastKernel.setArg(SAMPLING_RATE, 1.5f);     // default step size 0.5*voxel size
+        _raycastKernel.setArg(SAMPLING_RATE, 1.5f);      // default step size 1.0*voxel size
         _raycastKernel.setArg(ORTHO, 0);                // perspective cam by default
         _raycastKernel.setArg(ILLUMINATION, 1);         // illumination on by default
         _raycastKernel.setArg(BOX, 0);
@@ -148,6 +157,7 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel.setArg(AO, 0);                   // ambient occlusion off by default
         _raycastKernel.setArg(CONTOURS, 0);             // contour lines off by default
         _raycastKernel.setArg(AERIAL, 0);               // aerial perspective off by defualt
+        _raycastKernel.setArg(IMG_ESS, 0);
 
         _genBricksKernel = cl::Kernel(program, "generateBricks");
         _downsamplingKernel = cl::Kernel(program, "downsampling");
@@ -172,8 +182,11 @@ void VolumeRenderCL::setMemObjectsRaycast(const int t)
     else
         _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
     _raycastKernel.setArg(TFF_PREFIX, _tffPrefixMem);
-    cl_float3 modelScale = {_modelScale[0], _modelScale[1], _modelScale[2]};
+    cl_float3 modelScale = {{_modelScale[0], _modelScale[1], _modelScale[2]}};
     _raycastKernel.setArg(MODEL_SCALE, modelScale);
+
+    _raycastKernel.setArg(IN_HIT_IMG, _inputHitMem);
+    _raycastKernel.setArg(OUT_HIT_IMG, _outputHitMem);
 }
 
 
@@ -232,7 +245,7 @@ const std::string VolumeRenderCL::volumeDownsampling(const int t, const int fact
                                             texSize.at(1),
                                             texSize.at(2),
                                             0, 0,
-                                            NULL);
+                                            nullptr);
 
         _downsamplingKernel.setArg(VOLUME, _volumesMem.at(t));
         _downsamplingKernel.setArg(1, lowResVol);
@@ -373,12 +386,21 @@ void VolumeRenderCL::updateOutputImg(const size_t width, const size_t height, GL
     try
     {
         if (_useGL)
+        {
             _outputMem = cl::ImageGL(_contextCL, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texId);
+        }
         else
         {
             _outputMemNoGL = cl::Image2D(_contextCL, CL_MEM_WRITE_ONLY, format, width, height);
             _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
         }
+
+        std::vector<unsigned int> initBuff((width/LOCAL_SIZE+ 1)*(height/LOCAL_SIZE+ 1), 1u);
+        format = cl::ImageFormat(CL_R, CL_UNSIGNED_INT8);
+        _outputHitMem = cl::Image2D(_contextCL, CL_MEM_READ_WRITE, format,
+                                    width/LOCAL_SIZE + 1, height/LOCAL_SIZE + 1);
+        _inputHitMem = cl::Image2D(_contextCL, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, format,
+                                   width/LOCAL_SIZE + 1, height/LOCAL_SIZE + 1, 0, (void*)initBuff.data());
     }
     catch (cl::Error err)
     {
@@ -398,18 +420,26 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const i
     try // opencl scope
     {
         setMemObjectsRaycast(t);
-        size_t lDim = 8;    // local work group dimension
-        cl::NDRange globalThreads(width + (lDim - width % lDim), height + (lDim - height % lDim));
-        cl::NDRange localThreads(lDim, lDim);
+        cl::NDRange globalThreads(width + (LOCAL_SIZE - width % LOCAL_SIZE), height
+                                  + (LOCAL_SIZE - height % LOCAL_SIZE));
+        cl::NDRange localThreads(LOCAL_SIZE, LOCAL_SIZE);
         cl::Event ndrEvt;
 
         std::vector<cl::Memory> memObj;
         memObj.push_back(_outputMem);
         _queueCL.enqueueAcquireGLObjects(&memObj);
         _queueCL.enqueueNDRangeKernel(
-                    _raycastKernel, cl::NullRange, globalThreads, localThreads, NULL, &ndrEvt);
+                    _raycastKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
         _queueCL.enqueueReleaseGLObjects(&memObj);
         _queueCL.finish();    // global sync
+
+        if (_useImgESS)
+        {
+            // swap hit test buffers
+            cl::Image2D tmp = _outputHitMem;
+            _outputHitMem = _inputHitMem;
+            _inputHitMem = tmp;
+        }
 
 #ifdef CL_QUEUE_PROFILING_ENABLE
         cl_ulong start = 0;
@@ -442,9 +472,9 @@ void VolumeRenderCL::runRaycastNoGL(const size_t width, const size_t height, con
     try // opencl scope
     {
         setMemObjectsRaycast(t);
-        size_t lDim = 8;    // local work group dimension
-        cl::NDRange globalThreads(width + (lDim - width % lDim), height + (lDim - height % lDim));
-        cl::NDRange localThreads(lDim, lDim);
+        cl::NDRange globalThreads(width + (LOCAL_SIZE - width % LOCAL_SIZE),
+                                  height + (LOCAL_SIZE - height % LOCAL_SIZE));
+        cl::NDRange localThreads(LOCAL_SIZE, LOCAL_SIZE);
         cl::Event ndrEvt;
 
         _queueCL.enqueueNDRangeKernel(
@@ -455,12 +485,9 @@ void VolumeRenderCL::runRaycastNoGL(const size_t width, const size_t height, con
         std::array<size_t, 3> region = {{width, height, 1}};
         _queueCL.enqueueReadImage(_outputMemNoGL,
                                   CL_TRUE,
-                                  origin,
-                                  region,
-                                  0, 0,
+                                  origin, region, 0, 0,
                                   output.data(),
-                                  NULL,
-                                  &readEvt);
+                                  NULL, &readEvt);
         _queueCL.flush();    // global sync
 
 #ifdef CL_QUEUE_PROFILING_ENABLE
@@ -492,9 +519,9 @@ void VolumeRenderCL::generateBricks()
         // calculate brick size
         const unsigned int numBricks = 64u;
         std::array<unsigned int, 3> brickRes = {1u, 1u, 1u};
-        brickRes.at(0) = RoundPow2(_dr.properties().volume_res.at(0)/numBricks);
-        brickRes.at(1) = RoundPow2(_dr.properties().volume_res.at(1)/numBricks);
-        brickRes.at(2) = RoundPow2(_dr.properties().volume_res.at(2)/numBricks);
+        brickRes.at(0) = std::max(1u, RoundPow2(_dr.properties().volume_res.at(0)/numBricks));
+        brickRes.at(1) = std::max(1u, RoundPow2(_dr.properties().volume_res.at(1)/numBricks));
+        brickRes.at(2) = std::max(1u, RoundPow2(_dr.properties().volume_res.at(2)/numBricks));
         std::array<unsigned int, 3> bricksTexSize = {1u, 1u, 1u};
         bricksTexSize.at(0) = ceil(_dr.properties().volume_res.at(0)/(double)brickRes.at(0));
         bricksTexSize.at(1) = ceil(_dr.properties().volume_res.at(1)/(double)brickRes.at(1));
@@ -680,7 +707,7 @@ void VolumeRenderCL::setTransferFunction(std::vector<unsigned char> &tff)
         format.image_channel_data_type = CL_UNORM_INT8;
 
         cl_mem_flags flags = CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR;
-        // divide size by 4 because of RGBA
+        // divide size by 4 because of RGBA channels
         _tffMem = cl::Image1D(_contextCL, flags, format, tff.size() / 4, tff.data());
         generateBricks();
 
@@ -735,7 +762,6 @@ void VolumeRenderCL::setCamOrtho(bool setCamOrtho)
         _raycastKernel.setArg(ORTHO, (cl_uint)setCamOrtho);
     } catch (cl::Error err) { logCLerror(err); }
 }
-
 
 /**
  * @brief VolumeRenderCL::setIllumination
@@ -806,6 +832,36 @@ void VolumeRenderCL::setAerial(bool aerial)
     } catch (cl::Error err) { logCLerror(err); }
 }
 
+/**
+ * @brief VolumeRenderCL::setImgEss
+ * @param useEss
+ */
+void VolumeRenderCL::setImgEss(bool useEss)
+{
+    try {
+        _raycastKernel.setArg(IMG_ESS,  (cl_uint)useEss);
+        _useImgESS = useEss;
+    } catch (cl::Error err) { logCLerror(err); }
+}
+
+/**
+ * @brief VolumeRenderCL::setImgEss
+ * @param useEss
+ */
+void VolumeRenderCL::setObjEss(bool useEss)
+{
+    std::string ess = useEss ? "-DESS" : "";
+#ifdef _WIN32
+    initKernel("kernels//volumeraycast.cl", "-DCL_STD=CL1.2 " + ess);
+#else
+    initKernel("kernels/volumeraycast.cl", "-DCL_STD=CL1.2 " + ess);
+#endif // _WIN32
+    // upload volume data if already loaded
+    if (_dr.has_data())
+    {
+        volDataToCLmem(_dr.data());
+    }
+}
 
 /**
  * @brief VolumeRenderCL::setBackground

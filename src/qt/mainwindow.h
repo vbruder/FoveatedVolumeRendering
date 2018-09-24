@@ -67,6 +67,7 @@ protected slots:
     void saveCamState();
     void loadCamState();
     void showAboutDialog();
+    void updateTransferFunctionFromGradientStops();
 protected:
     void dragEnterEvent(QDragEnterEvent *ev) Q_DECL_OVERRIDE;
     void dropEvent(QDropEvent *ev) Q_DECL_OVERRIDE;
