@@ -41,7 +41,7 @@
 #include <qopenglfunctions_4_3_core.h>
 #include <QPainter>
 
-#include "volumerendercl.h"
+#include "src/core/volumerendercl.h"
 
 class VolumeRenderWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_3_Core
 {

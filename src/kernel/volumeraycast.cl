@@ -158,7 +158,7 @@ float4 gradientCentralDiff(read_only image3d_t vol, const float4 pos)
     return (float4)(normal, fast_length(s2 - s1));
 }
 
-// Compute gradient using central difference: f' = ( f(x+h)-f(x-h) )
+// Compute gradient using central difference: f' = ( f(x+h)-f(x-h) ) and the transfer funciton
 float4 gradientCentralDiffTff(read_only image3d_t vol, const float4 pos, read_only image1d_t tff)
 {
     float3 volResf = convert_float3(get_image_dim(vol).xyz);
@@ -580,11 +580,11 @@ __kernel void volumeRender(  __read_only image3d_t volData
 
                 if (tfColor.w > 0.1f && illumType)
                 {
-                    if (illumType == 1)
+                    if (illumType == 1)         // central diff
                         gradient = -gradientCentralDiff(volData, (float4)(pos, 1.f));
-                    else if (illumType == 2)
+                    else if (illumType == 2)    // central diff & transfer function
                         gradient = -gradientCentralDiffTff(volData, (float4)(pos, 1.f), tffData);
-                    else if (illumType == 3)
+                    else if (illumType == 3)    // sobel filter
                         gradient = -gradientSobel(volData, (float4)(pos, 1.f));
 
                     tfColor.xyz = illumination(volData, (float4)(pos, 1.f), tfColor.xyz, -rayDir,

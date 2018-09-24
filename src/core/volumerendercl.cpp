@@ -20,7 +20,7 @@
  *
  */
 
-#include "volumerendercl.h"
+#include "src/core/volumerendercl.h"
 
 #include <functional>
 #include <algorithm>
@@ -123,7 +123,7 @@ void VolumeRenderCL::initialize(bool useGL, bool useCPU, cl_vendor vendor)
 #ifdef _WIN32
     initKernel("kernels//volumeraycast.cl", "-DCL_STD=CL1.2 -DESS");
 #else
-    initKernel("../RaycastLight/kernels/volumeraycast.cl", "-DCL_STD=CL1.2 -DESS");
+    initKernel("kernels/volumeraycast.cl", "-DCL_STD=CL1.2 -DESS");
 #endif // _WIN32
 
     // upload volume data if already loaded
@@ -854,7 +854,7 @@ void VolumeRenderCL::setObjEss(bool useEss)
 #ifdef _WIN32
     initKernel("kernels//volumeraycast.cl", "-DCL_STD=CL1.2 " + ess);
 #else
-    initKernel("../RaycastLight/kernels/volumeraycast.cl", "-DCL_STD=CL1.2 " + ess);
+    initKernel("kernels/volumeraycast.cl", "-DCL_STD=CL1.2 " + ess);
 #endif // _WIN32
     // upload volume data if already loaded
     if (_dr.has_data())

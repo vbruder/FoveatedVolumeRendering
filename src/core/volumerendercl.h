@@ -23,10 +23,10 @@
 
 #define CL_QUEUE_PROFILING_ENABLE
 #define CL_HPP_ENABLE_EXCEPTIONS
-#include "openclglutilities.h"
-#include "openclutilities.h"
+#include "src/oclutil/openclglutilities.h"
+#include "src/oclutil/openclutilities.h"
 
-#include "datrawreader.h"
+#include "src/io/datrawreader.h"
 
 #include <valarray>
 

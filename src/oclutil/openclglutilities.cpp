@@ -31,7 +31,7 @@
  *
  */
 
-#include "openclglutilities.h"
+#include "src/oclutil/openclglutilities.h"
 
 cl::Context createCLGLContext(cl_device_type type, cl_vendor vendor)
 {

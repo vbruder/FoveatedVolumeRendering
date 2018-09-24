@@ -20,7 +20,7 @@
  *
  */
 
-#include "volumerenderwidget.h"
+#include "src/qt/volumerenderwidget.h"
 
 #include <QPainter>
 #include <QGradient>
@@ -431,7 +431,8 @@ void VolumeRenderWidget::resizeGL(int w, int h)
  */
 void VolumeRenderWidget::generateOutputTextures(int width, int height)
 {
-    glGenTextures(1, &_outTexId);
+	glDeleteTextures(1, &_outTexId);
+	glGenTextures(1, &_outTexId);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, _outTexId);

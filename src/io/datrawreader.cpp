@@ -20,7 +20,7 @@
  *
  */
 
-#include <datrawreader.h>
+#include <src/io/datrawreader.h>
 
 #include <iostream>
 #include <fstream>

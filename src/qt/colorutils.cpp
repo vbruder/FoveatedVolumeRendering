@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#include "colorutils.h"
+#include "src/qt/colorutils.h"
 
 namespace colorwidgets {
 namespace detail {

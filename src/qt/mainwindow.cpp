@@ -20,7 +20,7 @@
  *
  */
 
-#include "mainwindow.h"
+#include "src/qt/mainwindow.h"
 #include "ui_mainwindow.h"
 
 #include <QFileDialog>
@@ -49,7 +49,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     QCoreApplication::setOrganizationName("VISUS");
     QCoreApplication::setOrganizationDomain("www.visus.uni-stuttgart.de");
-    QCoreApplication::setApplicationName("Lightweight Volume Raycaster");
+    QCoreApplication::setApplicationName("VolumeRaycasterCL");
     _settings = new QSettings();
 
     setAcceptDrops( true );

@@ -20,7 +20,7 @@
  *
  */
 
-#include "mainwindow.h"
+#include "src/qt/mainwindow.h"
 #include <QApplication>
 #include <QErrorMessage>
 

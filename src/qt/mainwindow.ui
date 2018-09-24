@@ -387,7 +387,7 @@
         <item row="9" column="2" colspan="3">
          <widget class="QCheckBox" name="chbContRendering">
           <property name="text">
-           <string>Cont. rendering</string>
+           <string>Continued rendering</string>
           </property>
          </widget>
         </item>
@@ -592,18 +592,18 @@
   <customwidget>
    <class>VolumeRenderWidget</class>
    <extends>QOpenGLWidget</extends>
-   <header>volumerenderwidget.h</header>
+   <header>src/qt/volumerenderwidget.h</header>
   </customwidget>
   <customwidget>
    <class>TransferFunctionWidget</class>
    <extends>QWidget</extends>
-   <header>transferfunctionwidget.h</header>
+   <header>src/qt/transferfunctionwidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>colorwidgets::ColorWheel</class>
    <extends>QWidget</extends>
-   <header>colorwheel.h</header>
+   <header>src/qt/colorwheel.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

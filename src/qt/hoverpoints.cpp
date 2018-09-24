@@ -52,7 +52,7 @@
 //#include <QGLWidget>
 //#endif
 
-#include "hoverpoints.h"
+#include "src/qt/hoverpoints.h"
 
 #include <algorithm>
 
