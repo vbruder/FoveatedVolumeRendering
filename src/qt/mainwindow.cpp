@@ -63,6 +63,9 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->sldTimeStep, &QSlider::setMaximum);
     connect(ui->sldTimeStep, &QSlider::valueChanged,
             ui->volumeRenderWidget, &VolumeRenderWidget::setTimeStep);
+    connect(ui->pbPlay, &QPushButton::released, this, &MainWindow::setLoopTimesteps);
+    connect(ui->sbSpeed, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged),
+            this, &MainWindow::setPlaybackSpeed);
 
     // menu bar actions
     connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::openVolumeFile);
@@ -266,6 +269,48 @@ void MainWindow::updateTransferFunctionFromGradientStops()
                 ui->transferFunctionEditor->getEditor()->getGradientStops());
 }
 
+/**
+ * @brief MainWindow::setLoopTimesteps
+ */
+void MainWindow::setLoopTimesteps()
+{
+    if (!_loopTimer.isActive())
+    {
+        connect(&_loopTimer, &QTimer::timeout, this, &MainWindow::nextTimestep);
+        _loopTimer.start(ui->sbSpeed->value());
+        ui->pbPlay->setIcon(QIcon::fromTheme("media-playback-pause"));
+    }
+    else
+    {
+        _loopTimer.stop();
+        ui->pbPlay->setIcon(QIcon::fromTheme("media-playback-start"));
+    }
+}
+
+/**
+ * @brief MainWindow::setPlaybackSpeed
+ * @param speed
+ */
+void MainWindow::setPlaybackSpeed(int speed)
+{
+    _loopTimer.setInterval(speed);
+}
+
+/**
+ * @brief MainWindow::nextTimestep
+ */
+void MainWindow::nextTimestep()
+{
+    int val = ui->sbTimeStep->value() + 1;
+    if (val > ui->sbTimeStep->maximum() && ui->chbLoop->isChecked())
+        val = 0;
+    else if (val > ui->sbTimeStep->maximum())
+    {
+        _loopTimer.stop();
+        val = ui->sbTimeStep->maximum();
+    }
+    ui->sbTimeStep->setValue(val);
+}
 
 /**
  * @brief MainWindow::loadCamState
@@ -567,6 +612,8 @@ void MainWindow::setStatusText()
         status += QString::number(ui->volumeRenderWidget->getVolumeResolution().y());
         status += "x";
         status += QString::number(ui->volumeRenderWidget->getVolumeResolution().z());
+        status += "x";
+        status += QString::number(ui->volumeRenderWidget->getVolumeResolution().w());
         status += " | Frame: ";
         status += QString::number(ui->volumeRenderWidget->size().width());
         status += "x";
@@ -627,10 +674,11 @@ void MainWindow::loadTff()
  */
 void MainWindow::openVolumeFile()
 {
-    QFileDialog dia;
+    QFileDialog dialog;
     QString defaultPath = _settings->value( "LastVolumeFile" ).toString();
-    QString pickedFile = dia.getOpenFileName(
-                this, tr("Open Volume Data"), defaultPath, tr("Volume data files (*.dat)"));
+    QString pickedFile = dialog.getOpenFileName(
+                this, tr("Open Volume Data"), defaultPath,
+                tr("Volume data files (*.dat);; All files (*)"));
     if (!pickedFile.isEmpty())
     {
         if (!readVolumeFile(pickedFile))

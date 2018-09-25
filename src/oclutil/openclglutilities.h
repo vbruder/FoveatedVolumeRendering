@@ -59,7 +59,8 @@
 #endif
 
 
-cl::Context createCLGLContext(cl_device_type type = CL_DEVICE_TYPE_ALL,
+cl::Context createCLGLContext(std::string &device_name,
+                              cl_device_type type = CL_DEVICE_TYPE_ALL,
                               cl_vendor vendor = VENDOR_ANY);
 
 #if !(defined(__APPLE__) || defined(__MACOSX))

@@ -71,8 +71,13 @@ public:
 
     /**
      * @brief Initialize the volume raycaster, i.e. the OpenCL context, queue and kernel.
+     * @param useGL Use OpenGL context sharing.
+     * @param useCPU Use CPU device instead of GPU device.
+     * @param vendor OpenCL platform vendor.
+     * @param deviceName Name of the OpenCL device to use.
      */
-    void initialize(bool useGL = false, bool useCPU = false, cl_vendor vendor = VENDOR_ANY);
+    void initialize(bool useGL = false, bool useCPU = false, cl_vendor vendor = VENDOR_ANY,
+                    const std::string deviceName = "", const int platformId = -1);
 
     /**
      * @brief Update the view matrix argument for the raycasting kernel.
@@ -125,10 +130,10 @@ public:
     bool hasData();
 
     /**
-     * @brief getResolution
-     * @return
+     * @brief Return spacial and temporal resolution of loaded volume data set.
+     * @return 4D array containing the resolution in x,y,z direction and number of time steps.
      */
-    const std::array<unsigned int, 3> getResolution() const;
+    const std::array<unsigned int, 4> getResolution() const;
 
     /**
      * @brief Set the transfer function for the volume raycast as a kernel argument.
@@ -229,6 +234,13 @@ public:
     const std::vector<std::string> getDeviceNames(int platformId, const std::string &type);
 
     /**
+     * @brief Get the OpenCL device that is currently in use.
+     * @return The name of the current OpenCL device in use.
+     *         Returns an empty string if no device is currently used.
+     */
+    const std::string getCurrentDeviceName();
+
+    /**
      * @brief setAmbientOcclusion
      * @param ao
      */
@@ -320,6 +332,7 @@ private:
     std::valarray<float> _modelScale;
     bool _useGL;
     bool _useImgESS;
+    std::string _currentDevice;
 
     DatRawReader _dr;
 };

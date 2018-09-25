@@ -34,7 +34,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 # msvc only; mingw needs different logic
 IF(MSVC)
-	SET(QT_MISSING True)
+    SET(QT_MISSING True)
     # look for user-registry pointing to qtcreator
     GET_FILENAME_COMPONENT(QT_BIN [HKEY_CURRENT_USER\\Software\\Classes\\Applications\\QtProject.QtCreator.cpp\\shell\\Open\\Command] PATH)
 
@@ -51,12 +51,17 @@ IF(MSVC)
     # fix any double slashes which seem to be common
     STRING(REPLACE "//" "/"  QT_VERSION "${QT_VERSION}")
 
-    # do some math trickery to guess folder
-    # - qt uses (e.g.) "msvc2012"
+    # infer the folder from Cmake msvc_version string
+    # - qt uses (e.g.) "msvc2013"
     # - cmake uses (e.g.) "1800"
     # - see also https://cmake.org/cmake/help/v3.0/variable/MSVC_VERSION.html
-	# FIXME: only msvc2015 correct atm
-    MATH(EXPR QT_MSVC "2000 + (${MSVC_VERSION} - 400) / 100")
+    if(${MSVC_VERSION} == 1800)
+        SET(QT_MSVC 2013)
+    elseif(${MSVC_VERSION} == 1900)
+        SET(QT_MSVC 2015)
+    elseif(${MSVC_VERSION} >= 1910)
+        SET(QT_MSVC 2017)
+    endif()
 
     # check for 64-bit os
     # may need to be removed for older compilers as it wasn't always offered

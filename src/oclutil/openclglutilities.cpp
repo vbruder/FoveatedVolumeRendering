@@ -33,7 +33,7 @@
 
 #include "src/oclutil/openclglutilities.h"
 
-cl::Context createCLGLContext(cl_device_type type, cl_vendor vendor)
+cl::Context createCLGLContext(std::string &device_name, cl_device_type type, cl_vendor vendor)
 {
     cl::Platform platform = getPlatform(type, vendor);
 
@@ -87,6 +87,8 @@ cl::Context createCLGLContext(cl_device_type type, cl_vendor vendor)
             cl::Device interopDevice = getValidGLCLInteropDevice(platform, cps);
             singleDevice.push_back(interopDevice);
             context = cl::Context(singleDevice, cps);
+            std::cout << "Using device: " << interopDevice.getInfo<CL_DEVICE_NAME>() << std::endl;
+            device_name = interopDevice.getInfo<CL_DEVICE_NAME>();
 #else
             context = cl::Context(type,cps);
 #endif

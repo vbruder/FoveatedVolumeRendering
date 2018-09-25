@@ -73,6 +73,7 @@ typedef struct OpenCL
 cl::Context createCLContextFromArguments(int argc, char ** argv);
 
 cl::Context createCLContext(cl_device_type type = CL_DEVICE_TYPE_ALL, cl_vendor vendor = VENDOR_ANY);
+cl::Context createCLContext(std::vector<cl::Device> devices);
 
 cl::Platform getPlatform(cl_device_type = CL_DEVICE_TYPE_ALL, cl_vendor vendor = VENDOR_ANY);
 

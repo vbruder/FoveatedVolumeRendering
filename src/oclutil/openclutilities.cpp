@@ -161,6 +161,16 @@ cl::Context createCLContext(cl_device_type type, cl_vendor vendor)
     }
 }
 
+cl::Context createCLContext(std::vector<cl::Device> devices)
+{
+    try {
+        cl::Context context = cl::Context(devices);
+        return context;
+    } catch(cl::Error error) {
+        throw cl::Error(1, "Failed to create an OpenCL context!");
+    }
+}
+
 
 cl::Program buildProgramFromSource(cl::Context context, const std::string &filename,
                                    const std::string &buildOptions)

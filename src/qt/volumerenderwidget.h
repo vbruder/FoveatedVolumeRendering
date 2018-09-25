@@ -57,7 +57,7 @@ public:
 
     bool hasData();
 
-    const QVector3D getVolumeResolution();
+    const QVector4D getVolumeResolution();
 
     void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
 
@@ -72,7 +72,6 @@ public:
     void keyReleaseEvent(QKeyEvent *event) Q_DECL_OVERRIDE;
 
     void updateView(float dx = 0, float dy = 0);
-
 
     bool getLoadingFinished() const;
     void setLoadingFinished(bool loadingFinished);
@@ -101,7 +100,15 @@ public slots:
     void setLinearInterpolation(bool linear);
     void setContours(bool contours);
     void setAerial(bool aerial);
+    /**
+     * @brief Set image order empty space skipping.
+     * @param useEss
+     */
     void setImgEss(bool useEss);
+    /**
+     * @brief Set object order empty space skipping.
+     * @param useEss
+     */
     void setObjEss(bool useEss);
     void setDrawBox(bool box);
     void setBackgroundColor(const QColor col);
@@ -135,9 +142,14 @@ protected:
 
 private:
     void paintOrientationAxis(QPainter &p);
-    void paintFPS(QPainter &p, const double fps, const double lastTime);
-    double calcFPS();
+    void paintFps(QPainter &p, const double fps, const double lastTime);
+    double getFps();
 
+    /**
+     * @brief Initialize the OpenCL volume renderer.
+     * @param useGL use OpenGL context sharing
+     * @param useCPU use CPU as OpenCL device for rendering
+     */
     void initVolumeRenderer(bool useGL = true, bool useCPU = false);
     void generateOutputTextures(int width, int height);
     void recordViewConfig();

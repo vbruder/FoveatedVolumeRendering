@@ -139,7 +139,7 @@ void VolumeRenderWidget::paintOrientationAxis(QPainter &p)
 /**
  * @brief paintFPS
  */
-void VolumeRenderWidget::paintFPS(QPainter &p, const double fps, const double lastTime)
+void VolumeRenderWidget::paintFps(QPainter &p, const double fps, const double lastTime)
 {
     p.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
     p.setPen(Qt::darkGreen);
@@ -148,6 +148,8 @@ void VolumeRenderWidget::paintFPS(QPainter &p, const double fps, const double la
     p.drawText(10, 20, s);
     s = "Last: " + QString::number(lastTime);
     p.drawText(10, 36, s);
+    s = QString(_volumerender.getCurrentDeviceName().c_str());
+    p.drawText(10, 52, s);
 }
 
 
@@ -209,7 +211,8 @@ void VolumeRenderWidget::initVolumeRenderer(bool useGL, bool useCPU)
 {
     try
     {
-        _volumerender.initialize(false, false);
+        // try to use GPU with GL context sharing
+        _volumerender.initialize(useGL, useCPU);
     }
     catch (std::invalid_argument e)
     {
@@ -326,7 +329,7 @@ void VolumeRenderWidget::paintGL()
         {
             qCritical() << e.what();
         }
-        fps = calcFPS();
+        fps = getFps();
     }
 
     QPainter p(this);
@@ -382,7 +385,7 @@ void VolumeRenderWidget::paintGL()
     // render overlays
     if (_showOverlay)
     {
-        paintFPS(p, fps, _volumerender.getLastExecTime());
+        paintFps(p, fps, _volumerender.getLastExecTime());
         paintOrientationAxis(p);
     }
 
@@ -582,7 +585,8 @@ void VolumeRenderWidget::showSelectOpenCL()
             if (!device.isEmpty())
             {
                 try {
-                    _volumerender.initialize(_useGL, type == "CPU", vendor);
+                    _volumerender.initialize(_useGL, type == "CPU", vendor, device.toStdString(),
+                                             platformId);
                 } catch (std::runtime_error e) {
                     qCritical() << e.what() << "\nSwitching to CPU fallback mode.";
                     _useGL = false;
@@ -631,10 +635,11 @@ void VolumeRenderWidget::setVolumeData(const QString &fileName)
     {
         qCritical() << e.what();
     }
-    emit timeSeriesLoaded(timesteps - 1);
+    if (timesteps > 1)
+        emit timeSeriesLoaded(timesteps - 1);
 
     _overlayModelMX.setToIdentity();
-    QVector3D res = getVolumeResolution();
+    QVector3D res = getVolumeResolution().toVector3D();
     _overlayModelMX.scale(res / qMax(res.x(), qMax(res.y(), res.z())));
     this->_noUpdate = false;
     update();
@@ -655,14 +660,15 @@ bool VolumeRenderWidget::hasData()
  * @brief VolumeRenderWidget::getVolumeResolution
  * @return
  */
-const QVector3D VolumeRenderWidget::getVolumeResolution()
+const QVector4D VolumeRenderWidget::getVolumeResolution()
 {
     if (_volumerender.hasData() == false)
-        return QVector3D();
+        return QVector4D();
 
-    return QVector3D(_volumerender.getResolution().at(0),
+    return QVector4D(_volumerender.getResolution().at(0),
                      _volumerender.getResolution().at(1),
-                     _volumerender.getResolution().at(2));
+                     _volumerender.getResolution().at(2),
+                     _volumerender.getResolution().at(3));
 }
 
 
@@ -1108,7 +1114,7 @@ void VolumeRenderWidget::setBackgroundColor(const QColor col)
  * @brief VolumeRenderWidget::calcFPS
  * @return
  */
-double VolumeRenderWidget::calcFPS()
+double VolumeRenderWidget::getFps()
 {
     _times.push_back(_volumerender.getLastExecTime());
     if (_times.length() > 60)

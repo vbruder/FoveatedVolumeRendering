@@ -68,6 +68,9 @@ protected slots:
     void loadCamState();
     void showAboutDialog();
     void updateTransferFunctionFromGradientStops();
+    void setLoopTimesteps();
+    void nextTimestep();
+    void setPlaybackSpeed(int speed);
 protected:
     void dragEnterEvent(QDragEnterEvent *ev) Q_DECL_OVERRIDE;
     void dropEvent(QDropEvent *ev) Q_DECL_OVERRIDE;
@@ -96,6 +99,7 @@ private:
     QTimer _timer;
     QString _fileName;
     QLabel _statusLabel;
+    QTimer _loopTimer;
 };
 
 #endif // MAINWINDOW_H

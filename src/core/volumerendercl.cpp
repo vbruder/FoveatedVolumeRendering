@@ -89,23 +89,44 @@ void VolumeRenderCL::logCLerror(cl::Error error)
 /**
  * @brief VolumeRenderCL::initialize
  */
-void VolumeRenderCL::initialize(bool useGL, bool useCPU, cl_vendor vendor)
+void VolumeRenderCL::initialize(bool useGL, bool useCPU, cl_vendor vendor,
+                                const std::string deviceName, const int platformId)
 {
     cl_device_type type = useCPU ? CL_DEVICE_TYPE_CPU : CL_DEVICE_TYPE_GPU;
     try // opencl scope
     {
-        // FIXME: Using CPU segfaults on most tff changes
+        // FIXME: Using CPU segfaults on most tff changes - too many enques?
         if (useGL && !useCPU)
         {
             _useGL = useGL;
-            _contextCL = createCLGLContext(type, vendor);
+            _contextCL = createCLGLContext(_currentDevice, type, vendor);
         }
         else
         {
             if (useGL)
                 std::cout << "Cannot use OpenGL context shring with CPU devices. "
                           << "Falling back to buffer generation." << std::endl;
-            _contextCL = createCLContext(type, vendor);
+            if (deviceName.empty())
+                _contextCL = createCLContext(type, vendor);
+            else if (platformId >= 0)
+            {
+                std::vector<cl::Platform> platforms;
+                cl::Platform::get(&platforms);
+                std::vector<cl::Device> devices;
+                platforms[platformId].getDevices(type, &devices);
+
+                for(unsigned int i = 0; i < devices.size(); ++i)
+                {
+                    if (devices[i].getInfo<CL_DEVICE_NAME>() == deviceName)
+                    {
+                        std::vector<cl::Device> singleDevice;
+                        singleDevice.push_back(devices[i]);
+                        _contextCL = createCLContext(singleDevice);
+                        _currentDevice = deviceName;
+                        break;
+                    }
+                }
+            }
             _useGL = false;
         }
 
@@ -196,7 +217,7 @@ void VolumeRenderCL::setMemObjectsRaycast(const int t)
 void VolumeRenderCL::setMemObjectsBrickGen(const int t)
 {
     if (_volumesMem.size() <= static_cast<size_t>(t) || _bricksMem.size() <= static_cast<size_t>(t))
-        return;
+        throw std::runtime_error("Error loading timeseries data: size mismatch.");
     _genBricksKernel.setArg(VOLUME, _volumesMem.at(t));
     _genBricksKernel.setArg(BRICKS, _bricksMem.at(t));
 }
@@ -652,7 +673,7 @@ int VolumeRenderCL::loadVolumeData(const std::string fileName)
         throw std::runtime_error(e.what());
     }
 
-    // set initally a simple linear transfer function
+    // initally, set a simple linear transfer function
     std::vector<unsigned char> tff(256*4, 0);
     std::iota(tff.begin() + 3, tff.end(), 0);
     setTransferFunction(tff);
@@ -684,10 +705,10 @@ bool VolumeRenderCL::hasData()
  * @brief VolumeRenderCL::getResolution
  * @return
  */
-const std::array<unsigned int, 3> VolumeRenderCL::getResolution() const
+const std::array<unsigned int, 4> VolumeRenderCL::getResolution() const
 {
     if (!_dr.has_data())
-        return std::array<unsigned int, 3> {{0, 0, 0}};
+        return std::array<unsigned int, 4> {{0, 0, 0, 1}};
     return _dr.properties().volume_res;
 }
 
@@ -935,4 +956,13 @@ const std::vector<std::string> VolumeRenderCL::getDeviceNames(int platformId,
     }
 
     return names;
+}
+
+/**
+ * @brief VolumeRenderCL::getCurrentDeviceName
+ * @return
+ */
+const std::string VolumeRenderCL::getCurrentDeviceName()
+{
+    return _currentDevice;
 }

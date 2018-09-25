@@ -35,10 +35,10 @@ struct Properties
     std::vector<std::string> raw_file_names;
     size_t raw_file_size = 0;
 
-    std::array<unsigned int, 3> volume_res= {{0, 0, 0}};
+    std::array<unsigned int, 4> volume_res = {{0, 0, 0, 1}};     // x, y, z, t
     std::array<double, 3> slice_thickness = {{1.0, 1.0, 1.0}};
-    std::string format = {"UCHAR"};                     // UCHAR, USHORT,...
-    std::string node_file_name;
+    std::string format = "";     // UCHAR, USHORT, FLOAT
+    std::string node_file_name = "";
     unsigned int time_series = {1};
 
     const std::string to_string() const
@@ -105,6 +105,13 @@ public:
     void clearData();
 
 private:
+
+    /// <summary>
+    /// Tries to infer the volume data resolution from the file size.
+    /// Assumes equal size in each dimension and UCHAr format if not specified otherwise.
+    /// <summary>
+    /// <param name="file_size"> File size in bytes.</param>
+    void infer_volume_resolution(unsigned long long file_size);
 
     /// <summary>
     /// Read the dat textfile.
