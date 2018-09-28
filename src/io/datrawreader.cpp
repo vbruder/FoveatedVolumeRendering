@@ -163,6 +163,10 @@ void DatRawReader::read_dat(const std::string dat_file_name)
                 // slice thickness in x,y,z dimension
                 for (size_t i = 1; i < 4; ++i)
                 {
+                    double thickness = std::stod(l.at(i));
+                    // HACK for locale with ',' instread of '.' as decimal separator
+                    if (thickness <= 0)
+                        std::replace(l.at(i).begin(), l.at(i).end(), '.', ',');
                     _prop.slice_thickness.at(i - 1) = std::stod(l.at(i));
                 }
                 setSliceThickness = true;
@@ -266,7 +270,7 @@ void DatRawReader::read_raw(const std::string raw_file_name)
         // HACK: to support files bigger than 2048 MB on windows
         _prop.raw_file_size = *(__int64 *)(((char *)&(is.tellg())) + 8);
 #else
-        _prop.raw_file_size = is.tellg();
+        _prop.raw_file_size = static_cast<size_t>(is.tellg());
 #endif
         is.seekg( 0, is.beg );
 
@@ -274,7 +278,7 @@ void DatRawReader::read_raw(const std::string raw_file_name)
         raw_timestep.resize(_prop.raw_file_size);
 
         // read data as a block:
-        is.read(raw_timestep.data(), _prop.raw_file_size);
+        is.read(raw_timestep.data(), static_cast<std::streamsize>(_prop.raw_file_size));
         _raw_data.push_back(std::move(raw_timestep));
 
         if (!is)

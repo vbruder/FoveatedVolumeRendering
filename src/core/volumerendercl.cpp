@@ -95,7 +95,7 @@ void VolumeRenderCL::initialize(bool useGL, bool useCPU, cl_vendor vendor,
     cl_device_type type = useCPU ? CL_DEVICE_TYPE_CPU : CL_DEVICE_TYPE_GPU;
     try // opencl scope
     {
-        // FIXME: Using CPU segfaults on most tff changes - too many enques?
+        // FIXME: Using CPU segfaults on most tff changes - too many enques for down sampling?
         if (useGL && !useCPU)
         {
             _useGL = useGL;
@@ -104,8 +104,8 @@ void VolumeRenderCL::initialize(bool useGL, bool useCPU, cl_vendor vendor,
         else
         {
             if (useGL)
-                std::cout << "Cannot use OpenGL context shring with CPU devices. "
-                          << "Falling back to buffer generation." << std::endl;
+                std::cout << "Cannot use OpenGL context sharing with CPU devices. "
+                          << "Using buffer generation instead." << std::endl;
             if (deviceName.empty())
                 _contextCL = createCLContext(type, vendor);
             else if (platformId >= 0)
@@ -147,9 +147,10 @@ void VolumeRenderCL::initialize(bool useGL, bool useCPU, cl_vendor vendor,
     initKernel("kernels/volumeraycast.cl", "-DCL_STD=CL1.2 -DESS");
 #endif // _WIN32
 
-    // upload volume data if already loaded
+    // upload volume data to device if already loaded
     if (_dr.has_data())
     {
+        // update all memory objects
         volDataToCLmem(_dr.data());
     }
 }
@@ -676,7 +677,8 @@ size_t VolumeRenderCL::loadVolumeData(const std::string fileName)
     // initally, set a simple linear transfer function
     std::vector<unsigned char> tff(256*4, 0);
     std::iota(tff.begin() + 3, tff.end(), 0);
-    //setTransferFunction(tff);
+    // TODO: testing are there corner cases where this is necessary?
+//    setTransferFunction(tff);
 
     std::vector<unsigned int> prefixSum(256, 0);
 #pragma omp for

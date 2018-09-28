@@ -305,7 +305,7 @@ private:
                                               _dr.properties().volume_res[1],
                                               _dr.properties().volume_res[2],
                                               0, 0,
-                                              (void *)convertedData.data()));
+                                              const_cast<unsigned char*>(convertedData.data())));
         }
         catch (cl::Error err)
         {

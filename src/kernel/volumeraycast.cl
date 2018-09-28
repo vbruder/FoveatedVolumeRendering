@@ -366,7 +366,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , const float16 viewMat
                            , const uint orthoCam
                            , const uint illumType
-                           , const uint useBox
+                           , const uint showEss
                            , const uint useLinear
                            , const float4 background
                            , __read_only image1d_t tffPrefix
@@ -376,7 +376,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , const uint aerial
                            , __read_only image2d_t inHitImg
                            , __write_only image2d_t outHitImg
-                           , const uint img_ESS
+                           , const uint imgEss
                            )
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
@@ -385,7 +385,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     int2 texCoords = globalId;
 
     local uint hits;
-    if (img_ESS)
+    if (imgEss)
     {
         hits = 0;
         uint4 lastHit = read_imageui(inHitImg, (int2)(get_group_id(0)  , get_group_id(1)  ));
@@ -399,7 +399,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
         lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)+1, get_group_id(1)-1));
         if (!lastHit.x)
         {
-            write_imagef(outImg, texCoords, useBox ? (float4)(1.f) - background : background);
+            write_imagef(outImg, texCoords, showEss ? (float4)(1.f) - background : background);
             write_imageui(outHitImg, (int2)(get_group_id(0), get_group_id(1)), (uint4)(0u));
             return;
         }
@@ -458,7 +458,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     if (!hit || tfar < 0)
     {
         write_imagef(outImg, texCoords, background);
-        if (img_ESS)
+        if (imgEss)
             write_imageui(outHitImg, (int2)(get_group_id(0), get_group_id(1)), (uint4)(0u));
         return;
     }
@@ -485,10 +485,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
 
     float3 voxLen = (float3)(1.f) / convert_float3(volRes);
     float refSamplingInterval = 1.f / samplingRate;
-    float precisionDiv = 1.f;
-    if (get_image_channel_data_type(volData) == CLK_UNORM_INT16)
-        precisionDiv = 8.f;
-
     float t_exit = tfar;
 
 #ifdef ESS
@@ -622,7 +618,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
             }
             t += stepSize;
         }
-
 #ifdef ESS
         if (t >= tfar || alpha > ERT_THRESHOLD) break;
         if (any(cell == exit)) break;
@@ -630,20 +625,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
     }
 #endif  // ESS
 
-    // draw bounding box / empty space skipping
-    if (useBox)
-    {
-        if (checkBoundingBox(pos, voxLen, (float2)(0.f, 1.f)))
-        {
-            result.xyz = fabs((float3)(1.f) - background.xyz);
-            alpha = 1.f;
-        }
-    }
-
-    result.w = alpha;
-    write_imagef(outImg, texCoords, result);
-
-    if (img_ESS)
+    // image order empty space skipping
+    if (imgEss)
     {
         barrier(CLK_LOCAL_MEM_FENCE);
         if (any(result.xyz != background.xyz))
@@ -657,6 +640,18 @@ __kernel void volumeRender(  __read_only image3d_t volData
                 write_imageui(outHitImg, (int2)(get_group_id(0), get_group_id(1)), (uint4)(1u));
         }
     }
+    // visualize empty space skipping
+    if (showEss)
+    {
+        if (checkBoundingBox(pos, voxLen, (float2)(0.f, 1.f)))
+        {
+            result.xyz = fabs((float3)(1.f) - background.xyz);
+            alpha = 1.f;
+        }
+    }
+    // write final image
+    result.w = alpha;
+    write_imagef(outImg, texCoords, result);
 }
 
 #pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable

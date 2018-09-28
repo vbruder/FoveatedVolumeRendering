@@ -194,4 +194,5 @@ private:
     bool _recordView;
     QString _recordViewFile;
     bool _contRendering;
+    QGradientStops _tffStops;
 };

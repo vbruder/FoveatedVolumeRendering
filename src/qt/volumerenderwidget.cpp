@@ -595,6 +595,7 @@ void VolumeRenderWidget::showSelectOpenCL()
                 catch (...) {
                     qCritical() << "An unknown error occured initializing OpenCL/OpenGL.";
                 }
+                updateTransferFunction(_tffStops);
                 this->resizeGL(this->width(), this->height());
             }
         }
@@ -756,6 +757,7 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
         qCritical() << e.what();
     }
     update();
+    _tffStops = stops;
 }
 
 std::vector<unsigned char> VolumeRenderWidget::getRawTransferFunction(QGradientStops stops) const
