@@ -625,6 +625,19 @@ __kernel void volumeRender(  __read_only image3d_t volData
     }
 #endif  // ESS
 
+    // visualize empty space skipping
+    if (showEss)
+    {
+        if (checkBoundingBox(pos, voxLen, (float2)(0.f, 1.f)))
+        {
+            result.xyz = fabs((float3)(1.f) - background.xyz);
+            alpha = 1.f;
+        }
+    }
+    // write final image
+    result.w = alpha;
+    write_imagef(outImg, texCoords, result);
+
     // image order empty space skipping
     if (imgEss)
     {
@@ -640,18 +653,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
                 write_imageui(outHitImg, (int2)(get_group_id(0), get_group_id(1)), (uint4)(1u));
         }
     }
-    // visualize empty space skipping
-    if (showEss)
-    {
-        if (checkBoundingBox(pos, voxLen, (float2)(0.f, 1.f)))
-        {
-            result.xyz = fabs((float3)(1.f) - background.xyz);
-            alpha = 1.f;
-        }
-    }
-    // write final image
-    result.w = alpha;
-    write_imagef(outImg, texCoords, result);
 }
 
 #pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
