@@ -9,11 +9,11 @@ It can display volume (timeseries) data sets and uses the [Qt](https://www.qt.io
 To compile/run the code you need:
 
 * An OpenCL 1.2 capable device and drivers/libraries with image support. It is recommended to update your GPU driver before building/running.
-* Qt, at leat version 5.6 is required.
-* A compiler capable of c++14
-* CMake version 3.9 or higher 
+* Qt version 5.6 or higher.
+* A compiler capable of c++14.
+* CMake version 3.9 or higher.
 
-# Confirmed to build/run on the following configuration #
+# Confirmed to build/run on the following configurations #
 
 * NVIDIA Kepler & Pascal, AMD Fiji & Vega, Intel Gen9 GPU & Skylake CPU
 * GCC 5.3.1 & 7.3.0, Visual Studio 2015 (v140), Clang 6.0
