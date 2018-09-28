@@ -113,7 +113,7 @@ void VolumeRenderCL::initialize(bool useGL, bool useCPU, cl_vendor vendor,
                 std::vector<cl::Platform> platforms;
                 cl::Platform::get(&platforms);
                 std::vector<cl::Device> devices;
-                platforms[platformId].getDevices(type, &devices);
+                platforms[static_cast<size_t>(platformId)].getDevices(type, &devices);
 
                 for(unsigned int i = 0; i < devices.size(); ++i)
                 {
@@ -171,7 +171,7 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel.setArg(SAMPLING_RATE, 1.5f);      // default step size 1.0*voxel size
         _raycastKernel.setArg(ORTHO, 0);                // perspective cam by default
         _raycastKernel.setArg(ILLUMINATION, 1);         // illumination on by default
-        _raycastKernel.setArg(BOX, 0);
+        _raycastKernel.setArg(SHOW_ESS, 0);
         _raycastKernel.setArg(LINEAR, 1);
         cl_float4 bgColor = {{1.f, 1.f, 1.f, 1.f}};
         _raycastKernel.setArg(BACKGROUND, bgColor);
@@ -193,7 +193,7 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
 /**
  * @brief VolumeRenderCL::setMemObjects
  */
-void VolumeRenderCL::setMemObjectsRaycast(const int t)
+void VolumeRenderCL::setMemObjectsRaycast(const size_t t)
 {
     _raycastKernel.setArg(VOLUME, _volumesMem.at(t));
     _raycastKernel.setArg(BRICKS, _bricksMem.at(t));
@@ -214,7 +214,7 @@ void VolumeRenderCL::setMemObjectsRaycast(const int t)
 /**
  * @brief VolumeRenderCL::setMemObjectsBrickGen
  */
-void VolumeRenderCL::setMemObjectsBrickGen(const int t)
+void VolumeRenderCL::setMemObjectsBrickGen(const size_t t)
 {
     if (_volumesMem.size() <= static_cast<size_t>(t) || _bricksMem.size() <= static_cast<size_t>(t))
         throw std::runtime_error("Error loading timeseries data: size mismatch.");
@@ -225,16 +225,23 @@ void VolumeRenderCL::setMemObjectsBrickGen(const int t)
 
 /**
  * @brief VolumeRenderCL::setMemObjectsDownsampling
+ *
+ * TODO: Add support for downsampling of whole timeseries.
  */
-const std::string VolumeRenderCL::volumeDownsampling(const int t, const int factor)
+const std::string VolumeRenderCL::volumeDownsampling(const size_t t, const int factor)
 {
-    if (!_dr.has_data() || factor < 2)
-        return std::string("");
+    if (!_dr.has_data())
+        throw std::runtime_error("No volume data is loaded.");
+    if (factor < 2)
+        throw std::invalid_argument("Factor must be greater or equal 2.");
 
     std::array<unsigned int, 3> texSize = {1u, 1u, 1u};
-    texSize.at(0) = ceil(_dr.properties().volume_res.at(0)/(double)factor);
-    texSize.at(1) = ceil(_dr.properties().volume_res.at(1)/(double)factor);
-    texSize.at(2) = ceil(_dr.properties().volume_res.at(2)/(double)factor);
+    texSize.at(0) = static_cast<unsigned int>(ceil(_dr.properties().volume_res.at(0) /
+                                                         static_cast<double>(factor)));
+    texSize.at(1) = static_cast<unsigned int>(ceil(_dr.properties().volume_res.at(1) /
+                                                         static_cast<double>(factor)));
+    texSize.at(2) = static_cast<unsigned int>(ceil(_dr.properties().volume_res.at(2) /
+                                                         static_cast<double>(factor)));
 
     if (texSize.at(0) < 64)
     {
@@ -251,7 +258,7 @@ const std::string VolumeRenderCL::volumeDownsampling(const int t, const int fact
         format.image_channel_data_type = CL_UNORM_INT8;
     // FIXME: format
     else if (_dr.properties().format == "USHORT")
-        format.image_channel_data_type = CL_UNORM_INT8; //CL_UNORM_INT16
+        format.image_channel_data_type = CL_UNORM_INT16;
     else if (_dr.properties().format == "FLOAT")
         format.image_channel_data_type = CL_FLOAT;
     else
@@ -262,19 +269,15 @@ const std::string VolumeRenderCL::volumeDownsampling(const int t, const int fact
         cl::Image3D lowResVol = cl::Image3D(_contextCL,
                                             CL_MEM_WRITE_ONLY,
                                             format,
-                                            texSize.at(0),
-                                            texSize.at(1),
-                                            texSize.at(2),
-                                            0, 0,
-                                            nullptr);
-
+                                            texSize.at(0), texSize.at(1), texSize.at(2),
+                                            0, 0, nullptr);
         _downsamplingKernel.setArg(VOLUME, _volumesMem.at(t));
         _downsamplingKernel.setArg(1, lowResVol);
 
         cl::NDRange globalThreads(texSize.at(0), texSize.at(1), texSize.at(2));
         cl::Event ndrEvt;
         _queueCL.enqueueNDRangeKernel(_downsamplingKernel, cl::NullRange,
-                                      globalThreads, cl::NullRange, NULL, &ndrEvt);
+                                      globalThreads, cl::NullRange, nullptr, &ndrEvt);
         _queueCL.finish();    // global sync
 
         // read back volume data
@@ -282,12 +285,7 @@ const std::string VolumeRenderCL::volumeDownsampling(const int t, const int fact
         std::vector<unsigned char> outputData(texSize.at(0)*texSize.at(1)*texSize.at(2));
         std::array<size_t, 3> origin = {{0, 0, 0}};
         std::array<size_t, 3> region = {{texSize.at(0), texSize.at(1), texSize.at(2)}};
-        _queueCL.enqueueReadImage(lowResVol,
-                                  CL_TRUE,
-                                  origin,
-                                  region,
-                                  0, 0,
-                                  outputData.data());
+        _queueCL.enqueueReadImage(lowResVol, CL_TRUE, origin, region, 0, 0, outputData.data());
         _queueCL.flush();    // global sync
 
         // dump to file
@@ -304,7 +302,6 @@ const std::string VolumeRenderCL::volumeDownsampling(const int t, const int fact
 
         // Generate .dat file and write out
         std::ofstream datFile(rawname + ".dat", std::ios::out);
-//        lastindex = _dr.properties().raw_file_names.at(0).find_last_of(".");
         lastindex = rawname.find_last_of(".");
         size_t firstindex = rawname.find_last_of("/\\");
         std::string rawnameShort = rawname.substr(firstindex + 1, lastindex);
@@ -316,7 +313,7 @@ const std::string VolumeRenderCL::volumeDownsampling(const int t, const int fact
                 << _dr.properties().slice_thickness.at(2)
                 << "\n";
         // FIXME: format
-        datFile << "Format: \t\t\t" << "UCHAR" << "\n"; //_dr.properties().format << "\n";
+        datFile << "Format: \t\t\t" << _dr.properties().format << "\n";
         datFile.close();
         std::cout << " Done." << std::endl;
         return rawname;
@@ -325,7 +322,6 @@ const std::string VolumeRenderCL::volumeDownsampling(const int t, const int fact
     {
         logCLerror(err);
     }
-    return std::string("");
 }
 
 
@@ -421,7 +417,8 @@ void VolumeRenderCL::updateOutputImg(const size_t width, const size_t height, GL
         _outputHitMem = cl::Image2D(_contextCL, CL_MEM_READ_WRITE, format,
                                     width/LOCAL_SIZE + 1, height/LOCAL_SIZE + 1);
         _inputHitMem = cl::Image2D(_contextCL, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, format,
-                                   width/LOCAL_SIZE + 1, height/LOCAL_SIZE + 1, 0, (void*)initBuff.data());
+                                   width/LOCAL_SIZE + 1, height/LOCAL_SIZE + 1, 0,
+                                   const_cast<unsigned int*>(initBuff.data()));
     }
     catch (cl::Error err)
     {
@@ -434,7 +431,7 @@ void VolumeRenderCL::updateOutputImg(const size_t width, const size_t height, GL
  * @brief VolumeRenderCL::runRaycast
  * @param imgSize
  */
-void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const int t)
+void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const size_t t)
 {
     if (!this->_volLoaded)
         return;
@@ -485,7 +482,7 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const i
  * @param t
  * @param output
  */
-void VolumeRenderCL::runRaycastNoGL(const size_t width, const size_t height, const int t,
+void VolumeRenderCL::runRaycastNoGL(const size_t width, const size_t height, const size_t t,
                                     std::vector<float> &output)
 {
     if (!this->_volLoaded)
@@ -499,7 +496,7 @@ void VolumeRenderCL::runRaycastNoGL(const size_t width, const size_t height, con
         cl::Event ndrEvt;
 
         _queueCL.enqueueNDRangeKernel(
-                    _raycastKernel, cl::NullRange, globalThreads, localThreads, NULL, &ndrEvt);
+                    _raycastKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
         output.resize(width*height*4);
         cl::Event readEvt;
         std::array<size_t, 3> origin = {{0, 0, 0}};
@@ -508,7 +505,7 @@ void VolumeRenderCL::runRaycastNoGL(const size_t width, const size_t height, con
                                   CL_TRUE,
                                   origin, region, 0, 0,
                                   output.data(),
-                                  NULL, &readEvt);
+                                  nullptr, &readEvt);
         _queueCL.flush();    // global sync
 
 #ifdef CL_QUEUE_PROFILING_ENABLE
@@ -544,9 +541,12 @@ void VolumeRenderCL::generateBricks()
         brickRes.at(1) = std::max(1u, RoundPow2(_dr.properties().volume_res.at(1)/numBricks));
         brickRes.at(2) = std::max(1u, RoundPow2(_dr.properties().volume_res.at(2)/numBricks));
         std::array<unsigned int, 3> bricksTexSize = {1u, 1u, 1u};
-        bricksTexSize.at(0) = ceil(_dr.properties().volume_res.at(0)/(double)brickRes.at(0));
-        bricksTexSize.at(1) = ceil(_dr.properties().volume_res.at(1)/(double)brickRes.at(1));
-        bricksTexSize.at(2) = ceil(_dr.properties().volume_res.at(2)/(double)brickRes.at(2));
+        bricksTexSize.at(0) = static_cast<unsigned int>(ceil(_dr.properties().volume_res.at(0) /
+                                                             static_cast<double>(brickRes.at(0))));
+        bricksTexSize.at(1) = static_cast<unsigned int>(ceil(_dr.properties().volume_res.at(1) /
+                                                             static_cast<double>(brickRes.at(1))));
+        bricksTexSize.at(2) = static_cast<unsigned int>(ceil(_dr.properties().volume_res.at(2) /
+                                                             static_cast<double>(brickRes.at(2))));
 
         // set memory object
         cl::ImageFormat format;
@@ -608,7 +608,7 @@ void VolumeRenderCL::volDataToCLmem(const std::vector<std::vector<char>> &volume
     {
         cl::ImageFormat format;
         format.image_channel_order = CL_R;
-        int formatMultiplier = 1;
+        unsigned int formatMultiplier = 1;
 
         if (_dr.properties().format == "UCHAR")
             format.image_channel_data_type = CL_UNORM_INT8;
@@ -641,7 +641,7 @@ void VolumeRenderCL::volDataToCLmem(const std::vector<std::vector<char>> &volume
                                               _dr.properties().volume_res[1],
                                               _dr.properties().volume_res[2],
                                               0, 0,
-                                              (void *)v.data()));
+                                              const_cast<char*>(v.data())));
         }
     }
     catch (cl::Error err)
@@ -655,7 +655,7 @@ void VolumeRenderCL::volDataToCLmem(const std::vector<std::vector<char>> &volume
  * @brief VolumeRenderCL::loadVolumeData
  * @param fileName
  */
-int VolumeRenderCL::loadVolumeData(const std::string fileName)
+size_t VolumeRenderCL::loadVolumeData(const std::string fileName)
 {
     this->_volLoaded = false;
     std::cout << "Loading volume data defined in " << fileName << std::endl;
@@ -676,12 +676,12 @@ int VolumeRenderCL::loadVolumeData(const std::string fileName)
     // initally, set a simple linear transfer function
     std::vector<unsigned char> tff(256*4, 0);
     std::iota(tff.begin() + 3, tff.end(), 0);
-    setTransferFunction(tff);
+    //setTransferFunction(tff);
 
     std::vector<unsigned int> prefixSum(256, 0);
 #pragma omp for
-    for (int i = 0; i < (int)prefixSum.size(); ++i)
-        prefixSum.at(i) = i*4;
+    for (int i = 0; i < static_cast<int>(prefixSum.size()); ++i)
+        prefixSum.at(static_cast<unsigned int>(i)) = static_cast<unsigned int>(i)*4u;
 
     std::partial_sum(prefixSum.begin(), prefixSum.end(), prefixSum.begin());
     setTffPrefixSum(prefixSum);
@@ -734,7 +734,7 @@ void VolumeRenderCL::setTransferFunction(std::vector<unsigned char> &tff)
 
         std::vector<unsigned int> prefixSum;
         // copy only alpha values (every fourth element)
-        for (int i = 3; i < static_cast<int>(tff.size()); i += 4)
+        for (size_t i = 3; i < tff.size(); i += 4)
             prefixSum.push_back(static_cast<unsigned int>(tff.at(i)));
         std::partial_sum(prefixSum.begin(), prefixSum.end(), prefixSum.begin());
         setTffPrefixSum(prefixSum);
@@ -780,7 +780,7 @@ void VolumeRenderCL::setCamOrtho(bool setCamOrtho)
         return;
 
     try {
-        _raycastKernel.setArg(ORTHO, (cl_uint)setCamOrtho);
+        _raycastKernel.setArg(ORTHO, static_cast<cl_uint>(setCamOrtho));
     } catch (cl::Error err) { logCLerror(err); }
 }
 
@@ -791,7 +791,7 @@ void VolumeRenderCL::setCamOrtho(bool setCamOrtho)
 void VolumeRenderCL::setIllumination(unsigned int illum)
 {
     try {
-        _raycastKernel.setArg(ILLUMINATION, (cl_uint)illum);
+        _raycastKernel.setArg(ILLUMINATION, static_cast<cl_uint>(illum));
     } catch (cl::Error err) { logCLerror(err); }
 }
 
@@ -803,19 +803,19 @@ void VolumeRenderCL::setIllumination(unsigned int illum)
 void VolumeRenderCL::setAmbientOcclusion(bool ao)
 {
     try {
-        _raycastKernel.setArg(AO, (cl_uint)ao);
+        _raycastKernel.setArg(AO, static_cast<cl_uint>(ao));
     } catch (cl::Error err) { logCLerror(err); }
 }
 
 
 /**
- * @brief VolumeRenderCL::setBoundingBox
- * @param boundingBox
+ * @brief VolumeRenderCL::setShowESS
+ * @param showESS
  */
-void VolumeRenderCL::setBoundingBox(bool boundingBox)
+void VolumeRenderCL::setShowESS(bool showESS)
 {
     try {
-        _raycastKernel.setArg(BOX, (cl_uint)boundingBox);
+        _raycastKernel.setArg(SHOW_ESS, static_cast<cl_uint>(showESS));
     } catch (cl::Error err) { logCLerror(err); }
 }
 
@@ -827,7 +827,7 @@ void VolumeRenderCL::setBoundingBox(bool boundingBox)
 void VolumeRenderCL::setLinearInterpolation(bool linearSampling)
 {
     try {
-        _raycastKernel.setArg(LINEAR, (cl_uint)linearSampling);
+        _raycastKernel.setArg(LINEAR, static_cast<cl_uint>(linearSampling));
     } catch (cl::Error err) { logCLerror(err); }
 }
 
@@ -838,7 +838,7 @@ void VolumeRenderCL::setLinearInterpolation(bool linearSampling)
 void VolumeRenderCL::setContours(bool contours)
 {
     try {
-        _raycastKernel.setArg(CONTOURS, (cl_uint)contours);
+        _raycastKernel.setArg(CONTOURS, static_cast<cl_uint>(contours));
     } catch (cl::Error err) { logCLerror(err); }
 }
 
@@ -849,7 +849,7 @@ void VolumeRenderCL::setContours(bool contours)
 void VolumeRenderCL::setAerial(bool aerial)
 {
     try {
-        _raycastKernel.setArg(AERIAL, (cl_uint)aerial);
+        _raycastKernel.setArg(AERIAL, static_cast<cl_uint>(aerial));
     } catch (cl::Error err) { logCLerror(err); }
 }
 
@@ -860,7 +860,7 @@ void VolumeRenderCL::setAerial(bool aerial)
 void VolumeRenderCL::setImgEss(bool useEss)
 {
     try {
-        _raycastKernel.setArg(IMG_ESS,  (cl_uint)useEss);
+        _raycastKernel.setArg(IMG_ESS,  static_cast<cl_uint>(useEss));
         _useImgESS = useEss;
     } catch (cl::Error err) { logCLerror(err); }
 }
@@ -934,7 +934,7 @@ const std::vector<std::string> VolumeRenderCL::getPlatformNames()
  * @param type
  * @return
  */
-const std::vector<std::string> VolumeRenderCL::getDeviceNames(int platformId,
+const std::vector<std::string> VolumeRenderCL::getDeviceNames(size_t platformId,
                                                               const std::string &type)
 {
     std::vector<std::string> names;

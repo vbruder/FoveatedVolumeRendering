@@ -646,7 +646,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     if (img_ESS)
     {
         barrier(CLK_LOCAL_MEM_FENCE);
-        if (all(result.xyz != background.xyz))
+        if (any(result.xyz != background.xyz))
             ++hits;
         barrier(CLK_LOCAL_MEM_FENCE);
         if (get_local_id(0) + get_local_id(1) == 0)

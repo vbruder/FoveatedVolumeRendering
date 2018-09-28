@@ -558,7 +558,7 @@ void VolumeRenderWidget::showSelectOpenCL()
                 _useGL = ret == QMessageBox::Yes;
             }
 
-            int platformId = platforms.indexOf(platform);
+            size_t platformId = static_cast<size_t>(platforms.indexOf(platform));
             try
             {
                 names = _volumerender.getDeviceNames(platformId, type.toStdString());
@@ -586,7 +586,7 @@ void VolumeRenderWidget::showSelectOpenCL()
             {
                 try {
                     _volumerender.initialize(_useGL, type == "CPU", vendor, device.toStdString(),
-                                             platformId);
+                                             static_cast<int>(platformId));
                 } catch (std::runtime_error e) {
                     qCritical() << e.what() << "\nSwitching to CPU fallback mode.";
                     _useGL = false;
@@ -622,7 +622,7 @@ void VolumeRenderWidget::setupVertexAttribs()
 void VolumeRenderWidget::setVolumeData(const QString &fileName)
 {
     this->_noUpdate = true;
-    int timesteps = 0;
+    size_t timesteps = 0;
     try
     {
         timesteps = _volumerender.loadVolumeData(fileName.toStdString());
@@ -636,7 +636,7 @@ void VolumeRenderWidget::setVolumeData(const QString &fileName)
         qCritical() << e.what();
     }
     if (timesteps > 1)
-        emit timeSeriesLoaded(timesteps - 1);
+        emit timeSeriesLoaded(static_cast<int>(timesteps - 1));
 
     _overlayModelMX.setToIdentity();
     QVector3D res = getVolumeResolution().toVector3D();
@@ -725,7 +725,7 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
 
     QPropertyAnimation interpolator;
     interpolator.setEasingCurve(_tffInterpol);
-    interpolator.setDuration(granularity);
+    interpolator.setDuration(static_cast<int>(granularity));
     foreach (QGradientStop stop, stops)
     {
         interpolator.setKeyValueAt(stop.first, stop.second);
@@ -766,7 +766,7 @@ std::vector<unsigned char> VolumeRenderWidget::getRawTransferFunction(QGradientS
 
     QPropertyAnimation interpolator;
     interpolator.setEasingCurve(_tffInterpol);
-    interpolator.setDuration(granularity);
+    interpolator.setDuration(static_cast<int>(granularity));
     foreach (QGradientStop stop, stops)
     {
         interpolator.setKeyValueAt(stop.first, stop.second);
@@ -858,7 +858,7 @@ void VolumeRenderWidget::resetCam()
 void VolumeRenderWidget::updateView(float dx, float dy)
 {
     QVector3D rotAxis = QVector3D(dy, dx, 0.0f).normalized();
-    double angle = QVector2D(dx, dy).length()*500;
+    double angle = QVector2D(dx, dy).length()*500.0;
     _rotQuat = _rotQuat * QQuaternion::fromAxisAndAngle(rotAxis, -angle);
 
     QMatrix4x4 viewMat;
@@ -1016,7 +1016,7 @@ void VolumeRenderWidget::setContRendering(bool contRendering)
  */
 void VolumeRenderWidget::setIllumination(int illum)
 {
-    _volumerender.setIllumination(illum);
+    _volumerender.setIllumination(static_cast<unsigned int>(illum));
     this->updateView();
 }
 
@@ -1090,7 +1090,7 @@ void VolumeRenderWidget::setObjEss(bool useEss)
  */
 void VolumeRenderWidget::setDrawBox(bool box)
 {
-    _volumerender.setBoundingBox(box);
+    _volumerender.setShowESS(box);
     this->updateView();
 }
 
@@ -1145,7 +1145,8 @@ void VolumeRenderWidget::generateLowResVolume()
     {
         try
         {
-            std::string name = _volumerender.volumeDownsampling(_timestep, factor);
+            std::string name = _volumerender.volumeDownsampling(static_cast<size_t>(_timestep),
+                                                                factor);
             QLoggingCategory category("volumeDownSampling");
             qCInfo(category, "Successfully created down-sampled volume data set: '%s.raw'",
                    name.c_str());
