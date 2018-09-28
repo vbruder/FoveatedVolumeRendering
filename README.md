@@ -13,15 +13,7 @@ To compile the code you need:
 * A compiler capable of c++14.
 * CMake version 3.9 or higher.
 
-# Confirmed to build/run on the following configurations #
-
-* NVIDIA Kepler & Pascal, AMD Fiji & Vega, Intel Gen9 GPU & Skylake CPU
-* GCC 5.3.1 & 7.3.0, Visual Studio 2015 (v140), Clang 6.0
-* Qt 5.11.2
-* CMake 3.10.2 & 3.12.2
-
 Use CMake to build the volume rasycaster:
-
 ```
 git clone https://theVall@bitbucket.org/theVall/basicvolumeraycaster.git
 cd basicvolumeraycaster
@@ -32,6 +24,12 @@ make -j `nproc`
 ```
 Make sure to replace the CMAKE_PREFIX_PATH with the path to your Qt install directory, e.g. ```/home/username/Qt/5.11.2/gcc_64/```
 
+# Confirmed to build/run on the following configurations #
+
+* NVIDIA Kepler & Pascal, AMD Fiji & Vega, Intel Gen9 GPU & Skylake CPU
+* GCC 5.3.1 & 7.3.0, Visual Studio 2015 (v140), Clang 6.0
+* Qt 5.11.2
+* CMake 3.10.2 & 3.12.2
 
 # Screenshots #
 
