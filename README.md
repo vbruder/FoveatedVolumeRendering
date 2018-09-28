@@ -26,7 +26,7 @@ Make sure to replace the CMAKE_PREFIX_PATH with the path to your Qt install dire
 
 # Confirmed to build/run on the following configurations #
 
-* NVIDIA Mawell & Pascal, AMD Fiji & Vega, Intel Gen9 GPU & Skylake CPU
+* NVIDIA Maxwell & Pascal, AMD Fiji & Vega, Intel Gen9 GPU & Skylake CPU
 * GCC 5.3.1 & 7.3.0, Visual Studio 2015 (v140), Clang 6.0
 * Qt 5.11.2
 * CMake 3.10.2 & 3.12.2
