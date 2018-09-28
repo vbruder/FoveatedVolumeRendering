@@ -20,7 +20,7 @@ To compile the code you need:
 * Qt 5.11.2
 * CMake 3.10.2 & 3.12.2
 
-Use CMake to build the volume rasycaster:ascent
+Use CMake to build the volume rasycaster:
 
 ```
 git clone https://theVall@bitbucket.org/theVall/basicvolumeraycaster.git
