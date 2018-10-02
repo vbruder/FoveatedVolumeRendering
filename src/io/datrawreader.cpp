@@ -153,7 +153,7 @@ void DatRawReader::read_dat(const std::string dat_file_name)
             }
             else if (name.find("Resolution") != std::string::npos && l.size() > 3u)
             {
-                for (size_t i = 1; i < std::min(l.size(), 5ul); ++i)
+                for (size_t i = 1; i < std::min(l.size(), static_cast<size_t>(5)); ++i)
                 {
                     _prop.volume_res.at(i - 1) = std::stoul(l.at(i));
                 }
