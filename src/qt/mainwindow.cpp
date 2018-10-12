@@ -155,6 +155,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->volumeRenderWidget, &VolumeRenderWidget::frameSizeChanged,
             this, &MainWindow::setStatusText);
 
+    connect(&_loopTimer, &QTimer::timeout, this, &MainWindow::nextTimestep);
+
     // restore settings
     readSettings();
 }
@@ -276,7 +278,6 @@ void MainWindow::setLoopTimesteps()
 {
     if (!_loopTimer.isActive())
     {
-        connect(&_loopTimer, &QTimer::timeout, this, &MainWindow::nextTimestep);
         _loopTimer.start(ui->sbSpeed->value());
         ui->pbPlay->setIcon(QIcon::fromTheme("media-playback-pause"));
     }
