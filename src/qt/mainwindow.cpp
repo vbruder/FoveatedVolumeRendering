@@ -309,6 +309,7 @@ void MainWindow::nextTimestep()
         _loopTimer.stop();
         val = ui->sbTimeStep->maximum();
     }
+    ui->sldTimeStep->setValue(val);
     ui->sbTimeStep->setValue(val);
 }
 
@@ -709,11 +710,9 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *ev)
         {
             if (!url.fileName().isEmpty())
             {
-                QString sFileEnding = url.fileName().split(".", QString::SkipEmptyParts).at(1);
-                if (sFileEnding == "dat")
-                {
+                QFileInfo finf(url.fileName());
+                if (finf.suffix() == "dat")
                     valid = true;
-                }
             }
         }
         if (valid)
@@ -732,8 +731,8 @@ void MainWindow::dropEvent(QDropEvent *ev)
 {
     foreach(QUrl url, ev->mimeData()->urls())
     {
-        QString sFileEnding = url.fileName().split(".", QString::SkipEmptyParts).at(1);
-        if (sFileEnding == "dat")
+        QFileInfo finf(url.fileName());
+        if (finf.suffix() == "dat")
         {
             // extract path and remove leading '/'
             QString fileName = url.path(); //.remove( 0, 1 );

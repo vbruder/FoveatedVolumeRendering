@@ -145,6 +145,9 @@
         </item>
         <item row="0" column="1" colspan="3">
          <widget class="QSlider" name="sldTimeStep">
+          <property name="pageStep">
+           <number>1</number>
+          </property>
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>

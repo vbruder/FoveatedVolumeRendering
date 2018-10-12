@@ -254,14 +254,20 @@ const std::string VolumeRenderCL::volumeDownsampling(const size_t t, const int f
 
     cl::ImageFormat format;
     format.image_channel_order = CL_R;
+    unsigned int formatMultiplier = 1;
 
     if (_dr.properties().format == "UCHAR")
         format.image_channel_data_type = CL_UNORM_INT8;
-    // FIXME: format
     else if (_dr.properties().format == "USHORT")
+    {
         format.image_channel_data_type = CL_UNORM_INT16;
+        formatMultiplier = 2;
+    }
     else if (_dr.properties().format == "FLOAT")
+    {
         format.image_channel_data_type = CL_FLOAT;
+        formatMultiplier = 4;
+    }
     else
         throw std::invalid_argument("Unknown or invalid volume data format.");
 
@@ -282,8 +288,8 @@ const std::string VolumeRenderCL::volumeDownsampling(const size_t t, const int f
         _queueCL.finish();    // global sync
 
         // read back volume data
-        // TODO: format selection
-        std::vector<unsigned char> outputData(texSize.at(0)*texSize.at(1)*texSize.at(2));
+        std::vector<unsigned char> outputData(texSize.at(0)*texSize.at(1)*texSize.at(2)
+                                              *formatMultiplier);
         std::array<size_t, 3> origin = {{0, 0, 0}};
         std::array<size_t, 3> region = {{texSize.at(0), texSize.at(1), texSize.at(2)}};
         _queueCL.enqueueReadImage(lowResVol, CL_TRUE, origin, region, 0, 0, outputData.data());
@@ -313,7 +319,6 @@ const std::string VolumeRenderCL::volumeDownsampling(const size_t t, const int f
                 << _dr.properties().slice_thickness.at(1) << " "
                 << _dr.properties().slice_thickness.at(2)
                 << "\n";
-        // FIXME: format
         datFile << "Format: \t\t\t" << _dr.properties().format << "\n";
         datFile.close();
         std::cout << " Done." << std::endl;
@@ -633,7 +638,7 @@ void VolumeRenderCL::volDataToCLmem(const std::vector<std::vector<char>> &volume
                      _dr.properties().volume_res[2]*formatMultiplier > v.size())
             {
                 _dr.clearData();
-                throw std::runtime_error( "Volume size does not match size specified in dat file.");
+                throw std::runtime_error("Volume size does not match size specified in dat file.");
             }
             _volumesMem.push_back(cl::Image3D(_contextCL,
                                               CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,

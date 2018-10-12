@@ -411,14 +411,12 @@ __kernel void volumeRender(  __read_only image3d_t volData
     float rand = fract(sin(dot(convert_float2(globalId),
                        (float2)(12.9898f, 78.233f))) * 43758.5453f, &iptr);
 
-    float maxRes = (float)max(get_image_dim(volData).x, get_image_dim(volData).z);
-
     float aspectRatio = native_divide((float)get_global_size(1), (float)(get_global_size(0)));
     aspectRatio = min(aspectRatio, native_divide((float)get_global_size(0), (float)(get_global_size(1))));
-    int maxSize = max(get_global_size(0), get_global_size(1));
+    int maxImgSize = max(get_global_size(0), get_global_size(1));
     float2 imgCoords;
-    imgCoords.x = native_divide((globalId.x + 0.5f), convert_float(maxSize)) * 2.f;
-    imgCoords.y = native_divide((globalId.y + 0.5f), convert_float(maxSize)) * 2.f;
+    imgCoords.x = native_divide((globalId.x + 0.5f), convert_float(maxImgSize)) * 2.f;
+    imgCoords.y = native_divide((globalId.y + 0.5f), convert_float(maxImgSize)) * 2.f;
     // calculate correct offset based on aspect ratio
     imgCoords -= get_global_size(0) > get_global_size(1) ?
                         (float2)(1.0f, aspectRatio) : (float2)(aspectRatio, 1.0);
@@ -571,7 +569,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
             {
                 density = useLinear ? read_imagef(volData,  linearSmp, (float4)(pos, 1.f)).x :
                                       read_imagef(volData, nearestSmp, (float4)(pos, 1.f)).x;
-                density = clamp(density, 0.f, 1.f);
+//                density = clamp(density, 0.f, 1.f);
                 tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
 
                 if (tfColor.w > 0.1f && illumType)
