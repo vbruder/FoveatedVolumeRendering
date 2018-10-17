@@ -10,7 +10,7 @@ project(${PROJECT} VERSION 1.0 DESCRIPTION "Volume raycaster based on OpenCL" LA
 
 # require c++14
 set(CMAKE_CXX_STANDARD 14)
-add_compile_definitions(NOMINMAX)
+add_definitions(-DNOMINMAX)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin")
 ## TODO: set install target
