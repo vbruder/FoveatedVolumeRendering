@@ -294,6 +294,11 @@
             <string>Magnitude</string>
            </property>
           </item>
+          <item>
+           <property name="text">
+            <string>Cel shading</string>
+           </property>
+          </item>
          </widget>
         </item>
         <item row="0" column="0" colspan="5">

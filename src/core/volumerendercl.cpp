@@ -546,6 +546,7 @@ void VolumeRenderCL::generateBricks()
         brickRes.at(0) = std::max(1u, RoundPow2(_dr.properties().volume_res.at(0)/numBricks));
         brickRes.at(1) = std::max(1u, RoundPow2(_dr.properties().volume_res.at(1)/numBricks));
         brickRes.at(2) = std::max(1u, RoundPow2(_dr.properties().volume_res.at(2)/numBricks));
+//std::cout << brickRes.at(2) << std::endl;
         std::array<unsigned int, 3> bricksTexSize = {1u, 1u, 1u};
         bricksTexSize.at(0) = static_cast<unsigned int>(ceil(_dr.properties().volume_res.at(0) /
                                                              static_cast<double>(brickRes.at(0))));
@@ -553,7 +554,7 @@ void VolumeRenderCL::generateBricks()
                                                              static_cast<double>(brickRes.at(1))));
         bricksTexSize.at(2) = static_cast<unsigned int>(ceil(_dr.properties().volume_res.at(2) /
                                                              static_cast<double>(brickRes.at(2))));
-
+//std::cout << bricksTexSize.at(2) << std::endl;
         // set memory object
         cl::ImageFormat format;
         format.image_channel_order = CL_RG;  // NOTE: CL_RG for min+max

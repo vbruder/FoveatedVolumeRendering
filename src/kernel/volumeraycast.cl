@@ -272,8 +272,7 @@ float3 specularBlinnPhong(float3 lightColor, float specularExp, float3 materialC
 }
 
 // blinn phong illumination based gradients evaluating density values
-float3 illumination(read_only image3d_t vol, const float4 pos, float3 color, float3 toLightDir,
-                    float3 n)
+float3 illumination(const float4 pos, float3 color, float3 toLightDir, float3 n)
 {
     float3 l = fast_normalize(toLightDir.xyz);
 
@@ -283,6 +282,23 @@ float3 illumination(read_only image3d_t vol, const float4 pos, float3 color, flo
 
     return (amb + diff + spec);
 }
+
+// cel shading (aka toon shading)
+float3 celShading(float3 color, float3 toLightDir, float3 n)
+{
+    float3 celColor = color*0.2f;
+    float3 l = fast_normalize(toLightDir.xyz);
+    float intensity = max(0.f, dot(n, l));
+
+    if (intensity > 0.95f)
+        celColor = color;
+    else if (intensity > 0.5f)
+        celColor = color*0.6f;
+    else if (intensity > 0.25f)
+        celColor = color*0.4f;
+    return celColor;
+}
+
 
 // check for border edges
 bool checkBoundingBox(float3 pos, float3 voxLen, float2 bound)
@@ -488,6 +504,11 @@ __kernel void volumeRender(  __read_only image3d_t volData
 #ifdef ESS
     // 3D DDA initialization
     int3 bricksRes = get_image_dim(volBrickData).xyz;
+    // FIXME: correct if brick res is odd
+//    if ((bricksRes.x & 1) != 0) bricksRes.x -= 1;
+//    if ((bricksRes.y & 1) != 0) bricksRes.y -= 1;
+//    if ((bricksRes.z & 1) != 0) bricksRes.z -= 1;
+
     float3 brickLen = (float3)(1.f) / convert_float3(bricksRes);
     float3 invRay = 1.f/rayDir;
     int3 step = convert_int3(sign(rayDir));
@@ -543,8 +564,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
         float alphaMax = read_imagef(tffData, linearSmp, minMaxDensity.y).w;
         if (alphaMax < 1e-6f)
         {
-            uint prefixMin = read_imageui(tffPrefix, nearestSmp, minMaxDensity.x).x;
-            uint prefixMax = read_imageui(tffPrefix, nearestSmp, minMaxDensity.y).x;
+            uint prefixMin = read_imageui(tffPrefix, linearSmp, minMaxDensity.x).x;
+            uint prefixMax = read_imageui(tffPrefix, linearSmp, minMaxDensity.y).x;
             if (prefixMin == prefixMax)
             {
                 t = t_exit;
@@ -569,9 +590,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
             {
                 density = useLinear ? read_imagef(volData,  linearSmp, (float4)(pos, 1.f)).x :
                                       read_imagef(volData, nearestSmp, (float4)(pos, 1.f)).x;
-//                density = clamp(density, 0.f, 1.f);
                 tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
-
                 if (tfColor.w > 0.1f && illumType)
                 {
                     if (illumType == 1)         // central diff
@@ -581,12 +600,17 @@ __kernel void volumeRender(  __read_only image3d_t volData
                     else if (illumType == 3)    // sobel filter
                         gradient = -gradientSobel(volData, (float4)(pos, 1.f));
 
-                    tfColor.xyz = illumination(volData, (float4)(pos, 1.f), tfColor.xyz, -rayDir,
-                                               gradient.xyz);
+                    if (illumType == 5)
+                    {
+                        gradient = -gradientCentralDiff(volData, (float4)(pos, 1.f));
+                        tfColor.xyz = celShading(tfColor.xyz, -rayDir, gradient.xyz);
+                    }
+                    else
+                        tfColor.xyz = illumination((float4)(pos, 1.f), tfColor.xyz, -rayDir, gradient.xyz);
                 }
                 if (tfColor.w > 0.1f && contours) // edge enhancement
                 {
-                    if (!illumType)
+                    if (!illumType) // no illumination
                         gradient = -gradientCentralDiff(volData, (float4)(pos, 1.f));
                     tfColor.xyz *= fabs(dot(rayDir, gradient.xyz));
                 }
