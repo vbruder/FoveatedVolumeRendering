@@ -10,6 +10,7 @@ project(${PROJECT} VERSION 1.0 DESCRIPTION "Volume raycaster based on OpenCL" LA
 
 # require c++14
 set(CMAKE_CXX_STANDARD 14)
+add_compile_definitions(NOMINMAX)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin")
 ## TODO: set install target
@@ -55,11 +56,11 @@ IF(MSVC)
     # - qt uses (e.g.) "msvc2013"
     # - cmake uses (e.g.) "1800"
     # - see also https://cmake.org/cmake/help/v3.0/variable/MSVC_VERSION.html
-    if(${MSVC_VERSION} == 1800)
+    if(${MSVC_VERSION} VERSION_EQUAL "1800")
         SET(QT_MSVC 2013)
-    elseif(${MSVC_VERSION} == 1900)
+    elseif(${MSVC_VERSION} VERSION_EQUAL "1900")
         SET(QT_MSVC 2015)
-    elseif(${MSVC_VERSION} >= 1910)
+    elseif(${MSVC_VERSION} VERSION_GREATER "1900")
         SET(QT_MSVC 2017)
     endif()
 

@@ -220,9 +220,17 @@ void VolumeRenderWidget::initVolumeRenderer(bool useGL, bool useCPU)
     }
     catch (std::runtime_error e)
     {
-        qCritical() << e.what() << "\nSwitching to CPU fallback mode.";
         _useGL = false;
-        _volumerender.initialize(false, true);
+		try
+		{
+			qCritical() << e.what() << "\nSDiaabling OpenGL context sharing.";
+			_volumerender.initialize(_useGL, false);
+		}
+		catch (std::runtime_error e)
+		{
+			qCritical() << e.what() << "\nSwitching to CPU rendering mode.";
+			_volumerender.initialize(_useGL, true);
+		}
     }
     catch (...)
     {
