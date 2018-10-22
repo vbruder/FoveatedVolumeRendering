@@ -55,9 +55,9 @@ public:
 
     void setVolumeData(const QString &fileName);
 
-    bool hasData();
+    bool hasData() const;
 
-    const QVector4D getVolumeResolution();
+    const QVector4D getVolumeResolution() const;
 
     void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
 
@@ -71,10 +71,10 @@ public:
 
     void keyReleaseEvent(QKeyEvent *event) Q_DECL_OVERRIDE;
 
-    void updateView(float dx = 0, float dy = 0);
+    void updateView(const float dx = 0, const float dy = 0);
 
     bool getLoadingFinished() const;
-    void setLoadingFinished(bool loadingFinished);
+    void setLoadingFinished(const bool loadingFinished);
 
     QVector3D getCamTranslation() const;
     void setCamTranslation(const QVector3D &translation);
@@ -94,12 +94,12 @@ public slots:
 
 #undef Bool
     void setTffInterpolation(const QString method);
-    void setCamOrtho(bool camOrtho);
-    void setContRendering(bool setContRendering);
-    void setIllumination(int illum);
-    void setLinearInterpolation(bool linear);
-    void setContours(bool contours);
-    void setAerial(bool aerial);
+    void setCamOrtho(const bool camOrtho);
+    void setContRendering(const bool setContRendering);
+    void setIllumination(const int illum);
+    void setLinearInterpolation(const bool linear);
+    void setContours(const bool contours);
+    void setAerial(const bool aerial);
     /**
      * @brief Set image order empty space skipping.
      * @param useEss
@@ -138,7 +138,7 @@ protected:
     // Qt specific QOpenGLWidget methods
     void initializeGL() Q_DECL_OVERRIDE;
     void paintGL() Q_DECL_OVERRIDE;
-    void resizeGL(int w, int h) Q_DECL_OVERRIDE;
+    void resizeGL(const int w, const int h) Q_DECL_OVERRIDE;
 
 private:
     void paintOrientationAxis(QPainter &p);
@@ -150,11 +150,11 @@ private:
      * @param useGL use OpenGL context sharing
      * @param useCPU use CPU as OpenCL device for rendering
      */
-    void initVolumeRenderer(bool useGL = true, bool useCPU = false);
-    void generateOutputTextures(int width, int height);
-    void recordViewConfig();
+    void initVolumeRenderer(bool useGL = true, const bool useCPU = false);
+    void generateOutputTextures(const int width, const int height);
+    void recordViewConfig() const;
 
-    // -------Members--------
+    // -------Member variables--------
     //
     // OpenGL
     QOpenGLVertexArrayObject _screenQuadVao;
