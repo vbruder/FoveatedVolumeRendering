@@ -266,12 +266,12 @@ void DatRawReader::read_raw(const std::string raw_file_name)
     {
         // get length of file:
         is.seekg(0, is.end);
-#ifdef _WIN32
-        // HACK: to support files bigger than 2048 MB on windows
-        _prop.raw_file_size = *(__int64 *)(((char *)&(is.tellg())) + 8);
-#else
+//#ifdef _WIN32
+//        // HACK: to support files bigger than 2048 MB on windows
+//        _prop.raw_file_size = *(__int64 *)(((char *)&(is.tellg())) + 8);
+//#else
         _prop.raw_file_size = static_cast<size_t>(is.tellg());
-#endif
+//#endif
         is.seekg( 0, is.beg );
 
         std::vector<char> raw_timestep;

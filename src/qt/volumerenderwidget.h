@@ -40,6 +40,7 @@
 #include <QPropertyAnimation>
 #include <qopenglfunctions_4_3_core.h>
 #include <QPainter>
+#include <QElapsedTimer>
 
 #include "src/core/volumerendercl.h"
 
@@ -118,6 +119,7 @@ public slots:
     void saveFrame();
     void toggleVideoRecording();
     void toggleViewRecording();
+	void toggleInteractionLogging();
     void setTimeStep(int timestep);
     void setAmbientOcclusion(bool ao);
 
@@ -151,8 +153,25 @@ private:
      * @param useCPU use CPU as OpenCL device for rendering
      */
     void initVolumeRenderer(bool useGL = true, const bool useCPU = false);
+
+	/**
+	 * @brief create the OpenGL output texture to display on the screen quad.
+	 * @param width Width of the texture in pixels.
+	 * @param height Height of the texture in pixels.
+	 */
     void generateOutputTextures(const int width, const int height);
+
+	/**
+	 * @brief Log camera configurations rotation and zoom) to two files selected by the user.
+	 */
     void recordViewConfig() const;
+
+	/**
+	 * @brief Log a user interaction to file.
+	 * @param str String containing the user interaction in the fowllowing format:
+	 *	          time stamp, interaction type, interaction parameters
+	 */
+	void logInteraction(const QString &str) const;
 
     // -------Member variables--------
     //
@@ -191,8 +210,11 @@ private:
     double _imgSamplingRate;       // image oversampling rate
     bool _useGL;
     bool _showOverlay;
-    bool _recordView;
-    QString _recordViewFile;
+    bool _logView;
+	bool _logInteraction;
+    QString _viewLogFile;
+	QString _interactionLogFile;
     bool _contRendering;
     QGradientStops _tffStops;
+	QElapsedTimer _timer;
 };

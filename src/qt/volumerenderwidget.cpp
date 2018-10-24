@@ -78,7 +78,8 @@ VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
     , _imgSamplingRate(1)
     , _useGL(true)
     , _showOverlay(true)
-    , _recordView(false)
+    , _logView(false)
+	, _logInteraction(false)
     , _contRendering(false)
 {
     this->setMouseTracking(true);
@@ -268,20 +269,67 @@ void VolumeRenderWidget::toggleVideoRecording()
  */
 void VolumeRenderWidget::toggleViewRecording()
 {
-    qInfo() << (_recordView ? "Stopped view config recording." : "Started view config recording.");
+    qInfo() << (_logView ? "Stopped view config recording." : "Started view config recording.");
 
-    _recordView = !_recordView;
+    _logView = !_logView;
 
-    if (_recordView)
+    if (_logView)
     {
         QFileDialog dialog;
-        _recordViewFile= dialog.getSaveFileName(this, tr("Save camera path"),
+        _viewLogFile= dialog.getSaveFileName(this, tr("Save camera path"),
                                                 QDir::currentPath(), tr("All files"));
-        if (_recordViewFile.isEmpty())
+        if (_viewLogFile.isEmpty())
             return;
     }
 
     updateView();
+}
+
+
+void VolumeRenderWidget::toggleInteractionLogging()
+{
+	qInfo() << (_logInteraction ? "Stopped view config recording." : "Started view config recording.");
+
+	_logInteraction = !_logInteraction;
+
+	if (_logInteraction)
+	{
+		QFileDialog dialog;
+		_interactionLogFile = dialog.getSaveFileName(this, tr("Save camera path"),
+			QDir::currentPath(), tr("All files"));
+		if (_interactionLogFile.isEmpty())
+			return;
+		_timer.restart();
+
+		// log initial configuration
+		QString s;
+		s += QString::number(_timer.elapsed());
+		s += "; tffInterpolation; ";
+		s += _tffInterpol == QEasingCurve::InOutQuad ? "quad" : "linear";
+		s += "\n";
+		// tff
+		s += QString::number(_timer.elapsed());
+		s += "; transferFunction; ";
+		const std::vector<unsigned char> tff = getRawTransferFunction(_tffStops);
+		foreach(unsigned char c, tff)
+		{
+			s += QString::number(static_cast<int>(c)) + " ";
+		}
+		s += "\n";
+		// camera
+		s += QString::number(_timer.elapsed());
+		s += "; camera; ";
+		s += QString::number(_rotQuat.toVector4D().w()) + " ";
+		s += QString::number(_rotQuat.x()) + " " + QString::number(_rotQuat.y()) + " ";
+		s += QString::number(_rotQuat.z()) + ", ";
+		s += QString::number(_translation.x()) + " " + QString::number(_translation.y()) + " ";
+		s += QString::number(_translation.z()) + "\n";
+		// timestep
+		s += QString::number(_timer.elapsed());
+		s += "; timestep; ";
+		s += QString::number(_timestep) + "\n";
+		logInteraction(s);
+	}
 }
 
 
@@ -293,6 +341,16 @@ void VolumeRenderWidget::setTimeStep(int timestep)
 {
     _timestep = timestep;
     update();
+
+	if (_logInteraction)
+	{
+		QString s;
+		s += QString::number(_timer.elapsed());
+		s += "; timestep; ";
+		s += QString::number(_timestep) + "\n";
+
+		logInteraction(s);
+	}
 }
 
 /**
@@ -704,6 +762,17 @@ void VolumeRenderWidget::setTffInterpolation(const QString method)
         _tffInterpol = QEasingCurve::InOutQuad;
     else if (method.contains("Linear"))
         _tffInterpol = QEasingCurve::Linear;
+
+	if (_logInteraction)
+	{
+		QString s;
+		s += QString::number(_timer.elapsed());
+		s += "; tffInterpolation; ";
+		s += _tffInterpol == QEasingCurve::InOutQuad ? "quad" : "linear";
+		s += "\n";
+
+		logInteraction(s);
+	}
 }
 
 /**
@@ -768,6 +837,19 @@ void VolumeRenderWidget::updateTransferFunction(QGradientStops stops)
     }
     update();
     _tffStops = stops;
+
+	if (_logInteraction)
+	{
+		QString s;
+		s += QString::number(_timer.elapsed());
+		s += "; transferFunction; ";
+		const std::vector<unsigned char> tff = getRawTransferFunction(stops);
+		foreach (unsigned char c, tff)
+		{
+			s += QString::number(static_cast<int>(c)) + " ";
+		}
+		s += "\n";
+	}
 }
 
 std::vector<unsigned char> VolumeRenderWidget::getRawTransferFunction(QGradientStops stops) const
@@ -834,13 +916,13 @@ void VolumeRenderWidget::mouseReleaseEvent(QMouseEvent *event)
  */
 void VolumeRenderWidget::recordViewConfig() const
 {
-    QFile saveQuat(_recordViewFile + "_quat.txt");
-    QFile saveTrans(_recordViewFile + "_trans.txt");
+    QFile saveQuat(_viewLogFile + "_quat.txt");
+    QFile saveTrans(_viewLogFile + "_trans.txt");
     if (!saveQuat.open(QFile::WriteOnly | QFile::Append)
             || !saveTrans.open(QFile::WriteOnly | QFile::Append))
     {
         qWarning() << "Couldn't open file for saving the camera configurations: "
-                   << _recordViewFile;
+                   << _viewLogFile;
         return;
     }
 
@@ -851,6 +933,22 @@ void VolumeRenderWidget::recordViewConfig() const
     transStream << _translation.x() << " " << _translation.y() << " " << _translation.z() << "; ";
 }
 
+
+/**
+ *
+ */
+void VolumeRenderWidget::logInteraction(const QString &str) const
+{
+	QFile f(_interactionLogFile);
+	if (!f.open(QFile::WriteOnly | QFile::Append))
+	{
+		qWarning() << "Couldn't open file for saving the camera configurations: "
+				   << _interactionLogFile;
+		return;
+	}
+	QTextStream fileStream(&f);
+	fileStream << str;
+}
 
 /**
  * @brief VolumeRenderWidget::resetCam
@@ -899,8 +997,22 @@ void VolumeRenderWidget::updateView(const float dx, const float dy)
     }
     update();
 
-    if (_recordView)
+    if (_logView)
         recordViewConfig();
+	if (_logInteraction)
+	{
+		QString s;
+		s += QString::number(_timer.elapsed());
+		s += "; camera; ";
+		s += QString::number(_rotQuat.toVector4D().w()) + " ";
+		s += QString::number(_rotQuat.x()) + " " + QString::number(_rotQuat.y()) + " ";
+		s += QString::number(_rotQuat.z()) + ", ";
+
+		s += QString::number(_translation.x()) + " " + QString::number(_translation.y()) + " ";
+		s += QString::number(_translation.z()) + "\n";
+
+		logInteraction(s);
+	}
 }
 
 

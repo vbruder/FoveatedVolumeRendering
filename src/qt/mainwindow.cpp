@@ -79,6 +79,8 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->volumeRenderWidget, &VolumeRenderWidget::toggleVideoRecording);
     connect(ui->actionRecordCamera, &QAction::triggered,
             ui->volumeRenderWidget, &VolumeRenderWidget::toggleViewRecording);
+	connect(ui->actionLogInteraction, &QAction::triggered,
+			ui->volumeRenderWidget, &VolumeRenderWidget::toggleInteractionLogging);
     connect(ui->actionGenerateLowResVo, &QAction::triggered,
             ui->volumeRenderWidget, &VolumeRenderWidget::generateLowResVolume);
     connect(ui->actionResetCam, &QAction::triggered,
@@ -736,7 +738,7 @@ void MainWindow::dropEvent(QDropEvent *ev)
         if (finf.suffix() == "dat")
         {
             // extract path and remove leading '/'
-            QString fileName = url.path(); //.remove( 0, 1 );
+            QString fileName = url.path().remove( 0, 1 );
             qDebug() << "Loading volume data file" << fileName;
             readVolumeFile(fileName);
         }
