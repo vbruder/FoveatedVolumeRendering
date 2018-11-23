@@ -81,6 +81,7 @@ VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
     , _logView(false)
 	, _logInteraction(false)
     , _contRendering(false)
+	, _renderingMethod(Standard)
 {
     this->setMouseTracking(true);
 }
@@ -377,7 +378,7 @@ void VolumeRenderWidget::paintGL()
    
 	switch (_renderingMethod) {
 	case LBG_Sampling:
-		paintGL_LBG_Sampling();
+		paintGL_LBG_sampling();
 		break;
 	default:
 		paintGL_standard();
@@ -489,7 +490,7 @@ void VolumeRenderWidget::paintGL_standard() {
 	p.end();
 }
 
-void VolumeRenderWidget::paintGL_LBG_Sampling() {
+void VolumeRenderWidget::paintGL_LBG_sampling() {
 
 }
 

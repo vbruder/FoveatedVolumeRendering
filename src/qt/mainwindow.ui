@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1298</width>
-    <height>1081</height>
+    <width>1752</width>
+    <height>1179</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,8 +25,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1298</width>
-     <height>26</height>
+     <width>1752</width>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -251,21 +251,17 @@
         <string>Rendering</string>
        </property>
        <layout class="QGridLayout" name="gridLayout">
-        <item row="9" column="0" colspan="2">
-         <widget class="QCheckBox" name="chbOrtho">
-          <property name="text">
-           <string>Orthographic</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0" colspan="2">
+        <property name="verticalSpacing">
+         <number>4</number>
+        </property>
+        <item row="5" column="0" colspan="2">
          <widget class="QLabel" name="label_5">
           <property name="text">
            <string>Shading</string>
           </property>
          </widget>
         </item>
-        <item row="4" column="0" colspan="5">
+        <item row="6" column="0" colspan="5">
          <widget class="QComboBox" name="cbIllum">
           <property name="currentIndex">
            <number>1</number>
@@ -302,14 +298,7 @@
           </item>
          </widget>
         </item>
-        <item row="0" column="0" colspan="5">
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>Sampling rate</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
+        <item row="3" column="1">
          <widget class="QDoubleSpinBox" name="dsbImgSampling">
           <property name="minimum">
            <double>0.010000000000000</double>
@@ -325,22 +314,44 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="2" colspan="3">
-         <widget class="QPushButton" name="pbBgColor">
-          <property name="autoFillBackground">
-           <bool>false</bool>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">QPushButton:default {
-   background: yellow;
-}</string>
-          </property>
+        <item row="8" column="0" colspan="2">
+         <widget class="QCheckBox" name="chbLinear">
           <property name="text">
-           <string>Background color</string>
+           <string>Interpolation</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
-        <item row="1" column="3" colspan="2">
+        <item row="11" column="0" colspan="2">
+         <widget class="QCheckBox" name="chbOrtho">
+          <property name="text">
+           <string>Orthographic</string>
+          </property>
+         </widget>
+        </item>
+        <item row="13" column="0" colspan="2">
+         <widget class="QCheckBox" name="chbObjectESS">
+          <property name="text">
+           <string>Obejct ESS</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="14" column="0" colspan="3">
+         <widget class="QCheckBox" name="chbBox">
+          <property name="text">
+           <string>Show skipped</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="3" colspan="2">
          <widget class="QDoubleSpinBox" name="dsbSamplingRate">
           <property name="decimals">
            <number>1</number>
@@ -359,17 +370,7 @@
           </property>
          </widget>
         </item>
-        <item row="6" column="0" colspan="2">
-         <widget class="QCheckBox" name="chbLinear">
-          <property name="text">
-           <string>Interpolation</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="0" colspan="2">
+        <item row="10" column="0" colspan="2">
          <widget class="QCheckBox" name="chbContours">
           <property name="text">
            <string>Contours</string>
@@ -379,48 +380,43 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="2">
+        <item row="3" column="2">
          <widget class="QLabel" name="label_4">
           <property name="text">
            <string>Ray</string>
           </property>
          </widget>
         </item>
-        <item row="8" column="2" colspan="3">
+        <item row="10" column="2" colspan="3">
          <widget class="QCheckBox" name="chbAerial">
           <property name="text">
            <string>Aerial perspective</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
+        <item row="3" column="0">
          <widget class="QLabel" name="label_2">
           <property name="text">
            <string>Image</string>
           </property>
          </widget>
         </item>
-        <item row="11" column="0" colspan="2">
-         <widget class="QCheckBox" name="chbObjectESS">
-          <property name="text">
-           <string>Obejct ESS</string>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="12" column="0" colspan="3">
-         <widget class="QCheckBox" name="chbBox">
-          <property name="text">
-           <string>Show skipped</string>
-          </property>
-          <property name="checked">
+        <item row="5" column="2" colspan="3">
+         <widget class="QPushButton" name="pbBgColor">
+          <property name="autoFillBackground">
            <bool>false</bool>
           </property>
+          <property name="styleSheet">
+           <string notr="true">QPushButton:default {
+   background: yellow;
+}</string>
+          </property>
+          <property name="text">
+           <string>Background color</string>
+          </property>
          </widget>
         </item>
-        <item row="6" column="2" colspan="3">
+        <item row="8" column="2" colspan="3">
          <widget class="QCheckBox" name="chbAmbientOcclusion">
           <property name="enabled">
            <bool>true</bool>
@@ -433,17 +429,45 @@
           </property>
          </widget>
         </item>
-        <item row="11" column="2" colspan="2">
+        <item row="11" column="2" colspan="3">
+         <widget class="QCheckBox" name="chbContRendering">
+          <property name="text">
+           <string>Continued rendering</string>
+          </property>
+         </widget>
+        </item>
+        <item row="13" column="2" colspan="2">
          <widget class="QCheckBox" name="chbImageESS">
           <property name="text">
            <string>Image ESS</string>
           </property>
          </widget>
         </item>
-        <item row="9" column="2" colspan="3">
-         <widget class="QCheckBox" name="chbContRendering">
+        <item row="2" column="0">
+         <widget class="QLabel" name="label">
           <property name="text">
-           <string>Continued rendering</string>
+           <string>Sampling rate</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QComboBox" name="setRdMt">
+          <item>
+           <property name="text">
+            <string>Standard</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>LBG-Sampling</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="1" column="2" colspan="3">
+         <widget class="QCheckBox" name="chbEyetracking">
+          <property name="text">
+           <string>Use Eyetracking</string>
           </property>
          </widget>
         </item>

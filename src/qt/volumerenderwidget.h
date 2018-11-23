@@ -84,6 +84,7 @@ public:
     void setCamRotation(const QQuaternion &rotQuat);
 
 	enum RenderingMethod { Standard, LBG_Sampling };
+	void setRenderingMethod(int rm);	// sets the current rending method and calls update() to update the screen
 
 public slots:
     void cleanup();
@@ -132,7 +133,6 @@ public slots:
     void showSelectOpenCL();
     void reloadKernels();
 
-	void setRenderingMethod(int rm);	// sets the current rending method and calls update() to update the screen
 
 signals:
     void fpsChanged(double);
@@ -152,7 +152,7 @@ private:
 
 	// Different methods called from within the paintGL()-method
 	void paintGL_standard();
-	void paintGL_LBG_Sampling();
+	void paintGL_LBG_sampling();
 
     /**
      * @brief Initialize the OpenCL volume renderer.
