@@ -83,6 +83,7 @@ public:
     QQuaternion getCamRotation() const;
     void setCamRotation(const QQuaternion &rotQuat);
 
+	enum RenderingMethod { Standard, LBG_Sampling };
 
 public slots:
     void cleanup();
@@ -131,6 +132,8 @@ public slots:
     void showSelectOpenCL();
     void reloadKernels();
 
+	void setRenderingMethod(int rm);	// sets the current rending method and calls update() to update the screen
+
 signals:
     void fpsChanged(double);
     void frameSizeChanged(QSize);
@@ -146,6 +149,10 @@ private:
     void paintOrientationAxis(QPainter &p);
     void paintFps(QPainter &p, const double fps, const double lastTime);
     double getFps();
+
+	// Different methods called from within the paintGL()-method
+	void paintGL_standard();
+	void paintGL_LBG_Sampling();
 
     /**
      * @brief Initialize the OpenCL volume renderer.
@@ -217,4 +224,5 @@ private:
     bool _contRendering;
     QGradientStops _tffStops;
 	QElapsedTimer _timer;
+	RenderingMethod _renderingMethod;	// selects the rendering method which will be called within paintGL()
 };

@@ -363,113 +363,135 @@ void VolumeRenderWidget::setImageSamplingRate(const double samplingRate)
     this->resizeGL(this->width(), this->height());
 }
 
+void VolumeRenderWidget::setRenderingMethod(int rm)
+{
+	this->_renderingMethod = static_cast<VolumeRenderWidget::RenderingMethod>(rm);
+	update();
+}
+
 /**
  * @brief VolumeRenderWidget::paintGL
  */
 void VolumeRenderWidget::paintGL()
 {
-    double fps = 0.0;
-    if (this->_loadingFinished && _volumerender.hasData() && !_noUpdate)
-    {
-        // OpenCL raycast
-        try
-        {
-            if (_useGL)
-                _volumerender.runRaycast(floor(this->size().width() * _imgSamplingRate),
-                                         floor(this->size().height()* _imgSamplingRate), _timestep);
-            else
-            {
-                std::vector<float> d;
-                _volumerender.runRaycastNoGL(floor(this->size().width() * _imgSamplingRate),
-                                             floor(this->size().height()* _imgSamplingRate),
-                                             _timestep, d);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F,
-                             floor(this->size().width() * _imgSamplingRate),
-                             floor(this->size().height()* _imgSamplingRate),
-                             0, GL_RGBA, GL_FLOAT,
-                             d.data());
-                glGenerateMipmap(GL_TEXTURE_2D);
-                _volumerender.updateOutputImg(static_cast<size_t>(width()),
-                                              static_cast<size_t>(height()), _outTexId);
-            }
-        }
-        catch (std::runtime_error e)
-        {
-            qCritical() << e.what();
-        }
-        fps = getFps();
-    }
-
-    QPainter p(this);
-    p.beginNativePainting();
-    {
-        // render the ray casting output
-        // clear to white to avoid getting colored borders outside the quad
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-        // draw screen quad
-        //
-        _screenQuadVao.bind();
-        _quadVbo.bind();
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-
-        // render screen quad
-        //
-        _spScreenQuad.bind();
-        _spScreenQuad.setUniformValue( _spScreenQuad.uniformLocation( "projMatrix" ),
-                                          _screenQuadProjMX );
-        _spScreenQuad.setUniformValue( _spScreenQuad.uniformLocation( "mvMatrix" ),
-                                          _viewMX * _modelMX );
-
-        _spScreenQuad.setUniformValue(_spScreenQuad.uniformLocation("outTex"), GL_TEXTURE0);
-        glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
-        _screenQuadVao.release();
-        _quadVbo.release();
-        _spScreenQuad.release();
-
-        glDisable(GL_CULL_FACE);
-        glDisable(GL_DEPTH_TEST);
-
-        if (_volumerender.hasData() && _writeImage)
-        {
-            QImage img = this->grabFramebuffer();
-            QString number = QString("%1").arg(_imgCount++, 6, 10, QChar('0'));
-            if (!_recordVideo)
-            {
-                QLoggingCategory category("screenshot");
-                qCInfo(category, "Writing current frame img/frame_%s.png",
-                       number.toStdString().c_str());
-                _writeImage = false;
-            }
-            if (!QDir("img").exists())
-                QDir().mkdir("img");
-            img.save("img/frame_" + number + "_"
-                     + QString::number(_volumerender.getLastExecTime()) + ".png");
-        }
-    }
-    p.endNativePainting();
-
-    // render overlays
-    if (_showOverlay)
-    {
-        paintFps(p, fps, _volumerender.getLastExecTime());
-        paintOrientationAxis(p);
-    }
-
-    // recover opengl texture
-    p.beginNativePainting();
-    {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, _outTexId);
-    }
-    p.endNativePainting();
-    p.end();
+   
+	switch (_renderingMethod) {
+	case LBG_Sampling:
+		paintGL_LBG_Sampling();
+		break;
+	default:
+		paintGL_standard();
+		break;
+	}
 
     if (_contRendering)
         update();
 }
 
+
+void VolumeRenderWidget::paintGL_standard() {
+	double fps = 0.0;
+	if (this->_loadingFinished && _volumerender.hasData() && !_noUpdate)
+	{
+		// OpenCL raycast
+		try
+		{
+			if (_useGL)
+				_volumerender.runRaycast(floor(this->size().width() * _imgSamplingRate),
+					floor(this->size().height()* _imgSamplingRate), _timestep);
+			else
+			{
+				std::vector<float> d;
+				_volumerender.runRaycastNoGL(floor(this->size().width() * _imgSamplingRate),
+					floor(this->size().height()* _imgSamplingRate),
+					_timestep, d);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F,
+					floor(this->size().width() * _imgSamplingRate),
+					floor(this->size().height()* _imgSamplingRate),
+					0, GL_RGBA, GL_FLOAT,
+					d.data());
+				glGenerateMipmap(GL_TEXTURE_2D);
+				_volumerender.updateOutputImg(static_cast<size_t>(width()),
+					static_cast<size_t>(height()), _outTexId);
+			}
+		}
+		catch (std::runtime_error e)
+		{
+			qCritical() << e.what();
+		}
+		fps = getFps();
+	}
+
+	QPainter p(this);
+	p.beginNativePainting();
+	{
+		// render the ray casting output
+		// clear to white to avoid getting colored borders outside the quad
+		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// draw screen quad
+		//
+		_screenQuadVao.bind();
+		_quadVbo.bind();
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+		// render screen quad
+		//
+		_spScreenQuad.bind();
+		_spScreenQuad.setUniformValue(_spScreenQuad.uniformLocation("projMatrix"),
+			_screenQuadProjMX);
+		_spScreenQuad.setUniformValue(_spScreenQuad.uniformLocation("mvMatrix"),
+			_viewMX * _modelMX);
+
+		_spScreenQuad.setUniformValue(_spScreenQuad.uniformLocation("outTex"), GL_TEXTURE0);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		_screenQuadVao.release();
+		_quadVbo.release();
+		_spScreenQuad.release();
+
+		glDisable(GL_CULL_FACE);
+		glDisable(GL_DEPTH_TEST);
+
+		if (_volumerender.hasData() && _writeImage)
+		{
+			QImage img = this->grabFramebuffer();
+			QString number = QString("%1").arg(_imgCount++, 6, 10, QChar('0'));
+			if (!_recordVideo)
+			{
+				QLoggingCategory category("screenshot");
+				qCInfo(category, "Writing current frame img/frame_%s.png",
+					number.toStdString().c_str());
+				_writeImage = false;
+			}
+			if (!QDir("img").exists())
+				QDir().mkdir("img");
+			img.save("img/frame_" + number + "_"
+				+ QString::number(_volumerender.getLastExecTime()) + ".png");
+		}
+	}
+	p.endNativePainting();
+
+	// render overlays
+	if (_showOverlay)
+	{
+		paintFps(p, fps, _volumerender.getLastExecTime());
+		paintOrientationAxis(p);
+	}
+
+	// recover opengl texture
+	p.beginNativePainting();
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, _outTexId);
+	}
+	p.endNativePainting();
+	p.end();
+}
+
+void VolumeRenderWidget::paintGL_LBG_Sampling() {
+
+}
 
 /**
  * @brief VolumeRenderWidget::resizeGL
