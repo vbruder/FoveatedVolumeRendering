@@ -116,6 +116,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->cbIllum, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
             ui->volumeRenderWidget, &VolumeRenderWidget::setIllumination);
     connect(ui->pbBgColor, &QPushButton::released, this, &MainWindow::chooseBackgroundColor);
+	connect(ui->setRdMt, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+		ui->volumeRenderWidget, &VolumeRenderWidget::setRenderingMethod);
     // check boxes
     connect(ui->chbLinear, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setLinearInterpolation);
@@ -147,7 +149,8 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->transferFunctionEditor, SLOT(setInterpolation(QString)));
 //    connect(ui->cbInterpolation, qOverload<const QString &>(&QComboBox::currentIndexChanged),
 //            ui->transferFunctionEditor, &TransferFunctionEditor::setInterpolation);
-
+	connect(ui->chbEyetracking, &QCheckBox::toggled,
+		ui->volumeRenderWidget, &VolumeRenderWidget::setEyetracking);
     connect(ui->transferFunctionEditor->getEditor(), &TransferFunctionEditor::selectedPointChanged,
             ui->colorWheel, &colorwidgets::ColorWheel::setColor);
     connect(ui->colorWheel, &colorwidgets::ColorWheel::colorChanged,

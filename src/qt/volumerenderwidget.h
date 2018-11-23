@@ -41,8 +41,14 @@
 #include <qopenglfunctions_4_3_core.h>
 #include <QPainter>
 #include <QElapsedTimer>
+#include <qcheckbox.h>
 
 #include "src/core/volumerendercl.h"
+
+#include <inc/TOBIIRESEARCH/tobii_research.h>
+#include <inc/TOBIIRESEARCH/tobii_research_eyetracker.h>
+#include <inc/TOBIIRESEARCH/tobii_research_streams.h>
+#include <inc/TOBIIRESEARCH/tobii_research_calibration.h>
 
 class VolumeRenderWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_3_Core
 {
@@ -85,6 +91,11 @@ public:
 
 	enum RenderingMethod { Standard, LBG_Sampling };
 	void setRenderingMethod(int rm);	// sets the current rending method and calls update() to update the screen
+	/*
+	Enables or disables eyetracking and calls update() to update the screen.
+	Does not change the value of _contRendering.
+	*/
+	void setEyetracking(bool eyetracking);
 
 public slots:
     void cleanup();
@@ -154,6 +165,10 @@ private:
 	void paintGL_standard();
 	void paintGL_LBG_sampling();
 
+	// Eyetracking
+	bool check_eyetracker_availability();	// Checks if the currently selected eyetracker (_eyetracker) exists
+	static void gaze_data_callback(TobiiResearchGazeData *gaze_data, void *user_data);
+
     /**
      * @brief Initialize the OpenCL volume renderer.
      * @param useGL use OpenGL context sharing
@@ -203,11 +218,16 @@ private:
     QEasingCurve _tffInterpol;
     int _timestep;
 
+	// Eyetracking
+	TobiiResearchEyeTracker* _eyetracker;	// points to the currently selected eyetracker
+	TobiiResearchGazeData _gaze_data;	// holds the latest collected data from the eyetracking callback
+
     // global rendering flags
     QPoint _lastLocalCursorPos;
     QQuaternion _rotQuat;
     QVector3D _translation;
 
+	bool _useEyetracking;
     bool _noUpdate;
     bool _loadingFinished;
     bool _writeImage;

@@ -370,6 +370,68 @@ void VolumeRenderWidget::setRenderingMethod(int rm)
 	update();
 }
 
+void VolumeRenderWidget::setEyetracking(bool eyetracking)
+{
+	if (check_eyetracker_availability()) {
+		if (eyetracking) {
+			// start using eyetracking: subscribe to data
+			TobiiResearchStatus status = tobii_research_subscribe_to_gaze_data(_eyetracker, &VolumeRenderWidget::gaze_data_callback, &_gaze_data);
+			if (status != TOBII_RESEARCH_STATUS_OK) {
+				qCritical() << "Something went wrong when trying to subscribe to eyetracker data.\n";
+			}
+		}
+		else {
+			// stop using eyetracking: unsubscribe to data
+			TobiiResearchStatus status = tobii_research_unsubscribe_from_gaze_data(_eyetracker, &VolumeRenderWidget::gaze_data_callback);
+			if (status != TOBII_RESEARCH_STATUS_OK) {
+				qCritical() << "Something went wrong when trying to unsubscribe to eyetracker data.\n";
+			}
+
+		}
+		_useEyetracking = eyetracking;
+	}
+	else {
+		_useEyetracking = false;
+		QWidget* ppW = parentWidget()->parentWidget();
+		QCheckBox* eyeCB = ppW->findChild<QCheckBox*>("chbEyetracking");
+		eyeCB->setChecked(false);
+	}
+	update();
+	// std::cout << "use eyetracking: " << _useEyetracking << std::endl;
+}
+
+bool VolumeRenderWidget::check_eyetracker_availability()
+{
+	if (_eyetracker == nullptr) {
+		return false;
+	}
+	else {
+		TobiiResearchEyeTrackers* eyetrackers = NULL;
+
+		TobiiResearchStatus result;
+		result = tobii_research_find_all_eyetrackers(&eyetrackers);
+		if (result != TOBII_RESEARCH_STATUS_OK) {
+			qCritical() << "Finding trackers to check status failed. Error: " << result << "\n";
+			return false;
+		}
+
+		bool eyetracker_exists = false;
+		for (int i = 0; i < eyetrackers->count; i++) {
+			if (_eyetracker == eyetrackers->eyetrackers[i]) {
+				eyetracker_exists = true;
+			}
+		}
+		tobii_research_free_eyetrackers(eyetrackers);
+		return eyetracker_exists;
+	}
+
+}
+
+void VolumeRenderWidget::gaze_data_callback(TobiiResearchGazeData * gaze_data, void * user_data)
+{
+	memcpy(user_data, gaze_data, sizeof(*gaze_data));
+}
+
 /**
  * @brief VolumeRenderWidget::paintGL
  */

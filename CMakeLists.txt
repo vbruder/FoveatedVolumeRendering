@@ -141,6 +141,12 @@ if(OPENMP_FOUND)
     target_link_libraries(${PROJECT} PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
+# include tobii research sdk
+find_library(TOBII_LIBRARY NAME "tobii_research" PATHS "${CMAKE_CURRENT_SOURCE_DIR}/lib/")
+target_link_libraries(${PROJECT} PRIVATE ${TOBII_LIBRARY})
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/lib/tobii_research.dll" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Release/tobii_research.dll" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/lib/tobii_research.dll" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/tobii_research.dll" COPYONLY)
+
 # copy runtime files
 IF(MSVC)
 	# copy OpenCL kernel source file to build directory to support start from within VS (compiled @ runtime)
