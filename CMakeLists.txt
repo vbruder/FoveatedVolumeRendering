@@ -42,16 +42,18 @@ IF(MSVC)
     # get root path so we can search for 5.3, 5.4, 5.5, etc
     STRING(REPLACE "/Tools" ";" QT_BIN "${QT_BIN}")
     LIST(GET QT_BIN 0 QT_BIN)
-    FILE(GLOB QT_VERSIONS "${QT_BIN}/5.*")
-    LIST(SORT QT_VERSIONS)
+    #FILE(GLOB QT_VERSIONS "${QT_BIN}/5.*")
+    #LIST(SORT QT_VERSIONS)
 
     # assume the latest version will be last alphabetically
-    LIST(REVERSE QT_VERSIONS)
-    LIST(GET QT_VERSIONS 0 QT_VERSION)
+    #LIST(REVERSE QT_VERSIONS)
+    #LIST(GET QT_VERSIONS 0 QT_VERSION)
 
     # fix any double slashes which seem to be common
-    STRING(REPLACE "//" "/"  QT_VERSION "${QT_VERSION}")
+    #STRING(REPLACE "//" "/"  QT_VERSION "${QT_VERSION}")
 
+	SET(QT_VERSION "C:/Qt/5.11.2")
+	
     # infer the folder from Cmake msvc_version string
     # - qt uses (e.g.) "msvc2013"
     # - cmake uses (e.g.) "1800"
