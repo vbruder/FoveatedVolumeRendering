@@ -1,0 +1,17 @@
+# Basic style
+BasedOnStyle: LLVM
+IndentWidth: 4
+PointerAlignment: Left
+ColumnLimit: 100
+
+AlignOperands: true
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortBlocksOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+BinPackParameters: false
+
+# Comments
+AlwaysBreakTemplateDeclarations: true
+AlignTrailingComments: true
+SpacesBeforeTrailingComments: 1
