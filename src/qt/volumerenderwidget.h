@@ -91,11 +91,15 @@ public:
 
 	enum RenderingMethod { Standard, LBG_Sampling };
 	void setRenderingMethod(int rm);	// sets the current rending method and calls update() to update the screen
+
 	/*
 	Enables or disables eyetracking and calls update() to update the screen.
 	Does not change the value of _contRendering.
 	*/
 	void setEyetracking(bool eyetracking);
+	void showSelectEyetrackingDevice();
+	void actionSelectMonitor();
+	static bool MonitorEnumProc(HMONITOR monitor, HDC hdcMnitor, LPRECT rect, LPARAM param);
 
 public slots:
     void cleanup();
@@ -168,6 +172,11 @@ private:
 	// Eyetracking
 	bool check_eyetracker_availability();	// Checks if the currently selected eyetracker (_eyetracker) exists
 	static void gaze_data_callback(TobiiResearchGazeData *gaze_data, void *user_data);
+
+	// Monitorselection
+	QPoint _monitor_offset;	// The offset which is used for the transformation of the gaze point
+	int _curr_monitor_width;	// The width of the currently selected monitor which is used for the transformation of the gaze point
+	int _curr_monitor_height;	// The height of the currently selected monitor which is used for the transformation of the gaze point
 
     /**
      * @brief Initialize the OpenCL volume renderer.
