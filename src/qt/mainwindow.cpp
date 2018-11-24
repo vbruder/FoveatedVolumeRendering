@@ -118,6 +118,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->pbBgColor, &QPushButton::released, this, &MainWindow::chooseBackgroundColor);
 	connect(ui->setRdMt, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
 		ui->volumeRenderWidget, &VolumeRenderWidget::setRenderingMethod);
+	connect(ui->actionSelectEyetrackingDevice, &QAction::triggered,
+		ui->volumeRenderWidget, &VolumeRenderWidget::showSelectEyetrackingDevice);
+	connect(ui->actionSelectMonitor, &QAction::triggered,
+		ui->volumeRenderWidget, &VolumeRenderWidget::actionSelectMonitor);
     // check boxes
     connect(ui->chbLinear, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setLinearInterpolation);

@@ -437,10 +437,10 @@ void VolumeRenderWidget::showSelectEyetrackingDevice()
 	}
 
 	QStringList platforms;
-	bool ok;
+	bool ok = false;
 	bool only_one = false;
 	QString platform;
-	int eyetracker_index;
+	int eyetracker_index = 0;
 
 	for (std::string &s : eyetracker_device_names)
 		platforms.append(QString::fromStdString(s));
@@ -463,6 +463,10 @@ void VolumeRenderWidget::showSelectEyetrackingDevice()
 	tobii_research_free_eyetrackers(eyetrackers);
 }
 
+/*
+Shows the available monitors in a drop down menu and lets the user select one of them.
+The monitor to be selected should be the monitor on which the current eyetracking device is calibrated to.
+*/
 void VolumeRenderWidget::actionSelectMonitor()
 {
 	DISPLAY_DEVICE dd;
@@ -497,7 +501,7 @@ void VolumeRenderWidget::actionSelectMonitor()
 	for (int i = 0; i < device_names.size(); i++)
 		platforms.append(QString::fromStdString(device_names[i]).append(QString::fromStdString(", ")).append(QString::fromStdString(device_strings[i])));
 
-	bool ok;
+	bool ok = false;
 	bool only_one = false;
 	QString platform;
 	int monitor_index;
@@ -843,7 +847,7 @@ void VolumeRenderWidget::showSelectOpenCL()
     for (std::string &s : names)
         platforms.append(QString::fromStdString(s));
 
-    bool ok;
+    bool ok = false;
     QString platform = QInputDialog::getItem(this, tr("Select platform"),
                                              tr("Select OpenCL platform:"),
                                              platforms, 0, false, &ok);
@@ -1519,7 +1523,7 @@ double VolumeRenderWidget::getFps()
  */
 void VolumeRenderWidget::generateLowResVolume()
 {
-    bool ok;
+    bool ok = false;
     int factor = QInputDialog::getInt(this, tr("Factor"),
                                          tr("Select downsampling factor:"), 2, 2, 64, 1, &ok);
     if (ok)

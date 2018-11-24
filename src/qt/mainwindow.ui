@@ -91,10 +91,18 @@
     </property>
     <addaction name="actionAbout"/>
    </widget>
+   <widget class="QMenu" name="menuEyetracking_Settings">
+    <property name="title">
+     <string>Eyetracking Settings</string>
+    </property>
+    <addaction name="actionSelectEyetrackingDevice"/>
+    <addaction name="actionSelectMonitor"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
+   <addaction name="menuEyetracking_Settings"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <widget class="QDockWidget" name="dockSettings">
@@ -672,6 +680,16 @@
    </property>
    <property name="text">
     <string>Log interaction</string>
+   </property>
+  </action>
+  <action name="actionSelectEyetrackingDevice">
+   <property name="text">
+    <string>Select Eyetracking Device</string>
+   </property>
+  </action>
+  <action name="actionSelectMonitor">
+   <property name="text">
+    <string>Select Calibrated Monitor</string>
    </property>
   </action>
  </widget>
