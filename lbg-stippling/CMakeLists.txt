@@ -32,7 +32,7 @@ set(SOURCES
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-find_package(Qt5 5.10 COMPONENTS Core Widgets Svg PrintSupport REQUIRED)
+find_package(Qt5 COMPONENTS Core Widgets Svg PrintSupport REQUIRED)
 
 add_executable(${PROJECT_NAME} ${HEADERS} ${SOURCES} resources.qrc)
 
