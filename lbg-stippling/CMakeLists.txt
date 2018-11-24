@@ -42,3 +42,19 @@ target_link_libraries(${PROJECT_NAME}
 	Qt5::Svg
 	Qt5::PrintSupport
 )
+
+# add dlls to runtime
+configure_file("${PROJECT_DIR}/dlls/Qt5Gui.dll" "${PROJECT_DIR}/build/Release/Qt5Gui.dll" COPYONLY)
+configure_file("${PROJECT_DIR}/dlls/Qt5Guid.dll" "${PROJECT_DIR}/build/Debug/Qt5Guid.dll" COPYONLY)
+
+configure_file("${PROJECT_DIR}/dlls/Qt5PrintSupport.dll" "${PROJECT_DIR}/build/Release/Qt5PrintSupport.dll" COPYONLY)
+configure_file("${PROJECT_DIR}/dlls/Qt5PrintSupportd.dll" "${PROJECT_DIR}/build/Debug/Qt5PrintSupportd.dll" COPYONLY)
+
+configure_file("${PROJECT_DIR}/dlls/Qt5Svg.dll" "${PROJECT_DIR}/build/Release/Qt5Svg.dll" COPYONLY)
+configure_file("${PROJECT_DIR}/dlls/Qt5Svgd.dll" "${PROJECT_DIR}/build/Debug/Qt5Svgd.dll" COPYONLY)
+
+configure_file("${PROJECT_DIR}/dlls/Qt5Widgets.dll" "${PROJECT_DIR}/build/Release/Qt5Widgets.dll" COPYONLY)
+configure_file("${PROJECT_DIR}/dlls/Qt5Widgetsd.dll" "${PROJECT_DIR}/build/Debug/Qt5Widgetsd.dll" COPYONLY)
+
+configure_file("${PROJECT_DIR}/dlls/Qt5Core.dll" "${PROJECT_DIR}/build/Release/Qt5Core.dll" COPYONLY)
+configure_file("${PROJECT_DIR}/dlls/Qt5Cored.dll" "${PROJECT_DIR}/build/Debug/Qt5Cored.dll" COPYONLY)
