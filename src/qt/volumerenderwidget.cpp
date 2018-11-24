@@ -86,6 +86,7 @@ VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
 	, _monitor_offset(QPoint(0,0))
 	, _curr_monitor_width(0)
 	, _curr_monitor_height(0)
+	, _useEyetracking(false)
 {
     this->setMouseTracking(true);
 }
