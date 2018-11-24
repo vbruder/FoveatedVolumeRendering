@@ -173,11 +173,6 @@ private:
 	bool check_eyetracker_availability();	// Checks if the currently selected eyetracker (_eyetracker) exists
 	static void gaze_data_callback(TobiiResearchGazeData *gaze_data, void *user_data);
 
-	// Monitorselection
-	QPoint _monitor_offset;	// The offset which is used for the transformation of the gaze point
-	int _curr_monitor_width;	// The width of the currently selected monitor which is used for the transformation of the gaze point
-	int _curr_monitor_height;	// The height of the currently selected monitor which is used for the transformation of the gaze point
-
     /**
      * @brief Initialize the OpenCL volume renderer.
      * @param useGL use OpenGL context sharing
@@ -230,6 +225,11 @@ private:
 	// Eyetracking
 	TobiiResearchEyeTracker* _eyetracker;	// points to the currently selected eyetracker
 	TobiiResearchGazeData _gaze_data;	// holds the latest collected data from the eyetracking callback
+
+	// Monitorselection
+	QPoint _monitor_offset;	// The offset which is used for the transformation of the gaze point
+	int _curr_monitor_width;	// The width of the currently selected monitor which is used for the transformation of the gaze point
+	int _curr_monitor_height;	// The height of the currently selected monitor which is used for the transformation of the gaze point
 
     // global rendering flags
     QPoint _lastLocalCursorPos;
