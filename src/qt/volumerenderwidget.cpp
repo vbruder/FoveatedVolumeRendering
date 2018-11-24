@@ -510,7 +510,7 @@ void VolumeRenderWidget::actionSelectMonitor()
 	if (device_names.size() > 1) {
 		platform = QInputDialog::getItem(this, tr("Select Monitor"),
 			tr("Select the Monitor the Eyetracker is calibrated to:"),
-			platforms, 0, false, &ok);
+			platforms, 0, false, &ok, Qt::MSWindowsFixedSizeDialogHint);
 		monitor_index = platforms.indexOf(platform);
 	}
 	else {
