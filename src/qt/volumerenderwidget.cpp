@@ -736,13 +736,14 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 		// OpenCL raycast
 		try
 		{
+
 			if (_useGL)
-				_volumerender.runRaycast(floor(this->size().width() * _imgSamplingRate),
+				_volumerender.runRaycastLBG(floor(this->size().width() * _imgSamplingRate),
 					floor(this->size().height()* _imgSamplingRate), _timestep);
 			else
 			{
 				std::vector<float> d;
-				_volumerender.runRaycastNoGL(floor(this->size().width() * _imgSamplingRate),
+				_volumerender.runRaycastLBGNoGL(floor(this->size().width() * _imgSamplingRate),
 					floor(this->size().height()* _imgSamplingRate),
 					_timestep, d);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F,

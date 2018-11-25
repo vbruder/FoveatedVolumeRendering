@@ -128,12 +128,46 @@ public:
      void runRaycastNoGL(const size_t width, const size_t height, const size_t t,
                          std::vector<float> &output);
 
+	 /**
+	 * @brief Runs the Raycast but sets the kernel parameters to perform lbg-sampling.
+	 * @param width The image width in pixels, used to determine the section of the lbg sampling texture 
+	   and also the size of the output texture.
+	   Has to be less or equal the one third of the width of the lbg sampling texture.
+	 * @param height The image height in pixels, used to determine the section of the lbg sampling texture 
+	   and also the size of the output texture.
+	   Has to be less or equal the one third of the height of the lbg sampling texture.
+	 * @param t time series id, defaults to 0 if no time series
+	 */
+	 void runRaycastLBG(const size_t width, const size_t height, const size_t t);
+
+	 /**
+	  * @brief Run the actual OpenCL volume raycasting kernel without OpenGL context shring.
+	  * @param width The image width in pixels, used to determine the section of the lbg sampling texture 
+	   and also the size of the output texture.
+	   Has to be less or equal the one third of the width of the lbg sampling texture.
+	  * @param height The image height in pixels, used to determine the section of the lbg sampling texture 
+	   and also the size of the output texture.
+	   Has to be less or equal the one third of the height of the lbg sampling texture.
+	  * @param t time series id, defaults to 0 if no time series
+	  * @param pixel color output data of the frame
+	  */
+	 void runRaycastLBGNoGL(const size_t width, const size_t height, const size_t t,
+		 std::vector<float> &output);
+
     /**
      * @brief Load volume data from a given .dat file name.
      * @param fileName The full path to the volume data file.
      * @return number of loaded volume time steps
      */
     size_t loadVolumeData(const std::string fileName);
+
+	/**
+	 * @brief Load an index map and a sampling map, both are .png files.
+	 * @param fileNameIndexMap The full path to the index map file.
+	 * @param fileNameSamplingMap The full path to the sampling map file.
+	 * @return void
+	 */
+	void loadIndexAndSamplingMap(const std::string fileNameIndexMap, const std::string fileNameSamplingMap);
 
     /**
      * @brief Answers if volume data has been loaded.
@@ -359,7 +393,10 @@ private:
     cl::Image2D _outputMemNoGL;
     cl::Image2D _outputHitMem;
     cl::Image2D _inputHitMem;
+	cl::Image2D _samplingMap;
+	cl::Image2D _indexMap;	// The width of the index map defines the total number of work items to be started for lbg sampling
 
+	bool _imsmLoaded;	// is set to true iff _samplingMap and _indexMap have been loaded successfully.
     bool _volLoaded;
     double _lastExecTime;
     std::valarray<float> _modelScale;

@@ -61,6 +61,7 @@ VolumeRenderCL::VolumeRenderCL() :
   , _modelScale{1.0, 1.0, 1.0}
   , _useGL(true)
   , _useImgESS(false)
+  , _imsmLoaded(false)
 {
 }
 
@@ -529,6 +530,55 @@ void VolumeRenderCL::runRaycastNoGL(const size_t width, const size_t height, con
     }
 }
 
+void VolumeRenderCL::runRaycastLBG(const size_t width, const size_t height, const size_t t)
+{
+	if (!this->_volLoaded || !this->_imsmLoaded)
+		return;
+	try // opencl scope
+	{
+		setMemObjectsRaycast(t);
+		size_t amountOfSamples;
+		cl_int success = _indexMap.getImageInfo(CL_IMAGE_WIDTH, &amountOfSamples);
+		if (success != CL_SUCCESS) throw std::exception("Could not retrieve image information about _indexMap.");
+
+		cl::NDRange globalThreads(amountOfSamples + (LOCAL_SIZE - amountOfSamples % LOCAL_SIZE));
+		cl::NDRange localThreads(LOCAL_SIZE * LOCAL_SIZE);
+		cl::Event ndrEvt;
+
+		std::vector<cl::Memory> memObj;
+		memObj.push_back(_outputMem);
+		_queueCL.enqueueAcquireGLObjects(&memObj);
+		_queueCL.enqueueNDRangeKernel(
+			_raycastKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
+		_queueCL.enqueueReleaseGLObjects(&memObj);
+		_queueCL.finish();    // global sync
+
+		if (_useImgESS)
+		{
+			// swap hit test buffers
+			cl::Image2D tmp = _outputHitMem;
+			_outputHitMem = _inputHitMem;
+			_inputHitMem = tmp;
+		}
+
+#ifdef CL_QUEUE_PROFILING_ENABLE
+		cl_ulong start = 0;
+		cl_ulong end = 0;
+		ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
+		ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
+		_lastExecTime = static_cast<double>(end - start)*1e-9;
+		//        std::cout << "Kernel time: " << _lastExecTime << std::endl << std::endl;
+#endif
+	}
+	catch (cl::Error err)
+	{
+		logCLerror(err);
+	}
+}
+
+void VolumeRenderCL::runRaycastLBGNoGL(const size_t width, const size_t height, const size_t t, std::vector<float>& output)
+{
+}
 
 /**
  * @brief VolumeRenderCL::generateBricks
