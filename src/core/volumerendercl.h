@@ -27,6 +27,7 @@
 #include "src/oclutil/openclutilities.h"
 
 #include "src/io/datrawreader.h"
+#include <qimage.h>
 
 #include <valarray>
 
@@ -393,7 +394,7 @@ private:
     cl::Image2D _outputMemNoGL;
     cl::Image2D _outputHitMem;
     cl::Image2D _inputHitMem;
-	cl::Image2D _samplingMap;
+	cl::Buffer _samplingMap;
 	cl::Image2D _indexMap;	// The width of the index map defines the total number of work items to be started for lbg sampling
 
 	bool _imsmLoaded;	// is set to true iff _samplingMap and _indexMap have been loaded successfully.

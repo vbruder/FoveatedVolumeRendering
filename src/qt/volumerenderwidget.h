@@ -62,6 +62,8 @@ public:
 
     void setVolumeData(const QString &fileName);
 
+	void setIndexandSamplingMap(const QString &fileName);
+
     bool hasData() const;
 
     const QVector4D getVolumeResolution() const;

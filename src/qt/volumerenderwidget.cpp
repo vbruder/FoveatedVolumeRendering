@@ -1073,6 +1073,27 @@ void VolumeRenderWidget::setVolumeData(const QString &fileName)
     update();
 }
 
+void VolumeRenderWidget::setIndexandSamplingMap(const QString &fileNameIndexMap, const QString &fileNameSamplingMap)
+{
+	this->_noUpdate = true;
+
+	try
+	{
+		_volumerender.loadIndexAndSamplingMap(fileNameIndexMap.toStdString(), fileNameSamplingMap.toStdString());
+	}
+	catch (std::invalid_argument e)
+	{
+		qCritical() << e.what();
+	}
+	catch (std::runtime_error e)
+	{
+		qCritical() << e.what();
+	}
+
+	this->_noUpdate = false;
+	update();
+}
+
 
 /**
  * @brief VolumeRenderWidget::hasData
