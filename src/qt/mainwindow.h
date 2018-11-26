@@ -50,7 +50,7 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+	~MainWindow();
 
 protected slots:
     void openVolumeFile();
@@ -62,6 +62,8 @@ protected slots:
     void loadRawTff();
     void saveTff();
     void saveRawTff();
+
+	void loadIndex_and_Sampling_Map();
 
     void chooseBackgroundColor();
     void saveCamState();
@@ -81,6 +83,8 @@ protected:
 private:
 
     void setVolumeData(const QString &fileName);
+	void setIndex_and_Sampling_Map();
+
     bool readVolumeFile(const QString &fileName);
 
     void readTff(const QString &fileName);

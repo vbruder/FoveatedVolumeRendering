@@ -97,6 +97,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionRealoadKernel, &QAction::triggered,
             this, &MainWindow::updateTransferFunctionFromGradientStops);
 
+	connect(ui->actionLoad_Index_and_Sampling_Map, &QAction::triggered, this, &MainWindow::loadIndex_and_Sampling_Map);
+
     // future watcher for concurrent data loading
     _watcher = new QFutureWatcher<void>(this);
     connect(_watcher, &QFutureWatcher<void>::finished, this, &MainWindow::finishedLoading);
@@ -605,6 +607,27 @@ void MainWindow::loadRawTff()
     }
 }
 
+// TODO: make it save, e.g. picked wrong file.
+void MainWindow::loadIndex_and_Sampling_Map() {
+	QFileDialog dialog;
+	QString defaultPath = _settings->value("LastIndexMapFile").toString();
+	QString pickedFile = dialog.getOpenFileName(
+		this, tr("Open Index Map"), defaultPath,
+		tr("Index Map Files (*.png);; All files (*)"));
+	if (!pickedFile.isEmpty())
+	{
+		_settings->setValue("LastIndexMapFile", pickedFile);
+	}
+
+	defaultPath = _settings->value("LastSamplingMapFile").toString();
+	pickedFile = dialog.getOpenFileName(
+		this, tr("Open Sampling Map"), defaultPath,
+		tr("Sampling Map Files (*.png);; All files (*)"));
+	if (!pickedFile.isEmpty())
+	{
+		_settings->setValue("LastSamplingMapFile", pickedFile);
+	}
+}
 
 /**
  * @brief MainWindow::getStatus

@@ -62,7 +62,7 @@ public:
 
     void setVolumeData(const QString &fileName);
 
-	void setIndexandSamplingMap(const QString &fileName);
+	void setIndexandSamplingMap(const QString &fileNameIndexMap, const QString &fileNameSamplingMap);
 
     bool hasData() const;
 

@@ -98,11 +98,18 @@
     <addaction name="actionSelectEyetrackingDevice"/>
     <addaction name="actionSelectMonitor"/>
    </widget>
+   <widget class="QMenu" name="menuLBG_Sampling">
+    <property name="title">
+     <string>LBG Sampling</string>
+    </property>
+    <addaction name="actionLoad_Index_and_Sampling_Map"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
    <addaction name="menuEyetracking_Settings"/>
+   <addaction name="menuLBG_Sampling"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <widget class="QDockWidget" name="dockSettings">
@@ -690,6 +697,16 @@
   <action name="actionSelectMonitor">
    <property name="text">
     <string>Select Calibrated Monitor</string>
+   </property>
+  </action>
+  <action name="actionLoad_Index_and_Sampling_Map">
+   <property name="text">
+    <string>Load Index and Sampling Map</string>
+   </property>
+  </action>
+  <action name="actionLoad_Sampling_Map">
+   <property name="text">
+    <string>Load Sampling Map</string>
    </property>
   </action>
  </widget>
