@@ -402,6 +402,8 @@ private:
     cl::Image2D _outputMemNoGL;
     cl::Image2D _outputHitMem;
     cl::Image2D _inputHitMem;
+	cl::Buffer _place_holder_smd;
+	cl::Image2D _place_holder_imap;
 	cl::Buffer _samplingMapData; // The width of the sample map defines the total number of work items to be started for lbg sampling raycast
 	cl::Image2D _indexMap;
 	size_t _amountOfSamples;	// The indexes of the samplingMap (scanlLine width).

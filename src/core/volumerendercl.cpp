@@ -184,6 +184,14 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel.setArg(IMG_ESS, 0);
 		_raycastKernel.setArg(RMODE, 0u);				// Rendering Mode is initially Standard
 
+		{	// init index and sampling agruments with empty buffers / images
+			_place_holder_imap = cl::Image2D(_contextCL, CL_MEM_READ_ONLY, cl::ImageFormat(CL_RGBA, CL_UNORM_INT8), 1, 1);
+			_place_holder_smd = cl::Buffer(_contextCL, CL_MEM_READ_ONLY, 8);
+		}
+
+		_raycastKernel.setArg(IMAP, _place_holder_imap);
+		_raycastKernel.setArg(SDATA, _place_holder_smd);
+
         _genBricksKernel = cl::Kernel(program, "generateBricks");
         _downsamplingKernel = cl::Kernel(program, "downsampling");
     }
@@ -1039,8 +1047,10 @@ void VolumeRenderCL::updateRenderingParameters(unsigned int renderingMethod)
 	case 1:
 		// LBG-Sampling
 		_raycastKernel.setArg(RMODE, 1u);
-		_raycastKernel.setArg(IMAP, _indexMap);
-		_raycastKernel.setArg(SDATA, _samplingMapData);
+		if (_imsmLoaded) {
+			_raycastKernel.setArg(IMAP, _indexMap);
+			_raycastKernel.setArg(SDATA, _samplingMapData);
+		}
 		break;
 	default:
 		// Standard
