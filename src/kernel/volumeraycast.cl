@@ -375,6 +375,10 @@ typedef struct {
     uint y;
 } samplingDataStruct;
 
+int index_from_2d(int2 coord, int m){
+    return coord.y * m + coord.x;
+}
+
 /**
  * direct volume raycasting kernel
  */
@@ -397,7 +401,319 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , __read_only image2d_t inHitImg
                            , __write_only image2d_t outHitImg
                            , const uint imgEss
+                           )
+{
+    int2 globalId = (int2)(get_global_id(0), get_global_id(1));
+    int2 img_bounds = get_image_dim(outImg);
+    int2 texCoords = globalId;
+    int uniqueId = 0;
+
+    if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
+        return;
+
+    // TODO: Check if get_group_id() is related to the number of total work items and if it results in an error when using lbg-sampling.
+    local uint hits;
+    if (imgEss)
+    {
+        hits = 0;
+        uint4 lastHit = read_imageui(inHitImg, (int2)(get_group_id(0)  , get_group_id(1)  ));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)+1, get_group_id(1)  ));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)-1, get_group_id(1)  ));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)  , get_group_id(1)+1));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)  , get_group_id(1)-1));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)+1, get_group_id(1)+1));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)-1, get_group_id(1)-1));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)-1, get_group_id(1)+1));
+        lastHit += read_imageui(inHitImg,      (int2)(get_group_id(0)+1, get_group_id(1)-1));
+        if (!lastHit.x)
+        {
+            write_imagef(outImg, texCoords, showEss ? (float4)(1.f) - background : background);
+            write_imageui(outHitImg, (int2)(get_group_id(0), get_group_id(1)), (uint4)(0u));
+            return;
+        }
+    }
+
+    uint4 taus = initRNG();
+    // pseudo random number [0,1] for ray offsets to avoid moire patterns
+    float iptr;
+    float rand = fract(sin(dot(convert_float2(globalId),
+                       (float2)(12.9898f, 78.233f))) * 43758.5453f, &iptr);
+
+    float aspectRatio = native_divide((float)(img_bounds.y), (float)(img_bounds.x));
+    aspectRatio = min(aspectRatio, native_divide((float)(img_bounds.x), (float)(img_bounds.y)));
+
+    int maxImgSize = max(img_bounds.x, img_bounds.y);
+    float2 imgCoords;
+    imgCoords.x = native_divide((texCoords.x + 0.5f), convert_float(maxImgSize)) * 2.f;
+    imgCoords.y = native_divide((texCoords.y + 0.5f), convert_float(maxImgSize)) * 2.f;
+    // calculate correct offset based on aspect ratio
+    imgCoords -= get_global_size(0) > get_global_size(1) ?
+                        (float2)(1.0f, aspectRatio) : (float2)(aspectRatio, 1.0);
+    imgCoords.y *= -1.f;   // flip y coord
+
+    // z position of view plane is -1.0 to fit the cube to the screen quad when axes are aligned,
+    // zoom is -1 and the data set is uniform in each dimension
+    // (with FoV of 90° and near plane in range [-1,+1]).
+    float3 nearPlanePos = fast_normalize((float3)(imgCoords, -1.0f));
+    // transform nearPlane from view space to world space
+    float3 rayDir = (float3)(0.f);
+    rayDir.x = dot(viewMat.s012, nearPlanePos);
+    rayDir.y = dot(viewMat.s456, nearPlanePos);
+    rayDir.z = dot(viewMat.s89a, nearPlanePos);
+
+    // camera position in world space (ray origin) is translation vector of view matrix
+    float3 camPos = viewMat.s37b*modelScale;
+
+    if (orthoCam)
+    {
+        camPos = (float3)(viewMat.s37b);
+        float3 viewPlane_x = viewMat.s048;
+        float3 viewPlane_y = viewMat.s159;
+        float3 viewPlane_z = viewMat.s26a;
+        rayDir = -viewPlane_z;
+        nearPlanePos = camPos + imgCoords.x*viewPlane_x + imgCoords.y*viewPlane_y;
+        nearPlanePos *= length(camPos);
+        camPos = nearPlanePos * modelScale;
+    }
+    rayDir = fast_normalize(rayDir*modelScale);
+
+    float tnear = FLT_MIN;
+    float tfar = FLT_MAX;
+    int hit = 0;
+    // bbox from (-1,-1,-1) to (+1,+1,+1)
+    hit = intersectBox(camPos, rayDir, &tnear, &tfar);
+    if (!hit || tfar < 0)
+    {
+        write_imagef(outImg, texCoords, background);
+        if (imgEss)
+            write_imageui(outHitImg, (int2)(get_group_id(0), get_group_id(1)), (uint4)(0u));
+        return;
+    }
+
+    float sampleDist = tfar - tnear;
+    if (sampleDist <= 0.f)
+        return;
+    int3 volRes = get_image_dim(volData).xyz;
+    float stepSize = min(sampleDist, sampleDist /
+                            (samplingRate*length(sampleDist*rayDir*convert_float3(volRes))));
+    float samples = ceil(sampleDist/stepSize);
+    stepSize = sampleDist/samples;
+    float offset = stepSize*rand*0.9f; // offset by 'random' distance to avoid moiré pattern
+
+    // raycast parameters
+    tnear = max(0.f, tnear);    // clamp to near plane
+    float4 result = background;
+    float alpha = 0.f;
+    float3 pos = (float3)(0);
+    float density = 0.f;
+    float4 tfColor = (float4)(0);
+    float opacity = 0.f;
+    float t = tnear;
+
+    float3 voxLen = (float3)(1.f) / convert_float3(volRes);
+    float refSamplingInterval = 1.f / samplingRate;
+    float t_exit = tfar;
+
+#ifdef ESS
+    // 3D DDA initialization
+    int3 bricksRes = get_image_dim(volBrickData).xyz;
+    // FIXME: correct if brick res is odd
+//    if ((bricksRes.x & 1) != 0) bricksRes.x -= 1;
+//    if ((bricksRes.y & 1) != 0) bricksRes.y -= 1;
+//    if ((bricksRes.z & 1) != 0) bricksRes.z -= 1;
+
+    float3 brickLen = (float3)(1.f) / convert_float3(bricksRes);
+    float3 invRay = 1.f/rayDir;
+    int3 step = convert_int3(sign(rayDir));
+    if (rayDir.x == 0.f)
+    {
+        invRay.x = FLT_MAX;
+        step.x = 1;
+    }
+    if (rayDir.y == 0.f)
+    {
+        invRay.y = FLT_MAX;
+        step.y = 1;
+    }
+    if (rayDir.z == 0.f)
+    {
+        invRay.z = FLT_MAX;
+        step.z = 1;
+    }
+    float3 deltaT = convert_float3(step)*(brickLen*2.f*invRay);
+    float3 voxIncr = (float3)0;
+
+    // convert ray starting point to cell coordinates
+    float3 rayOrigCell = (camPos + rayDir * tnear) - (float3)(-1.f);
+    int3 cell = clamp(convert_int3(floor(rayOrigCell / (2.f*brickLen))),
+                        (int3)(0), convert_int3(bricksRes.xyz) - 1);
+
+    // add +1 to cells if ray dir component is negative: rayDir >= 0 ? (-1) : 0
+    float3 tv = tnear + (convert_float3(cell - isgreaterequal(rayDir, (float3)(0)))
+                            * (2.f*brickLen) - rayOrigCell) * invRay;
+    int3 exit = step * bricksRes.xyz;
+    if (exit.x < 0) exit.x = -1;
+    if (exit.y < 0) exit.y = -1;
+    if (exit.z < 0) exit.z = -1;
+    // length of diagonal of a brick => longest distance through brick
+    float brickDia = length(brickLen)*2.f;
+
+    // 3D DDA loop over low-res grid for image order empty space skipping
+    while (t < tfar)
+    {
+        float2 minMaxDensity = read_imagef(volBrickData, (int4)(cell, 0)).xy;
+
+        // increment to next brick
+        voxIncr.x = (tv.x <= tv.y) && (tv.x <= tv.z) ? 1 : 0;
+        voxIncr.y = (tv.y <= tv.x) && (tv.y <= tv.z) ? 1 : 0;
+        voxIncr.z = (tv.z <= tv.x) && (tv.z <= tv.y) ? 1 : 0;
+        cell += convert_int3(voxIncr) * step;    // [0; res-1]
+
+        t_exit = dot((float3)(1), tv * voxIncr);
+        t_exit = clamp(t_exit, t+stepSize, t+brickDia);
+        tv += voxIncr*deltaT;
+
+        // skip bricks that contain only fully transparent voxels
+        float alphaMax = read_imagef(tffData, linearSmp, minMaxDensity.y).w;
+        if (alphaMax < 1e-6f)
+        {
+            uint prefixMin = read_imageui(tffPrefix, linearSmp, minMaxDensity.x).x;
+            uint prefixMax = read_imageui(tffPrefix, linearSmp, minMaxDensity.y).x;
+            if (prefixMin == prefixMax)
+            {
+                t = t_exit;
+                continue;
+            }
+        }
+#endif  // ESS
+
+        // standard raycasting loop
+        while (t < t_exit)
+        {
+            pos = camPos + (t-offset)*rayDir;
+            pos = pos * 0.5f + 0.5f;    // normalize to [0,1]
+
+            float4 gradient = (float4)(0.f);
+            if (illumType == 4)   // gradient magnitude based shading
+            {
+                gradient = -gradientCentralDiff(volData, (float4)(pos, 1.f));
+                tfColor = read_imagef(tffData, linearSmp, -gradient.w);
+            }
+            else    // density based shading and optional illumination
+            {
+                density = useLinear ? read_imagef(volData,  linearSmp, (float4)(pos, 1.f)).x :
+                                      read_imagef(volData, nearestSmp, (float4)(pos, 1.f)).x;
+                tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
+                if (tfColor.w > 0.1f && illumType)
+                {
+                    if (illumType == 1)         // central diff
+                        gradient = -gradientCentralDiff(volData, (float4)(pos, 1.f));
+                    else if (illumType == 2)    // central diff & transfer function
+                        gradient = -gradientCentralDiffTff(volData, (float4)(pos, 1.f), tffData);
+                    else if (illumType == 3)    // sobel filter
+                        gradient = -gradientSobel(volData, (float4)(pos, 1.f));
+
+                    if (illumType == 5)
+                    {
+                        gradient = -gradientCentralDiff(volData, (float4)(pos, 1.f));
+                        tfColor.xyz = celShading(tfColor.xyz, -rayDir, gradient.xyz);
+                    }
+                    else
+                        tfColor.xyz = illumination((float4)(pos, 1.f), tfColor.xyz, -rayDir, gradient.xyz);
+                }
+                if (tfColor.w > 0.1f && contours) // edge enhancement
+                {
+                    if (!illumType) // no illumination
+                        gradient = -gradientCentralDiff(volData, (float4)(pos, 1.f));
+                    tfColor.xyz *= fabs(dot(rayDir, gradient.xyz));
+                }
+            }
+            tfColor.xyz = background.xyz - tfColor.xyz;
+            if (aerial) // depth cue as aerial perspective
+            {
+                float depthCue = 1.f - (t - tnear)/sampleDist; // [0..1]
+                tfColor.w *= depthCue;
+            }
+
+            // Taylor expansion approximation
+            opacity = 1.f - native_powr(1.f - tfColor.w, refSamplingInterval);
+            result.xyz = result.xyz - tfColor.xyz * opacity * (1.f - alpha);
+            alpha = alpha + opacity * (1.f - alpha);
+
+            if (t >= tfar) break;
+            if (alpha > ERT_THRESHOLD)   // early ray termination check
+            {
+                if (useAO)  // ambient occlusion only on solid surfaces
+                {
+                    float3 n = -gradientCentralDiff(volData, (float4)(pos, 1.f)).xyz;
+                    float ao = calcAO(n, &taus, volData, pos, length(voxLen), length(voxLen)*5.f);
+                    result.xyz *= 1.f - 0.3f*ao;
+                }
+                break;
+            }
+            t += stepSize;
+        }
+#ifdef ESS
+        if (t >= tfar || alpha > ERT_THRESHOLD) break;
+        if (any(cell == exit)) break;
+        t = t_exit;
+    }
+#endif  // ESS
+
+    // visualize empty space skipping
+    if (showEss)
+    {
+        if (checkBoundingBox(pos, voxLen, (float2)(0.f, 1.f)))
+        {
+            result.xyz = fabs((float3)(1.f) - background.xyz);
+            alpha = 1.f;
+        }
+    }
+    // write final image
+    result.w = alpha;
+    write_imagef(outImg, texCoords, result);
+
+    // image order empty space skipping
+    if (imgEss)
+    {
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if (any(result.xyz != background.xyz))
+            ++hits;
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if (get_local_id(0) + get_local_id(1) == 0)
+        {
+            if (hits == 0)
+                write_imageui(outHitImg, (int2)(get_group_id(0), get_group_id(1)), (uint4)(0u));
+            else
+                write_imageui(outHitImg, (int2)(get_group_id(0), get_group_id(1)), (uint4)(1u));
+        }
+    }
+}
+
+/**
+ * direct volume raycasting kernel
+ */
+__kernel void volumeRenderLBG(  __read_only image3d_t volData
+                           , __read_only image3d_t volBrickData
+                           , __read_only image1d_t tffData     // constant transfer function values
+                           , __write_only image2d_t outImg
+                           , const float samplingRate
+                           , const float16 viewMat
+                           , const uint orthoCam
+                           , const uint illumType
+                           , const uint showEss
+                           , const uint useLinear
+                           , const float4 background
+                           , __read_only image1d_t tffPrefix
+                           , const uint useAO
+                           , const float3 modelScale
+                           , const uint contours
+                           , const uint aerial
+                           , __read_only image2d_t inHitImg
+                           , __write_only image2d_t outHitImg
+                           , const uint imgEss
                            , const uint rmode // selects the rendering mode
+                           , const uint samplingDataSize
                            , __read_only image2d_t indexMap
                            , __global samplingDataStruct *samplingData
                            )
@@ -405,10 +721,14 @@ __kernel void volumeRender(  __read_only image3d_t volData
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
     int2 img_bounds = get_image_dim(outImg);
     int2 texCoords = globalId;
+    int uniqueId = 0;
 
     switch(rmode){
         case 1:
             // LBG-Sampling
+            uniqueId = index_from_2d(globalId, get_global_size(0));
+            if(uniqueId > samplingDataSize - 1) return;
+            texCoords = (int2)(samplingData[uniqueId].x, samplingData[uniqueId].y);
             break;
         default:
             

@@ -61,7 +61,12 @@ public:
         , IN_HIT_IMG     // input image for image order ESS         image2d_t (UINT)
         , OUT_HIT_IMG    // output image for image order ESS        image2d_t (UINT)
         , IMG_ESS        // image order empty space skipping        cl_uint (bool)
-		, RMODE			 // rendering mode							cl_uint
+	};
+
+	enum kernel_lbg_arg
+	{
+		RMODE = 19			 // rendering mode							cl_uint
+		, SDS			 // Elements in the SDATA Buffer			cl_uint
 		, IMAP			 // Indexmap Image							image2d_t
 		, SDATA			 // Sampling map buffer						(buffer)
 	};
@@ -267,11 +272,6 @@ public:
      */
     double getLastExecTime() const;
 
-	/*
-	Updates the parameters of the raycast kernel according to the rendering method.
-	*/
-	void updateRenderingParameters(unsigned int renderingMethod);
-
     /**
      * @brief getPlatformNames
      * @return platform names
@@ -364,6 +364,8 @@ private:
      */
     void setMemObjectsRaycast(const size_t t);
 
+	void setMemObjectsRaycastLBG(const size_t t);
+
     /**
      * @brief Set OpenCL memory objects for brick generation kernel.
      * @param t number of volume timesteps.
@@ -390,6 +392,7 @@ private:
     cl::Context _contextCL;
     cl::CommandQueue _queueCL;
     cl::Kernel _raycastKernel;
+	cl::Kernel _raycastLBG_Kernel;
     cl::Kernel _genBricksKernel;
     cl::Kernel _downsamplingKernel;
 
@@ -406,7 +409,7 @@ private:
 	cl::Image2D _place_holder_imap;
 	cl::Buffer _samplingMapData; // The width of the sample map defines the total number of work items to be started for lbg sampling raycast
 	cl::Image2D _indexMap;
-	size_t _amountOfSamples;	// The indexes of the samplingMap (scanlLine width).
+	unsigned int _amountOfSamples;	// The indexes of the samplingMap (scanlLine width).
 
 	bool _imsmLoaded;	// is set to true iff _samplingMapData and _indexMap have been loaded successfully.
     bool _volLoaded;

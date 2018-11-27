@@ -371,8 +371,8 @@ void VolumeRenderWidget::setImageSamplingRate(const double samplingRate)
 
 void VolumeRenderWidget::setRenderingMethod(int rm)
 {
-	this->_renderingMethod = static_cast<VolumeRenderWidget::RenderingMethod>(rm);
-	_volumerender.updateRenderingParameters(_renderingMethod);
+	_renderingMethod = static_cast<VolumeRenderWidget::RenderingMethod>(rm);
+	std::cout << "Rendering Method: " << _renderingMethod << std::endl;
 	update();
 }
 
