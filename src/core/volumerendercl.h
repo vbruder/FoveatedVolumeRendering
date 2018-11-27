@@ -402,11 +402,11 @@ private:
     cl::Image2D _outputMemNoGL;
     cl::Image2D _outputHitMem;
     cl::Image2D _inputHitMem;
-	cl::Buffer _samplingMap; // The width of the sample map defines the total number of work items to be started for lbg sampling raycast
+	cl::Buffer _samplingMapData; // The width of the sample map defines the total number of work items to be started for lbg sampling raycast
 	cl::Image2D _indexMap;
 	size_t _amountOfSamples;	// The indexes of the samplingMap (scanlLine width).
 
-	bool _imsmLoaded;	// is set to true iff _samplingMap and _indexMap have been loaded successfully.
+	bool _imsmLoaded;	// is set to true iff _samplingMapData and _indexMap have been loaded successfully.
     bool _volLoaded;
     double _lastExecTime;
     std::valarray<float> _modelScale;

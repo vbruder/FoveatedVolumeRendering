@@ -809,7 +809,7 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 		std::cout << "Total size of index_data: " << index_data.size() * sizeof(indexStruct) << std::endl;
 		*/
 
-		_samplingMap = cl::Buffer(_contextCL, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, index_data.size() * sizeof(indexStruct), index_data.data(), &err);
+		_samplingMapData = cl::Buffer(_contextCL, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, index_data.size() * sizeof(indexStruct), index_data.data(), &err);
 	}
 	catch (cl::Error e) {
 		throw std::runtime_error(std::string("Failed to create Buffer for Sampling Map Image. Error: ").append(std::to_string(e.err())).c_str());
@@ -1040,7 +1040,7 @@ void VolumeRenderCL::updateRenderingParameters(unsigned int renderingMethod)
 		// LBG-Sampling
 		_raycastKernel.setArg(RMODE, 1u);
 		_raycastKernel.setArg(IMAP, _indexMap);
-		_raycastKernel.setArg(SDATA, _samplingMap);
+		_raycastKernel.setArg(SDATA, _samplingMapData);
 		break;
 	default:
 		// Standard
