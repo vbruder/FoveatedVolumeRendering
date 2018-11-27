@@ -62,6 +62,8 @@ public:
         , OUT_HIT_IMG    // output image for image order ESS        image2d_t (UINT)
         , IMG_ESS        // image order empty space skipping        cl_uint (bool)
 		, RMODE			 // rendering mode							cl_uint
+		, IMAP			 // Indexmap Image							image2d_t
+		, SDATA			 // Sampling map buffer						(buffer)
 	};
 
     // mipmap down-scaling metric
@@ -400,8 +402,9 @@ private:
     cl::Image2D _outputMemNoGL;
     cl::Image2D _outputHitMem;
     cl::Image2D _inputHitMem;
-	cl::Buffer _samplingMap;
-	cl::Image2D _indexMap;	// The width of the index map defines the total number of work items to be started for lbg sampling
+	cl::Buffer _samplingMap; // The width of the sample map defines the total number of work items to be started for lbg sampling raycast
+	cl::Image2D _indexMap;
+	size_t _amountOfSamples;	// The indexes of the samplingMap (scanlLine width).
 
 	bool _imsmLoaded;	// is set to true iff _samplingMap and _indexMap have been loaded successfully.
     bool _volLoaded;

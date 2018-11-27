@@ -370,6 +370,10 @@ float calcAO(float3 n, uint4 *taus, image3d_t volData, float3 pos, float stepSiz
     return ao;
 }
 
+typedef struct {
+    uint x;
+    uint y;
+} samplingDataStruct;
 
 /**
  * direct volume raycasting kernel
@@ -394,6 +398,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , __write_only image2d_t outHitImg
                            , const uint imgEss
                            , const uint rmode // selects the rendering mode
+                           , __read_only image2d_t indexMap
+                           , __global samplingDataStruct *samplingData
                            )
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
