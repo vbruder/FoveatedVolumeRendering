@@ -542,6 +542,8 @@ void VolumeRenderCL::runRaycastLBG(const size_t width, const size_t height, cons
 		cl_int success = _indexMap.getImageInfo(CL_IMAGE_WIDTH, &amountOfSamples);
 		if (success != CL_SUCCESS) throw std::exception("Could not retrieve image information about _indexMap.");
 
+		std::cout << "Amount of Samples: " << amountOfSamples << std::endl;
+
 		cl::NDRange globalThreads(amountOfSamples + (LOCAL_SIZE - amountOfSamples % LOCAL_SIZE));
 		cl::NDRange localThreads(LOCAL_SIZE * LOCAL_SIZE);
 		cl::Event ndrEvt;

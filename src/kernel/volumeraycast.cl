@@ -398,19 +398,20 @@ __kernel void volumeRender(  __read_only image3d_t volData
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
     int2 img_bounds = get_image_dim(outImg);
+    int2 texCoords = globalId;
 
     switch(rmode){
         case 1:
             // LBG-Sampling
             break;
         default:
-            if(any(globalId >= get_image_dim(outImg)))
-                return;
+            
             // Standard
             break;
     }
 
-    int2 texCoords = globalId;
+    if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
+        return;
 
     // TODO: Check if get_group_id() is related to the number of total work items and if it results in an error when using lbg-sampling.
     local uint hits;
@@ -445,8 +446,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
 
     int maxImgSize = max(img_bounds.x, img_bounds.y);
     float2 imgCoords;
-    imgCoords.x = native_divide((globalId.x + 0.5f), convert_float(maxImgSize)) * 2.f;
-    imgCoords.y = native_divide((globalId.y + 0.5f), convert_float(maxImgSize)) * 2.f;
+    imgCoords.x = native_divide((texCoords.x + 0.5f), convert_float(maxImgSize)) * 2.f;
+    imgCoords.y = native_divide((texCoords.y + 0.5f), convert_float(maxImgSize)) * 2.f;
     // calculate correct offset based on aspect ratio
     imgCoords -= get_global_size(0) > get_global_size(1) ?
                         (float2)(1.0f, aspectRatio) : (float2)(aspectRatio, 1.0);
