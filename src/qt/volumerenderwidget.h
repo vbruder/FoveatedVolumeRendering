@@ -92,7 +92,8 @@ public:
     void setCamRotation(const QQuaternion &rotQuat);
 
 	enum RenderingMethod { Standard, LBG_Sampling };
-	void setRenderingMethod(int rm);	// sets the current rending method and calls update() to update the screen
+	void setRenderingMethod(int rm);	/* sets the current rending method
+	updates RenderingParameters of the kernel and calls update() to update the screen. */
 
 	/*
 	Enables or disables eyetracking and calls update() to update the screen.

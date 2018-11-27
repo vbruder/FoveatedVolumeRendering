@@ -61,7 +61,8 @@ public:
         , IN_HIT_IMG     // input image for image order ESS         image2d_t (UINT)
         , OUT_HIT_IMG    // output image for image order ESS        image2d_t (UINT)
         , IMG_ESS        // image order empty space skipping        cl_uint (bool)
-    };
+		, RMODE			 // rendering mode							cl_uint
+	};
 
     // mipmap down-scaling metric
     enum scaling_metric
@@ -263,6 +264,11 @@ public:
      * @return The kernel runtime in seconds.
      */
     double getLastExecTime() const;
+
+	/*
+	Updates the parameters of the raycast kernel according to the rendering method.
+	*/
+	void updateRenderingParameters(unsigned int renderingMethod);
 
     /**
      * @brief getPlatformNames

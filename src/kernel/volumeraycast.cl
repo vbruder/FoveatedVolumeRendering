@@ -393,13 +393,26 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , __read_only image2d_t inHitImg
                            , __write_only image2d_t outHitImg
                            , const uint imgEss
+                           , const uint rmode // selects the rendering mode
                            )
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
-    if(any(globalId >= get_image_dim(outImg)))
-        return;
+    int2 img_bounds = get_image_dim(outImg);
+
+    switch(rmode){
+        case 1:
+            // LBG-Sampling
+            break;
+        default:
+            if(any(globalId >= get_image_dim(outImg)))
+                return;
+            // Standard
+            break;
+    }
+
     int2 texCoords = globalId;
 
+    // TODO: Check if get_group_id() is related to the number of total work items and if it results in an error when using lbg-sampling.
     local uint hits;
     if (imgEss)
     {
@@ -427,9 +440,10 @@ __kernel void volumeRender(  __read_only image3d_t volData
     float rand = fract(sin(dot(convert_float2(globalId),
                        (float2)(12.9898f, 78.233f))) * 43758.5453f, &iptr);
 
-    float aspectRatio = native_divide((float)get_global_size(1), (float)(get_global_size(0)));
-    aspectRatio = min(aspectRatio, native_divide((float)get_global_size(0), (float)(get_global_size(1))));
-    int maxImgSize = max(get_global_size(0), get_global_size(1));
+    float aspectRatio = native_divide((float)(img_bounds.y), (float)(img_bounds.x));
+    aspectRatio = min(aspectRatio, native_divide((float)(img_bounds.x), (float)(img_bounds.y)));
+
+    int maxImgSize = max(img_bounds.x, img_bounds.y);
     float2 imgCoords;
     imgCoords.x = native_divide((globalId.x + 0.5f), convert_float(maxImgSize)) * 2.f;
     imgCoords.y = native_divide((globalId.y + 0.5f), convert_float(maxImgSize)) * 2.f;

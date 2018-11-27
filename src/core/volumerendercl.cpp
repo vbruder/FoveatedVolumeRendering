@@ -181,6 +181,7 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel.setArg(CONTOURS, 0);             // contour lines off by default
         _raycastKernel.setArg(AERIAL, 0);               // aerial perspective off by defualt
         _raycastKernel.setArg(IMG_ESS, 0);
+		_raycastKernel.setArg(RMODE, 0u);				// Rendering Mode is initially Standard
 
         _genBricksKernel = cl::Kernel(program, "generateBricks");
         _downsamplingKernel = cl::Kernel(program, "downsampling");
@@ -995,6 +996,20 @@ void VolumeRenderCL::setBackground(const std::array<float, 4> color)
 double VolumeRenderCL::getLastExecTime() const
 {
     return _lastExecTime;
+}
+
+void VolumeRenderCL::updateRenderingParameters(unsigned int renderingMethod)
+{
+	switch (renderingMethod) {
+	case 1:
+		// LBG-Sampling
+		_raycastKernel.setArg(RMODE, 1u);
+		break;
+	default:
+		// Standard
+		_raycastKernel.setArg(RMODE, 0u);
+		break;
+	}
 }
 
 
