@@ -762,7 +762,7 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 		QImage im = QImage(QString::fromStdString(fileNameIndexMap));
 		std::cout << "Loaded Index Map with size: " << im.sizeInBytes() << std::endl;
 		// std::cout << "width: " << im.width() << std::endl;
-		_indexMap = cl::Image2D(_contextCL, CL_MEM_READ_ONLY, im_format, im.width(), im.height(), 0, im.bits(), &err);
+		_indexMap = cl::Image2D(_contextCL, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, im_format, im.width(), im.height(), 0, im.bits(), &err);
 	}
 	catch (cl::Error e) {
 		throw std::runtime_error(std::string("Failed to create cl::Image2D for index map. Error: ").append(std::to_string(e.err())).c_str());
@@ -773,7 +773,7 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 		std::cout << "Trying to open: " << fileNameSamplingMap << std::endl;
 		QImage sm = QImage(QString::fromStdString(fileNameSamplingMap));
 		std::cout << "Loaded Sampling Map with size: " << sm.sizeInBytes() << std::endl;
-		_samplingMap = cl::Buffer(CL_MEM_READ_ONLY, sm.sizeInBytes(), sm.bits(), &err);
+		_samplingMap = cl::Buffer(_contextCL, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, sm.sizeInBytes(), sm.bits(), &err);
 	}
 	catch (cl::Error e) {
 		throw std::runtime_error(std::string("Failed to create Buffer for Sampling Map Image. Error: ").append(std::to_string(e.err())).c_str());
