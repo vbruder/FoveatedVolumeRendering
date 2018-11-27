@@ -609,24 +609,39 @@ void MainWindow::loadRawTff()
 
 // TODO: make it save, e.g. picked wrong file.
 void MainWindow::loadIndex_and_Sampling_Map() {
-	QFileDialog dialog;
+	bool imap = false;
+	bool smap = false;
+	QFileDialog dialog0;
 	QString defaultPath = _settings->value("LastIndexMapFile").toString();
-	QString pickedFile = dialog.getOpenFileName(
+	QString indexMapFile = dialog0.getOpenFileName(
 		this, tr("Open Index Map"), defaultPath,
 		tr("Index Map Files (*.png);; All files (*)"));
-	if (!pickedFile.isEmpty())
+	if (!indexMapFile.isEmpty())
 	{
-		_settings->setValue("LastIndexMapFile", pickedFile);
+		imap = true;
+		_settings->setValue("LastIndexMapFile", indexMapFile);
+	}
+	else {
+		qCritical() << "Failed to pick file for index map.\n";
 	}
 
+	QFileDialog dialog1;
 	defaultPath = _settings->value("LastSamplingMapFile").toString();
-	pickedFile = dialog.getOpenFileName(
+	QString samplingMapFile = dialog1.getOpenFileName(
 		this, tr("Open Sampling Map"), defaultPath,
 		tr("Sampling Map Files (*.png);; All files (*)"));
-	if (!pickedFile.isEmpty())
+	if (!samplingMapFile.isEmpty())
 	{
-		_settings->setValue("LastSamplingMapFile", pickedFile);
+		smap = true;
+		_settings->setValue("LastSamplingMapFile", samplingMapFile);
 	}
+	else {
+		qCritical() << "Failed to pick file for sampling map.\n";
+	}
+
+	if (imap && smap) ui->volumeRenderWidget->setIndexandSamplingMap(_settings->value("LastIndexMapFile").toString(), 
+		_settings->value("LastSamplingMapFile").toString());
+	else qCritical() << "Failed to set index map and sampling map.\n";
 }
 
 /**

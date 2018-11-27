@@ -83,7 +83,6 @@ protected:
 private:
 
     void setVolumeData(const QString &fileName);
-	void setIndex_and_Sampling_Map();
 
     bool readVolumeFile(const QString &fileName);
 

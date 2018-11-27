@@ -1076,6 +1076,7 @@ void VolumeRenderWidget::setVolumeData(const QString &fileName)
 void VolumeRenderWidget::setIndexandSamplingMap(const QString &fileNameIndexMap, const QString &fileNameSamplingMap)
 {
 	this->_noUpdate = true;
+	// qDebug() << fileNameIndexMap << " " << fileNameSamplingMap;
 
 	try
 	{

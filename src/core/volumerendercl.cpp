@@ -751,19 +751,30 @@ size_t VolumeRenderCL::loadVolumeData(const std::string fileName)
 
 void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap, const std::string fileNameSamplingMap)
 {
-	QImage im = QImage(QString::fromStdString(fileNameIndexMap));
-	QImage sm = QImage(QString::fromStdString(fileNameSamplingMap));
-
 	cl_int err;
-	_samplingMap = cl::Buffer(CL_MEM_READ_ONLY, sm.sizeInBytes(), sm.bits(), &err);
-	if (err != CL_SUCCESS) throw std::runtime_error(std::string("Failed to create Buffer for Sampling Map Image. Error: ").append(std::to_string(err)).c_str());
+	try {
+		std::cout << "Trying to open: " << fileNameSamplingMap << std::endl;
+		QImage sm = QImage(QString::fromStdString(fileNameSamplingMap));
+		std::cout << "Loaded " << sm.sizeInBytes() << std::endl;
+		_samplingMap = cl::Buffer(CL_MEM_READ_ONLY, sm.sizeInBytes(), *sm.bits(), &err);
+	}
+	catch (cl::Error e) {
+		throw std::runtime_error(std::string("Failed to create Buffer for Sampling Map Image. Error: ").append(std::to_string(e.err())).c_str());
+	}
 
 	cl::ImageFormat im_format;
 	im_format.image_channel_data_type = CL_UNSIGNED_INT8;
 	im_format.image_channel_order = CL_RGBA;
 
-	_indexMap = cl::Image2D(_contextCL, CL_MEM_READ_ONLY, im_format, im.width(), im.height(), 0, im.bits(), &err);
-	if (err != CL_SUCCESS) throw std::runtime_error(std::string("Failed to create cl::Image2D for index map. Error: ").append(std::to_string(err)).c_str());
+	try {
+		std::cout << "Trying to open: " << fileNameIndexMap << std::endl;
+		QImage im = QImage(QString::fromStdString(fileNameIndexMap));
+		_indexMap = cl::Image2D(_contextCL, CL_MEM_READ_ONLY, im_format, im.width(), im.height(), 0, im.bits(), &err);
+	}
+	catch (cl::Error e) {
+		throw std::runtime_error(std::string("Failed to create cl::Image2D for index map. Error: ").append(std::to_string(e.err())).c_str());
+	}
+
 	_imsmLoaded = true;
 }
 
