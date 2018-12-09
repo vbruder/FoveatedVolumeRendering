@@ -409,6 +409,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     switch(rmode){
         case 1:
             // LBG-Sampling
+
             break;
         default:
             

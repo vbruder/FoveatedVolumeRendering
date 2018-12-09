@@ -220,6 +220,11 @@ void VolumeRenderCL::setMemObjectsRaycast(const size_t t)
 
     _raycastKernel.setArg(IN_HIT_IMG, _inputHitMem);
     _raycastKernel.setArg(OUT_HIT_IMG, _outputHitMem);
+
+	if (_imsmLoaded) {
+		_raycastKernel.setArg(IMAP, _indexMap);
+		_raycastKernel.setArg(SDATA, _samplingMapData);
+	}
 }
 
 
@@ -764,14 +769,14 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 	
 	cl::ImageFormat im_format;
 	im_format.image_channel_data_type = CL_UNSIGNED_INT8;
-	im_format.image_channel_order = CL_RGBA;
+	im_format.image_channel_order = CL_BGRA;
 
 	try {
 		std::cout << "Trying to open: " << fileNameIndexMap << std::endl;
-		QImage im = QImage(QString::fromStdString(fileNameIndexMap));
-		std::cout << "Loaded Index Map with size: " << im.sizeInBytes() << " bytes." << std::endl;
+		QImage im = QImage(QString::fromStdString(fileNameIndexMap), "0xbbrrggff");
+		std::cout << "Loaded Index Map with size: " << im.sizeInBytes() << " bytes and format: " << im.format() << std::endl;
 		// std::cout << "width: " << im.width() << std::endl;
-		_indexMap = cl::Image2D(_contextCL, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, im_format, im.width(), im.height(), 0, im.bits(), &err);
+		_indexMap = cl::Image2D(_contextCL, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, im_format, im.width(), im.height(), 0, im.bits(), &err);
 	}
 	catch (cl::Error e) {
 		throw std::runtime_error(std::string("Failed to create cl::Image2D for index map. Error: ").append(std::to_string(e.err())).c_str());
@@ -781,14 +786,14 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 	try {
 		std::cout << "Trying to open: " << fileNameSamplingMap << std::endl;
 		QImage sm = QImage(QString::fromStdString(fileNameSamplingMap));
-		std::cout << "Loaded Sampling Map with size: " << sm.sizeInBytes() << " bytes." << std::endl;
+		std::cout << "Loaded Sampling Map with size: " << sm.sizeInBytes() << " bytes and format: " << sm.format() << std::endl;
 		
 		struct indexStruct {
 		public:
-			indexStruct(unsigned int x, unsigned int y) : x_coord(x), y_coord(y) {};
+			indexStruct(cl_uint x, cl_uint y) : x_coord(x), y_coord(y) {};
 
-			unsigned int x_coord;
-			unsigned int y_coord;
+			cl_uint x_coord;
+			cl_uint y_coord;
 		};
 
 		std::vector<indexStruct> index_data;
@@ -799,13 +804,32 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 		uchar* scanLine0 = sm.scanLine(0);
 		uchar* scanLine1 = sm.scanLine(1);
 
-		UINT32 * firstLine = reinterpret_cast<UINT32*>(scanLine0);
-		UINT32 * secondLine = reinterpret_cast<UINT32*>(scanLine1);
+		cl_uint * firstLine = reinterpret_cast<cl_uint*>(scanLine0);
+		cl_uint * secondLine = reinterpret_cast<cl_uint*>(scanLine1);
 
 		unsigned int pixelsPerLine = sm.bytesPerLine() / 4;
 		// std::cout << "SM: Pixels per Line: " << pixelsPerLine << std::endl;
 		for (unsigned int i = 0; i < pixelsPerLine; i++) {
-			index_data.push_back(indexStruct(firstLine[i], secondLine[i]));
+			uchar bx = scanLine0[0 + i * 4];
+			uchar gx = scanLine0[1 + i * 4];
+			uchar rx = scanLine0[2 + i * 4];
+			// uchar ax = scanLine0[3 + i * 4];
+
+			uchar by = scanLine1[0 + i * 4];
+			uchar gy = scanLine1[1 + i * 4];
+			uchar ry = scanLine1[2 + i * 4];
+			// uchar ay = scanLine1[3 + i * 4];
+
+			cl_uint x = (0x00 << 24) | (rx << 16) | (gx << 8) | bx;
+			cl_uint y = (0x00 << 24) | (ry << 16) | (gy << 8) | by;
+
+			/*if (i <5) {
+				std::cout << "b: " << std::to_string(b) << ", g: " << std::to_string(g) << ", r: " << std::to_string(r) << ", a: " << std::to_string(a) << std::endl;
+			}*/
+			index_data.push_back(indexStruct(x, y));
+			if (i < 5) {
+				std::cout << "i: " << i << ", Sampling: " << index_data[i].x_coord<< ", " << index_data[i].y_coord << std::endl;
+			}
 		}
 
 		_amountOfSamples = pixelsPerLine;
@@ -817,7 +841,7 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 		std::cout << "Total size of index_data: " << index_data.size() * sizeof(indexStruct) << std::endl;
 		*/
 
-		_samplingMapData = cl::Buffer(_contextCL, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, index_data.size() * sizeof(indexStruct), index_data.data(), &err);
+		_samplingMapData = cl::Buffer(_contextCL, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, index_data.size() * sizeof(indexStruct), index_data.data(), &err);
 	}
 	catch (cl::Error e) {
 		throw std::runtime_error(std::string("Failed to create Buffer for Sampling Map Image. Error: ").append(std::to_string(e.err())).c_str());
@@ -1047,10 +1071,6 @@ void VolumeRenderCL::updateRenderingParameters(unsigned int renderingMethod)
 	case 1:
 		// LBG-Sampling
 		_raycastKernel.setArg(RMODE, 1u);
-		if (_imsmLoaded) {
-			_raycastKernel.setArg(IMAP, _indexMap);
-			_raycastKernel.setArg(SDATA, _samplingMapData);
-		}
 		break;
 	default:
 		// Standard
