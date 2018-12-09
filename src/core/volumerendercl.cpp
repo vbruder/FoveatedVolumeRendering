@@ -553,9 +553,12 @@ void VolumeRenderCL::runRaycastLBG(const size_t width, const size_t height, cons
 	{
 		setMemObjectsRaycast(t);
 		
-		std::cout << "Amount of Samples: " << _amountOfSamples << std::endl;
+		size_t total_threads = _amountOfSamples;
+		size_t xy_threads = std::sqrt(total_threads) + 1;
 
-		cl::NDRange globalThreads(_amountOfSamples + (LOCAL_SIZE - _amountOfSamples % LOCAL_SIZE));
+		std::cout << "total amount of Samples: " << _amountOfSamples << ", xy_samples: " << xy_threads << std::endl;
+
+		cl::NDRange globalThreads(xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE), xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE));
 		cl::NDRange localThreads(LOCAL_SIZE * LOCAL_SIZE);
 		cl::Event ndrEvt;
 
