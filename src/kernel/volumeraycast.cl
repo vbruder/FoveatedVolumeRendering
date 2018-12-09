@@ -406,10 +406,16 @@ __kernel void volumeRender(  __read_only image3d_t volData
     int2 img_bounds = get_image_dim(outImg);
     int2 texCoords = globalId;
 
+    
+
     switch(rmode){
         case 1:
             // LBG-Sampling
-
+            {
+                // debug
+                write_imagef(outImg, texCoords, convert_float4(read_imageui(indexMap, texCoords)) / 255.0f);
+                return;
+            }
             break;
         default:
             

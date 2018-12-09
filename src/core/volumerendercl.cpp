@@ -556,7 +556,7 @@ void VolumeRenderCL::runRaycastLBG(const size_t width, const size_t height, cons
 		size_t total_threads = _amountOfSamples;
 		size_t xy_threads = std::sqrt(total_threads) + 1;
 
-		std::cout << "total amount of Samples: " << _amountOfSamples << ", xy_samples: " << xy_threads << std::endl;
+		// std::cout << "total amount of Samples: " << _amountOfSamples << ", xy_samples: " << xy_threads << std::endl;
 
 		cl::NDRange globalThreads(xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE), xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE));
 		cl::NDRange localThreads(LOCAL_SIZE * LOCAL_SIZE);
@@ -776,7 +776,7 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 
 	try {
 		std::cout << "Trying to open: " << fileNameIndexMap << std::endl;
-		QImage im = QImage(QString::fromStdString(fileNameIndexMap), "0xbbrrggff");
+		QImage im = QImage(QString::fromStdString(fileNameIndexMap));
 		std::cout << "Loaded Index Map with size: " << im.sizeInBytes() << " bytes and format: " << im.format() << std::endl;
 		// std::cout << "width: " << im.width() << std::endl;
 		_indexMap = cl::Image2D(_contextCL, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, im_format, im.width(), im.height(), 0, im.bits(), &err);
