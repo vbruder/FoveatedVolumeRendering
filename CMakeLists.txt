@@ -52,7 +52,7 @@ IF(MSVC)
     # fix any double slashes which seem to be common
     #STRING(REPLACE "//" "/"  QT_VERSION "${QT_VERSION}")
 
-	SET(QT_VERSION "C:/Qt/5.11.2")
+	SET(QT_VERSION "C:/Qt/5.10.1")
 	
     # infer the folder from Cmake msvc_version string
     # - qt uses (e.g.) "msvc2013"
