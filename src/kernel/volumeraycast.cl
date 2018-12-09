@@ -375,6 +375,11 @@ typedef struct {
     uint y;
 } samplingDataStruct;
 
+// returns the 1D index for a 2D coordinate (coord) in a grid with width m
+int index_from_2d(int2 coord, int m){
+    return coord.y * m + coord.x;
+}
+
 /**
  * direct volume raycasting kernel
  */
@@ -405,17 +410,18 @@ __kernel void volumeRender(  __read_only image3d_t volData
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
     int2 img_bounds = get_image_dim(outImg);
     int2 texCoords = globalId;
-
-    
+    uint texId;
 
     switch(rmode){
         case 1:
             // LBG-Sampling
-            {
+            /*{
                 // debug
                 write_imagef(outImg, texCoords, convert_float4(read_imageui(indexMap, texCoords)) / 255.0f);
                 return;
-            }
+            }*/
+            texId = index_from_2d(texCoords, get_global_size(0));
+            texCoords = (int2)(samplingData[texId].x, samplingData[texId].y);
             break;
         default:
             
