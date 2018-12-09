@@ -403,6 +403,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , __write_only image2d_t outHitImg
                            , const uint imgEss
                            , const uint rmode // selects the rendering mode
+                           , const int2 gpoint // gaze point
+                           , const uint sdSamples // amount of samples in samplingData
                            , __read_only image2d_t indexMap
                            , __global samplingDataStruct *samplingData
                            )
@@ -420,8 +422,10 @@ __kernel void volumeRender(  __read_only image3d_t volData
                 write_imagef(outImg, texCoords, convert_float4(read_imageui(indexMap, texCoords)) / 255.0f);
                 return;
             }*/
-            texId = index_from_2d(texCoords, get_global_size(0));
-            texCoords = (int2)(samplingData[texId].x, samplingData[texId].y);
+            texId = index_from_2d(globalId, get_global_size(0));
+            if(texId >= sdSamples || texId < 0) return;
+            texCoords = (int2)(samplingData[texId].x, samplingData[texId].y) + gpoint - (int2)(0.5f * get_image_dim(indexMap).x, 0.5f * get_image_dim(indexMap).y);
+            // texCoords = texCoords - 0.5f * get_image_dim(indexMap);
             break;
         default:
             
