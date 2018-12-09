@@ -196,6 +196,7 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
 
         _genBricksKernel = cl::Kernel(program, "generateBricks");
         _downsamplingKernel = cl::Kernel(program, "downsampling");
+		_interpolateLBGKernel = cl::Kernel(program, "interpolateLBG");
     }
     catch (cl::Error err)
     {
@@ -207,15 +208,30 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
 /**
  * @brief VolumeRenderCL::setMemObjects
  */
-void VolumeRenderCL::setMemObjectsRaycast(const size_t t)
+void VolumeRenderCL::setMemObjectsRaycast(const size_t t, const uint rendering_method, GLuint omlbgTexId)
 {
     _raycastKernel.setArg(VOLUME, _volumesMem.at(t));
     _raycastKernel.setArg(BRICKS, _bricksMem.at(t));
     _raycastKernel.setArg(TFF, _tffMem);
-    if (_useGL)
-        _raycastKernel.setArg(OUTPUT, _outputMem);
-    else
-        _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
+	if (rendering_method == 0) {
+		// Standard
+		if (_useGL)
+			_raycastKernel.setArg(OUTPUT, _outputMem);
+		else
+			_raycastKernel.setArg(OUTPUT, _outputMemNoGL);
+	}
+	else if(rendering_method==1) {
+		_outputMemLBG = cl::ImageGL(_contextCL, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, omlbgTexId);
+		if (_useGL)
+			_raycastKernel.setArg(OUTPUT, _outputMemLBG);
+		else
+			//_raycastKernel.setArg(OUTPUT, _outputMemNoGL);
+			;
+	}
+	else {
+		throw std::runtime_error("Couldn't set memory objects because the rendering method is unknown!");
+	}
+    
     _raycastKernel.setArg(TFF_PREFIX, _tffPrefixMem);
     cl_float3 modelScale = {{_modelScale[0], _modelScale[1], _modelScale[2]}};
     _raycastKernel.setArg(MODEL_SCALE, modelScale);
@@ -227,6 +243,22 @@ void VolumeRenderCL::setMemObjectsRaycast(const size_t t)
 		_raycastKernel.setArg(IMAP, _indexMap);
 		_raycastKernel.setArg(SDATA, _samplingMapData);
 	}
+}
+
+void VolumeRenderCL::setMemObjectsInterpolationLBG()
+{
+	// input is previous output
+	if (_useGL)
+		_interpolateLBGKernel.setArg(IP_INIMG, _outputMemLBG);
+	else
+		_interpolateLBGKernel.setArg(IP_INIMG, _outputMemNoGL);
+
+	if (_imsmLoaded) {
+		_interpolateLBGKernel.setArg(IP_IMAP, _indexMap);
+		_interpolateLBGKernel.setArg(IP_SDATA, _samplingMapData);
+	}
+
+	_interpolateLBGKernel.setArg(IP_OUTIMG, _outputMem);
 }
 
 
@@ -599,6 +631,48 @@ void VolumeRenderCL::runRaycastLBG(const size_t width, const size_t height, cons
 
 void VolumeRenderCL::runRaycastLBGNoGL(const size_t width, const size_t height, const size_t t, std::vector<float>& output)
 {
+}
+
+void VolumeRenderCL::interpolateLBG(const size_t width, const size_t height)
+{
+	if (!this->_volLoaded || !this->_imsmLoaded)
+		return;
+	try // opencl scope
+	{
+		setMemObjectsInterpolationLBG();
+
+		_interpolateLBGKernel.setArg(IP_SDSAMPLES, static_cast<uint>(_amountOfSamples));
+
+		// std::cout << "total amount of Samples: " << _amountOfSamples << ", xy_samples: " << xy_threads << std::endl;
+
+		cl::NDRange globalThreads(width + (LOCAL_SIZE - width % LOCAL_SIZE), height
+			+ (LOCAL_SIZE - height % LOCAL_SIZE));
+		cl::NDRange localThreads(LOCAL_SIZE * LOCAL_SIZE);
+		cl::Event ndrEvt;
+
+		std::vector<cl::Memory> memObj;
+		memObj.push_back(_outputMem);
+		memObj.push_back(_outputMemLBG);
+		_queueCL.enqueueAcquireGLObjects(&memObj);
+		_queueCL.enqueueNDRangeKernel(
+			_raycastKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
+		_queueCL.enqueueReleaseGLObjects(&memObj);
+		_queueCL.finish();    // global sync
+
+
+#ifdef CL_QUEUE_PROFILING_ENABLE
+		cl_ulong start = 0;
+		cl_ulong end = 0;
+		ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
+		ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
+		_lastExecTime = static_cast<double>(end - start)*1e-9;
+		//        std::cout << "Kernel time: " << _lastExecTime << std::endl << std::endl;
+#endif
+	}
+	catch (cl::Error err)
+	{
+		logCLerror(err);
+	}
 }
 
 /**

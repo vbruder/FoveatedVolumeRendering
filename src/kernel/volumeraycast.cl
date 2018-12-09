@@ -715,6 +715,41 @@ __kernel void volumeRender(  __read_only image3d_t volData
     }
 }
 
+//************************** Interpolation Kernel for LBG Sampling ***********
+__kernel void interpolateLBG(__read_only image2d_t inImg
+                            ,__read_only image2d_t indexMap
+                            ,__write_only image2d_t outImg
+                            ,const uint sdSamples
+                            ,__global samplingDataStruct *samplingData
+){
+    int2 globalId = (int2)(get_global_id(0), get_global_id(1));
+    int2 texCoords = globalId;
+    
+    if(any(texCoords >= get_image_dim(indexMap)) || any(texCoords < (int2)(0,0)))
+        return;
+
+    uint4 sample = read_imageui(indexMap, texCoords);
+    uint sampleId = (0x00 << 24) | (sample.r << 16) | (sample.g << 8) | sample.b;
+
+    if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
+        return;
+
+    if(sampleId >= sdSamples){
+        write_imagef(outImg, texCoords, (float4)(1.0f,0.0f,0.0f,0.0f));
+        return;
+    }
+
+    int2 sampleCoord = (samplingData[sampleId].x, samplingData[sampleId].y);
+    if(any(sampleCoord >= get_image_dim(inImg)) || any(sampleCoord < (int2)(0,0))){
+        write_imagef(outImg, texCoords, (float4)(1.0f,0.0f,0.0f,0.0f));
+        return;
+    }
+        
+
+    write_imagef(outImg, texCoords, read_imagef(inImg, sampleCoord);
+}
+
+
 #pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
 
 //************************** Generate brick volume ***************************

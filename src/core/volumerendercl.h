@@ -68,6 +68,15 @@ public:
 		, SDATA			 // Sampling map buffer						(buffer)
 	};
 
+	enum ip_kernel_arg
+	{
+		  IP_INIMG = 0
+		, IP_IMAP
+		, IP_OUTIMG
+		, IP_SDSAMPLES
+		, IP_SDATA
+	};
+
     // mipmap down-scaling metric
     enum scaling_metric
     {
@@ -159,6 +168,11 @@ public:
 	  */
 	 void runRaycastLBGNoGL(const size_t width, const size_t height, const size_t t,
 		 std::vector<float> &output);
+
+	 /**
+	 * @brief Interpolate the image previously computed by runRaycastLBG.
+	 */
+	 void interpolateLBG(const size_t width, const size_t height);
 
     /**
      * @brief Load volume data from a given .dat file name.
@@ -369,7 +383,12 @@ private:
      * @brief Set OpenCL memory objects for volume raycast kernel.
      * @param t number of volume timesteps.
      */
-    void setMemObjectsRaycast(const size_t t);
+    void setMemObjectsRaycast(const size_t t, const uint renderingmethod=0, GLuint omlbgTexId=2);
+
+	/**
+	 * @brief Set OpenCL memory objects for interpolateLBG Kernel.
+	 */
+	void setMemObjectsInterpolationLBG();
 
     /**
      * @brief Set OpenCL memory objects for brick generation kernel.
@@ -399,6 +418,7 @@ private:
     cl::Kernel _raycastKernel;
     cl::Kernel _genBricksKernel;
     cl::Kernel _downsamplingKernel;
+	cl::Kernel _interpolateLBGKernel;
 
     std::vector<cl::Image3D> _volumesMem;
     std::vector<cl::Image3D> _bricksMem;
@@ -415,6 +435,7 @@ private:
 	QPoint _samplingMapExtends; // The width and height the sampling map defines.
 	cl::Image2D _indexMap;
 	size_t _amountOfSamples;	// The indexes of the samplingMap (scanlLine width).
+	cl::ImageGL _outputMemLBG; // The output memory for the raycast when using lbg sampling
 
 	bool _imsmLoaded;	// is set to true iff _samplingMapData and _indexMap have been loaded successfully.
     bool _volLoaded;
