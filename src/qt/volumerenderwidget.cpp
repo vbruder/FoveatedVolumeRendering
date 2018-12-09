@@ -618,6 +618,7 @@ void VolumeRenderWidget::paintGL()
    
 	switch (_renderingMethod) {
 	case LBG_Sampling:
+		_volumerender.setGazePoint(_lastLocalCursorPos);
 		paintGL_LBG_sampling();
 		break;
 	default:

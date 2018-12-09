@@ -183,6 +183,8 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
         _raycastKernel.setArg(AERIAL, 0);               // aerial perspective off by defualt
         _raycastKernel.setArg(IMG_ESS, 0);
 		_raycastKernel.setArg(RMODE, 0u);				// Rendering Mode is initially Standard
+		_raycastKernel.setArg(GPOINT, cl_int2{ 0u, 0u });	// gaze point
+		_raycastKernel.setArg(SDSAMPLES, 0u);
 
 		{	// init index and sampling agruments with empty buffers / images
 			_place_holder_imap = cl::Image2D(_contextCL, CL_MEM_READ_ONLY, cl::ImageFormat(CL_RGBA, CL_UNORM_INT8), 1, 1);
@@ -555,6 +557,8 @@ void VolumeRenderCL::runRaycastLBG(const size_t width, const size_t height, cons
 		
 		size_t total_threads = _amountOfSamples;
 		size_t xy_threads = std::sqrt(total_threads) + 1;
+		
+		_raycastKernel.setArg(SDSAMPLES, static_cast<cl_uint>(total_threads));	// sets the amount of samples so they won't be taken from undefined memory
 
 		// std::cout << "total amount of Samples: " << _amountOfSamples << ", xy_samples: " << xy_threads << std::endl;
 
@@ -830,9 +834,9 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 				std::cout << "b: " << std::to_string(b) << ", g: " << std::to_string(g) << ", r: " << std::to_string(r) << ", a: " << std::to_string(a) << std::endl;
 			}*/
 			index_data.push_back(indexStruct(x, y));
-			if (i < 5) {
+			/*if (i < 5) {
 				std::cout << "i: " << i << ", Sampling: " << index_data[i].x_coord<< ", " << index_data[i].y_coord << std::endl;
-			}
+			}*/
 		}
 
 		_amountOfSamples = pixelsPerLine;
@@ -849,7 +853,6 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 	catch (cl::Error e) {
 		throw std::runtime_error(std::string("Failed to create Buffer for Sampling Map Image. Error: ").append(std::to_string(e.err())).c_str());
 	}
-
 	_imsmLoaded = true;
 }
 
@@ -1056,6 +1059,11 @@ void VolumeRenderCL::setBackground(const std::array<float, 4> color)
     try {
         _raycastKernel.setArg(BACKGROUND, bgColor);
     } catch (cl::Error err) { logCLerror(err); }
+}
+
+void VolumeRenderCL::setGazePoint(QPoint gaze_point)
+{
+	_raycastKernel.setArg(GPOINT, gaze_point);
 }
 
 

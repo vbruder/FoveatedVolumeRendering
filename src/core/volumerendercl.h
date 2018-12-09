@@ -62,6 +62,8 @@ public:
         , OUT_HIT_IMG    // output image for image order ESS        image2d_t (UINT)
         , IMG_ESS        // image order empty space skipping        cl_uint (bool)
 		, RMODE			 // rendering mode							cl_uint
+		, GPOINT		 // gaze point								cl_int2
+		, SDSAMPLES		 // amount of samples						cl_uint
 		, IMAP			 // Indexmap Image							image2d_t
 		, SDATA			 // Sampling map buffer						(buffer)
 	};
@@ -260,6 +262,11 @@ public:
      * @param color
      */
     void setBackground(const std::array<float, 4> color);
+	/**
+	 * @brief Sets the gaze point to be used by lbg sampling.
+	 * @param color
+	 */
+	void setGazePoint(QPoint gaze_point);
 
     /**
      * @brief Get the execution time of the last kernel run.
@@ -405,6 +412,7 @@ private:
 	cl::Buffer _place_holder_smd;
 	cl::Image2D _place_holder_imap;
 	cl::Buffer _samplingMapData; // The width of the sample map defines the total number of work items to be started for lbg sampling raycast
+	QPoint _samplingMapExtends; // The width and height the sampling map defines.
 	cl::Image2D _indexMap;
 	size_t _amountOfSamples;	// The indexes of the samplingMap (scanlLine width).
 
