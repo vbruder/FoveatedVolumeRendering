@@ -166,7 +166,7 @@ protected:
 private:
     void paintOrientationAxis(QPainter &p);
     void paintFps(QPainter &p, const double fps, const double lastTime);
-    double getFps();
+    double getFps(double offset=0.0);
 
 	// Different methods called from within the paintGL()-method
 	void paintGL_standard();

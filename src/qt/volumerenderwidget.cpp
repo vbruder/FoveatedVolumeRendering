@@ -746,6 +746,8 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 
 				_volumerender.runRaycastLBG(_timestep);
 
+				fps = _volumerender.getLastExecTime();
+
 				// second texture needs to have one third in each dimension of the index map
 				/*_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0),
 					_outTexId);*/
@@ -772,7 +774,7 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 		{
 			qCritical() << e.what();
 		}
-		fps = getFps();
+		fps = getFps(fps);
 	}
 
 	QPainter p(this);
@@ -1639,9 +1641,9 @@ void VolumeRenderWidget::setBackgroundColor(const QColor col)
  * @brief VolumeRenderWidget::calcFPS
  * @return
  */
-double VolumeRenderWidget::getFps()
+double VolumeRenderWidget::getFps(double offset)
 {
-    _times.push_back(_volumerender.getLastExecTime());
+    _times.push_back(_volumerender.getLastExecTime() + offset);
     if (_times.length() > 60)
         _times.pop_front();
 
