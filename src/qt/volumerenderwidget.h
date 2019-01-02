@@ -188,7 +188,7 @@ private:
 	 * @param width Width of the texture in pixels.
 	 * @param height Height of the texture in pixels.
 	 */
-    void generateOutputTextures(const int width, const int height, GLuint texture, GLuint tex_unit);
+    void generateOutputTextures(const int width, const int height, GLuint* texture, GLuint tex_unit);
 
 	/**
 	 * @brief Log camera configurations rotation and zoom) to two files selected by the user.

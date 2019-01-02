@@ -847,8 +847,7 @@ void VolumeRenderWidget::resizeGL(const int w, const int h)
 
     try
     {
-		std::cout << "Generate Output Textures!" << std::endl;
-        generateOutputTextures(floor(w*_imgSamplingRate), floor(h*_imgSamplingRate),  _outTexId, GL_TEXTURE0);
+        generateOutputTextures(floor(w*_imgSamplingRate), floor(h*_imgSamplingRate),  &_outTexId, GL_TEXTURE0);
     }
     catch (std::runtime_error e)
     {
@@ -862,13 +861,14 @@ void VolumeRenderWidget::resizeGL(const int w, const int h)
 /**
  * @brief VolumeRenderWidget::generateOutputTextures
  */
-void VolumeRenderWidget::generateOutputTextures(const int width, const int height, GLuint texture, GLuint tex_unit)
+void VolumeRenderWidget::generateOutputTextures(const int width, const int height, GLuint* texture, GLuint tex_unit)
 {
-	glDeleteTextures(1, &texture);
-	glGenTextures(1, &texture);
+	std::cout << "Generate Output Textures!" << std::endl;
+	glDeleteTextures(1, texture);
+	glGenTextures(1, texture);
 
     glActiveTexture(tex_unit);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    glBindTexture(GL_TEXTURE_2D, *texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -896,7 +896,7 @@ void VolumeRenderWidget::generateOutputTextures(const int width, const int heigh
     glGenerateMipmap(GL_TEXTURE_2D);
 
     _volumerender.updateOutputImg(static_cast<size_t>(width), static_cast<size_t>(height),
-		texture);
+		*texture);
 
     updateView(0, 0);
 }
