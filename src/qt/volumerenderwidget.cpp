@@ -747,10 +747,10 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 				_volumerender.runRaycastLBG(_timestep);
 
 				// second texture needs to have one third in each dimension of the index map
-				_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0),
-					_outTexId);
+				/*_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0),
+					_outTexId);*/
 
-				_volumerender.interpolateLBG(floor(width() * _imgSamplingRate), floor(height() * _imgSamplingRate), _tmpTexId, _outTexId);
+				_volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0), _tmpTexId, _outTexId);
 			}
 			else
 			{

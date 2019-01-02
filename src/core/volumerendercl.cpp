@@ -653,7 +653,7 @@ void VolumeRenderCL::interpolateLBG(const size_t width, const size_t height, GLu
 		memObj.push_back(_inputMem);
 		_queueCL.enqueueAcquireGLObjects(&memObj);
 		_queueCL.enqueueNDRangeKernel(
-			_raycastKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
+			_interpolateLBGKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
 		_queueCL.enqueueReleaseGLObjects(&memObj);
 		_queueCL.finish();    // global sync
 

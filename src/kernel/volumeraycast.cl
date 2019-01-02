@@ -729,7 +729,7 @@ __kernel void interpolateLBG(__read_only image2d_t inImg
     if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
         return;
 
-    write_imagef(outImg, texCoords, (float4)(1.0f,0.0f,0.0f,0.0f));// read_imagef(inImg, texCoords));
+    write_imagef(outImg, texCoords, read_imagef(inImg, texCoords)); // (float4)(1.0f,0.0f,0.0f,0.0f));//
     return;
 
     /*uint4 sample = read_imageui(indexMap, texCoords);
