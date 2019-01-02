@@ -414,12 +414,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
     int2 texCoords = globalId;
     uint texId;
 
-    {
-        // debug
-        write_imagef(outImg, texCoords, (float4)(1.0f, 0.0f, 0.0f, 1.0f));
-        return;
-    }
-
     switch(rmode){
         case 1:
             // LBG-Sampling

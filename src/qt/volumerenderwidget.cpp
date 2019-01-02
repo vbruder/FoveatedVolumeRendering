@@ -863,7 +863,6 @@ void VolumeRenderWidget::resizeGL(const int w, const int h)
  */
 void VolumeRenderWidget::generateOutputTextures(const int width, const int height, GLuint* texture, GLuint tex_unit)
 {
-	std::cout << "Generate Output Textures!" << std::endl;
 	glDeleteTextures(1, texture);
 	glGenTextures(1, texture);
 
