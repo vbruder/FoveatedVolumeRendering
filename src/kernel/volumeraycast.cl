@@ -414,6 +414,12 @@ __kernel void volumeRender(  __read_only image3d_t volData
     int2 texCoords = globalId;
     uint texId;
 
+    {
+        // debug
+        write_imagef(outImg, texCoords, (float4)(1.0f, 0.0f, 0.0f, 1.0f));
+        return;
+    }
+
     switch(rmode){
         case 1:
             // LBG-Sampling
@@ -435,6 +441,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
 
     if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
         return;
+
 
     // TODO: Check if get_group_id() is related to the number of total work items and if it results in an error when using lbg-sampling.
     local uint hits;
@@ -728,7 +735,9 @@ __kernel void interpolateLBG(__read_only image2d_t inImg
     if(any(texCoords >= get_image_dim(indexMap)) || any(texCoords < (int2)(0,0)))
         return;
 
-    uint4 sample = read_imageui(indexMap, texCoords);
+    write_imagef(outImg, texCoords, read_imagef(inImg, texCoords));
+
+    /*uint4 sample = read_imageui(indexMap, texCoords);
     uint sampleId = (0x00 << 24) | (sample.r << 16) | (sample.g << 8) | sample.b;
 
     if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
@@ -746,7 +755,7 @@ __kernel void interpolateLBG(__read_only image2d_t inImg
     }
         
 
-    write_imagef(outImg, texCoords, read_imagef(inImg, sampleCoord);
+    write_imagef(outImg, texCoords, read_imagef(inImg, sampleCoord);*/
 }
 
 

@@ -188,7 +188,7 @@ private:
 	 * @param width Width of the texture in pixels.
 	 * @param height Height of the texture in pixels.
 	 */
-    void generateOutputTextures(const int width, const int height);
+    void generateOutputTextures(const int width, const int height, GLuint texture, GLuint tex_unit);
 
 	/**
 	 * @brief Log camera configurations rotation and zoom) to two files selected by the user.
@@ -209,8 +209,6 @@ private:
     QOpenGLShaderProgram _spScreenQuad;
     QOpenGLShaderProgram _spOverlaysGL;
     QOpenGLBuffer _quadVbo;
-    GLuint _overlayFboId;
-    GLuint _overlayTexId;
 
     QMatrix4x4 _screenQuadProjMX;
     QMatrix4x4 _viewMX;
@@ -220,7 +218,8 @@ private:
     QMatrix4x4 _overlayModelMX;
 
     QPoint _tffRange;
-    GLuint _outTexId;
+    GLuint _outTexId;	// TexId for final output Texture
+	GLuint _tmpTexId;	// TexId for temporary Textures like pre interpolation
     VolumeRenderCL _volumerender;
     QEasingCurve _tffInterpol;
     int _timestep;
