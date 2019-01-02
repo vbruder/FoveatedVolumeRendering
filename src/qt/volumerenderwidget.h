@@ -161,7 +161,7 @@ protected:
     // Qt specific QOpenGLWidget methods
     void initializeGL() Q_DECL_OVERRIDE;
     void paintGL() Q_DECL_OVERRIDE;
-    void resizeGL(const int w, const int h) Q_DECL_OVERRIDE;
+    void resizeGL(const int w, const int h) Q_DECL_OVERRIDE; // generates the two GL textures, GL_TEXTURE0 is active afterwards
 
 private:
     void paintOrientationAxis(QPainter &p);
@@ -218,8 +218,8 @@ private:
     QMatrix4x4 _overlayModelMX;
 
     QPoint _tffRange;
-    GLuint _outTexId;	// TexId for final output Texture
-	GLuint _tmpTexId;	// TexId for temporary Textures like pre interpolation
+    GLuint _outTexId;	// TexId for final output Texture, bound to tex_unit 0
+	GLuint _tmpTexId;	// TexId for temporary Textures like pre interpolation, bound to tex_unit 1
     VolumeRenderCL _volumerender;
     QEasingCurve _tffInterpol;
     int _timestep;

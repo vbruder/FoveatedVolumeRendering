@@ -726,10 +726,11 @@ __kernel void interpolateLBG(__read_only image2d_t inImg
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
     int2 texCoords = globalId;
     
-    if(any(texCoords >= get_image_dim(indexMap)) || any(texCoords < (int2)(0,0)))
+    if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
         return;
 
-    write_imagef(outImg, texCoords, read_imagef(inImg, texCoords));
+    write_imagef(outImg, texCoords, (float4)(1.0f,0.0f,0.0f,0.0f));// read_imagef(inImg, texCoords));
+    return;
 
     /*uint4 sample = read_imageui(indexMap, texCoords);
     uint sampleId = (0x00 << 24) | (sample.r << 16) | (sample.g << 8) | sample.b;

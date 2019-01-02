@@ -63,6 +63,7 @@ VolumeRenderCL::VolumeRenderCL() :
   , _useImgESS(false)
   , _imsmLoaded(false)
   , _amountOfSamples(0)
+  , _indexMapExtends({3,3})
 {
 }
 
@@ -372,6 +373,11 @@ const std::string VolumeRenderCL::volumeDownsampling(const size_t t, const int f
     }
 }
 
+QPoint VolumeRenderCL::getIndexMapExtends()
+{
+	return _indexMapExtends;
+}
+
 
 /**
  * @brief VolumeRenderCL::calcScaling
@@ -571,7 +577,7 @@ void VolumeRenderCL::runRaycastNoGL(const size_t width, const size_t height, con
     }
 }
 
-void VolumeRenderCL::runRaycastLBG(const size_t width, const size_t height, const size_t t)
+void VolumeRenderCL::runRaycastLBG(const size_t t)
 {
 	if (!this->_volLoaded || !this->_imsmLoaded)
 		return;
@@ -850,6 +856,7 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 		std::cout << "Loaded Index Map with size: " << im.sizeInBytes() << " bytes and format: " << im.format() << std::endl;
 		// std::cout << "width: " << im.width() << std::endl;
 		_indexMap = cl::Image2D(_contextCL, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, im_format, im.width(), im.height(), 0, im.bits(), &err);
+		_indexMapExtends = { im.size().width(), im.size().height() };
 	}
 	catch (cl::Error e) {
 		throw std::runtime_error(std::string("Failed to create cl::Image2D for index map. Error: ").append(std::to_string(e.err())).c_str());

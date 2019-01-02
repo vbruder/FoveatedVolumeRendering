@@ -153,7 +153,7 @@ public:
 	   Has to be less or equal the one third of the height of the lbg sampling texture.
 	 * @param t time series id, defaults to 0 if no time series
 	 */
-	 void runRaycastLBG(const size_t width, const size_t height, const size_t t);
+	 void runRaycastLBG(const size_t t);
 
 	 /**
 	  * @brief Run the actual OpenCL volume raycasting kernel without OpenGL context shring.
@@ -327,6 +327,9 @@ public:
      */
     const std::string volumeDownsampling(const size_t t, const int factor);
 
+	// Returns the extends of the index map. {0,0} if it hasn't been loaded yet.
+	QPoint getIndexMapExtends();
+
 private:
     /**
      * @brief Generate coarse grained volume bricks that can be used for ESS.
@@ -432,8 +435,8 @@ private:
 	cl::Buffer _place_holder_smd;
 	cl::Image2D _place_holder_imap;
 	cl::Buffer _samplingMapData; // The width of the sample map defines the total number of work items to be started for lbg sampling raycast
-	QPoint _samplingMapExtends; // The width and height the sampling map defines.
 	cl::Image2D _indexMap;
+	QPoint _indexMapExtends; // The width and height of the Index Map
 	size_t _amountOfSamples;	// The indexes of the samplingMap (scanlLine width).
 
 	bool _imsmLoaded;	// is set to true iff _samplingMapData and _indexMap have been loaded successfully.
