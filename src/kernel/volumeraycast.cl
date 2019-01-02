@@ -425,7 +425,9 @@ __kernel void volumeRender(  __read_only image3d_t volData
             texId = index_from_2d(globalId, get_global_size(0));
             if(texId >= sdSamples || texId < 0) return;
             texCoords = (int2)(samplingData[texId].x, samplingData[texId].y) + gpoint - (int2)(0.5f * get_image_dim(indexMap).x, 0.5f * get_image_dim(indexMap).y);
-            // texCoords = texCoords - 0.5f * get_image_dim(indexMap);
+            
+            // TODO: delete the next line if the sample_image has been properly recomputed
+            texCoords += get_image_dim(indexMap) / 3.0f;
             break;
         default:
             

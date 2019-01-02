@@ -203,6 +203,7 @@ void VolumeRenderCL::initKernel(const std::string fileName, const std::string bu
     {
         logCLerror(err);
     }
+
 }
 
 
