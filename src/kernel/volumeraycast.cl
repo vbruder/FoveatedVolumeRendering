@@ -423,11 +423,11 @@ __kernel void volumeRender(  __read_only image3d_t volData
                 return;
             }*/
             texId = index_from_2d(globalId, get_global_size(0));
-            if(texId >= sdSamples || texId < 0) return;
+            if(texId >= sdSamples) return;
             texCoords = (int2)(samplingData[texId].x, samplingData[texId].y) + gpoint - (int2)(0.5f * get_image_dim(indexMap).x, 0.5f * get_image_dim(indexMap).y);
             
             // TODO: delete the next line if the sample_image has been properly recomputed
-            texCoords += get_image_dim(indexMap) / 3.0f;
+            texCoords += get_image_dim(indexMap) / 3;
             break;
         default:
             
@@ -728,14 +728,14 @@ __kernel void interpolateLBG(__read_only image2d_t inImg
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
     int2 texCoords = globalId;
     
-    if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
+    /*if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
         return;
 
     write_imagef(outImg, texCoords, read_imagef(inImg, texCoords)); // (float4)(1.0f,0.0f,0.0f,0.0f));//
-    return;
+    return;*/
 
-    /*uint4 sample = read_imageui(indexMap, texCoords);
-    uint sampleId = (0x00 << 24) | (sample.r << 16) | (sample.g << 8) | sample.b;
+    uint4 sample = read_imageui(indexMap, texCoords);
+    uint sampleId = (0x00 << 24) | (sample.x << 16) | (sample.y << 8) | sample.z;
 
     if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
         return;
@@ -745,14 +745,14 @@ __kernel void interpolateLBG(__read_only image2d_t inImg
         return;
     }
 
-    int2 sampleCoord = (samplingData[sampleId].x, samplingData[sampleId].y);
+    int2 sampleCoord = (int2)(samplingData[sampleId].x, samplingData[sampleId].y);
     if(any(sampleCoord >= get_image_dim(inImg)) || any(sampleCoord < (int2)(0,0))){
         write_imagef(outImg, texCoords, (float4)(1.0f,0.0f,0.0f,0.0f));
         return;
     }
         
 
-    write_imagef(outImg, texCoords, read_imagef(inImg, sampleCoord);*/
+    write_imagef(outImg, texCoords, read_imagef(inImg, sampleCoord));
 }
 
 
