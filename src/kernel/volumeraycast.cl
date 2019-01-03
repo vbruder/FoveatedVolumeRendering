@@ -411,11 +411,9 @@ __kernel void volumeRender(  __read_only image3d_t volData
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
     int2 img_bounds = get_image_dim(outImg);
-    int2 innerScreenBounds;
     int2 texCoords = globalId;
     uint texId;
     int2 gp;
-    float aspectRatio;
 
     switch(rmode){
         case 1:
@@ -425,19 +423,13 @@ __kernel void volumeRender(  __read_only image3d_t volData
                 write_imagef(outImg, texCoords, convert_float4(read_imageui(indexMap, texCoords)) / 255.0f);
                 return;
             }*/
-            innerScreenBounds = img_bounds / 3;
             gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap) / 3) * gpoint);
             texId = index_from_2d(globalId, get_global_size(0));
             if(texId >= sdSamples) return;
             texCoords = (int2)(samplingData[texId].x, samplingData[texId].y) + gp - (int2)(get_image_dim(indexMap).x / 6, get_image_dim(indexMap).y / 6);
-            aspectRatio = native_divide((float)(innerScreenBounds.y), (float)(innerScreenBounds.x));
-            aspectRatio = min(aspectRatio, native_divide((float)(innerScreenBounds.x), (float)(innerScreenBounds.y)));
-            // TODO: delete the next line if the sample_image has been properly recomputed
-            // texCoords += get_image_dim(indexMap) / 3;
             break;
         default:
-            aspectRatio = native_divide((float)(img_bounds.y), (float)(img_bounds.x));
-            aspectRatio = min(aspectRatio, native_divide((float)(img_bounds.x), (float)(img_bounds.y)));
+            
             // Standard
             break;
     }
@@ -473,6 +465,9 @@ __kernel void volumeRender(  __read_only image3d_t volData
     float iptr;
     float rand = fract(sin(dot(convert_float2(globalId),
                        (float2)(12.9898f, 78.233f))) * 43758.5453f, &iptr);
+
+    float aspectRatio = native_divide((float)(img_bounds.y), (float)(img_bounds.x));
+    aspectRatio = min(aspectRatio, native_divide((float)(img_bounds.x), (float)(img_bounds.y)));
 
     int maxImgSize = max(img_bounds.x, img_bounds.y);
     float2 imgCoords;
