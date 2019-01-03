@@ -423,10 +423,18 @@ __kernel void volumeRender(  __read_only image3d_t volData
                 write_imagef(outImg, texCoords, convert_float4(read_imageui(indexMap, texCoords)) / 255.0f);
                 return;
             }*/
+            // img_bounds /= 3;
+            // gp are the unnormalized coordinates between 0 and one third of the indexMap extends
             gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap) / 3) * gpoint);
+
+            // used to look up the sampleCoordinates
             texId = index_from_2d(globalId, get_global_size(0));
             if(texId >= sdSamples) return;
-            texCoords = (int2)(samplingData[texId].x, samplingData[texId].y) + gp - (int2)(get_image_dim(indexMap).x / 6, get_image_dim(indexMap).y / 6);
+            
+            // texCoords are the sampleCoords but with an offset according to gp
+            texCoords = (int2)(samplingData[texId].x, samplingData[texId].y) 
+                      + gp 
+                      - (img_bounds / 6); // if gp in middle of screen one half of one third, then offset is zero
             break;
         default:
             
@@ -725,39 +733,65 @@ __kernel void interpolateLBG(__read_only image2d_t inImg
                             ,const uint sdSamples
                             ,__global samplingDataStruct *samplingData
 ){
+    // position to write back
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
-    int2 texCoords = globalId;// + gpoint - (int2)(0.5f * get_image_dim(indexMap).x, 0.5f * get_image_dim(indexMap).y);
+    int2 inImg_bounds = get_image_dim(inImg);
+    int2 outImg_bounds = get_image_dim(outImg);
     
-    texCoords += get_image_dim(indexMap) / 3; // get middle of index map
+    
+    int2 lookupCoords = convert_int2_rtz(
+        convert_float2(inImg_bounds) * (0.5f - gpoint / 3.f) + convert_float2(globalId)
+    );
 
-    if(any(globalId >= get_image_dim(outImg)) || any(globalId < (int2)(0,0)))
-        return;
-
-    if(any(texCoords >= get_image_dim(inImg)) || any(texCoords < (int2)(0,0)))
-        return;
-
-    write_imagef(outImg, globalId, read_imagef(inImg, texCoords)); // (float4)(1.0f,0.0f,0.0f,0.0f));//
-    return;
-
-    /*uint4 sample = read_imageui(indexMap, texCoords);
+    uint4 sample = read_imageui(indexMap, lookupCoords);
     uint sampleId = (0x00 << 24) | (sample.x << 16) | (sample.y << 8) | sample.z;
 
-    if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
-        return;
-
     if(sampleId >= sdSamples){
-        write_imagef(outImg, texCoords, (float4)(1.0f,0.0f,0.0f,0.0f));
+        write_imagef(outImg, globalId, (float4)(1.0f,0.0f,0.0f,0.0f));
         return;
     }
 
+    // the coordinates of the sample
     int2 sampleCoord = (int2)(samplingData[sampleId].x, samplingData[sampleId].y);
     if(any(sampleCoord >= get_image_dim(inImg)) || any(sampleCoord < (int2)(0,0))){
-        write_imagef(outImg, texCoords, (float4)(1.0f,0.0f,0.0f,0.0f));
+        write_imagef(outImg, globalId, (float4)(1.0f,0.0f,0.0f,0.0f));
         return;
     }
-        
 
-    write_imagef(outImg, texCoords, read_imagef(inImg, sampleCoord));*/
+    write_imagef(outImg, globalId, read_imagef(inImg, sampleCoord));
+    return;
+
+    /*write_imagef(outImg, globalId, read_imagef(inImg, globalId));
+    return;*/
+
+    /*{
+        // debug
+        write_imagef(outImg, globalId, convert_float4(read_imageui(indexMap, globalId)) / 255.0f);
+        return;
+    }*/
+    // int2 indexMap_bounds = get_image_dim(indexMap);
+
+    // texCoords are the screen coordinates (the screen is kind of moved around with the gpoint)
+    /*int2 texCoords = globalId; // + gpoint - (int2)(0.5f * get_image_dim(indexMap).x, 0.5f * get_image_dim(indexMap).y);
+    texCoords += get_image_dim(indexMap) / 3; // get screen*/
+
+    /*// the coordinates used to look up the correct sample
+    
+
+    if(any(globalId >= get_image_dim(outImg)) || any(globalId < (int2)(0,0))){
+        write_imagef(outImg, globalId, (float4)(1.0f,0.0f,0.0f,0.0f));
+        return;
+    }
+
+    if(any(lookupCoords >= get_image_dim(inImg)) || any(lookupCoords < (int2)(0,0))){
+        write_imagef(outImg, globalId, (float4)(1.0f,0.0f,0.0f,0.0f));
+        return;
+    }
+
+    // debug
+    write_imagef(outImg, globalId, read_imagef(inImg, lookupCoords)); // (float4)(1.0f,0.0f,0.0f,0.0f));//
+    return;
+    */
 }
 
 

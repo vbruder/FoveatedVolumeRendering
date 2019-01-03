@@ -913,6 +913,24 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 			}*/
 		}
 
+		/*{
+			// debug
+			cl_uint xmin = 100000000000000;
+			cl_uint xmax = 0;
+			cl_uint ymin = 100000000000000;
+			cl_uint ymax = 0;
+			for (indexStruct is : index_data) {
+				if (xmin > is.x_coord) xmin = is.x_coord;
+				if (xmax < is.x_coord) xmax = is.x_coord;
+				if (ymin > is.y_coord) ymin = is.y_coord;
+				if (ymax < is.y_coord) ymax = is.y_coord;
+			}
+			std::cout << "xmin: " << xmin << ", xmax: " << xmax << ", ymin: " << ymin << ", ymax: " << ymax << std::endl;
+		}*/
+
+
+		
+
 		_amountOfSamples = pixelsPerLine;
 
 		/*
