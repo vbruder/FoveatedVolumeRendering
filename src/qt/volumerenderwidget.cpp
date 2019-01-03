@@ -743,7 +743,7 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 		{
 
 			if (_useGL) {
-				/*
+				
 				// set first Texture to extends of index map
 				_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()),
 					_tmpTexId);
@@ -757,9 +757,9 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 				//	_outTexId);
 
 				_volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0), _tmpTexId, _outTexId);
-				*/
+				
 
-				generateOutputTextures(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()),
+				/*generateOutputTextures(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()),
 					&_tmpTexId, GL_TEXTURE1);
 
 				_volumerender.runRaycastLBG(_timestep);
@@ -771,7 +771,7 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 				//	_outTexId);
 
 				_volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0), _tmpTexId, _outTexId);
-
+				*/
 			}
 			else
 			{
