@@ -741,16 +741,23 @@ __kernel void interpolateLBG(__read_only image2d_t inImg
     int2 texCoords = globalId;
     texCoords += get_image_dim(indexMap) / 3;
 
-    // add mouse offset
-    texCoords -= gp - (inImg_bounds / 6);
+    // negate mouse offset
+    int2 lookupCoords = texCoords - (gp - (inImg_bounds / 6));
     
-    {
+    uint4 sample = read_imageui(indexMap, lookupCoords);
+    uint sampleId = (0x00 << 24) | (sample.x << 16) | (sample.y << 8) | sample.z;
+    int2 sampleCoord = (int2)(samplingData[sampleId].x, samplingData[sampleId].y);
+
+    // add mouse offset
+    sampleCoord += gp - (inImg_bounds / 6);
+
+    /*{
         // debug
         write_imagef(outImg, globalId, convert_float4(read_imageui(indexMap, texCoords)) / 255.0f);
         return;
-    }
+    }*/
 
-    write_imagef(outImg, globalId, read_imagef(inImg, texCoords));
+    write_imagef(outImg, globalId, read_imagef(inImg, sampleCoord));
     return;
 
     /*
