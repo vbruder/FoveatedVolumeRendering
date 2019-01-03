@@ -887,9 +887,12 @@ void VolumeRenderWidget::resizeGL(const int w, const int h)
 		else
 			generateOutputTextures(floor(w*_imgSamplingRate), floor(h*_imgSamplingRate),  &_outTexId, GL_TEXTURE0);
 			
+		/*
+		// Debug
 		std::cout << "Resize _tmpImgId: (" << floor(_volumerender.getIndexMapExtends().x()) << ", " << floor(_volumerender.getIndexMapExtends().y()) << ")" << std::endl;
 		std::cout << "size / 3.0: (" << floor(_volumerender.getIndexMapExtends().x()) / 3.0 << ", " << floor(_volumerender.getIndexMapExtends().y()) / 3.0 << ")\n" << std::endl;
-    }
+		*/
+	}
     catch (std::runtime_error e)
     {
         qCritical() << "An error occured while generating output texture." << e.what();
