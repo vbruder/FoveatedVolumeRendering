@@ -73,6 +73,7 @@ public:
 		  IP_INIMG = 0
 		, IP_IMAP
 		, IP_OUTIMG
+		, IP_GPOINT
 		, IP_SDSAMPLES
 		, IP_SDATA
 	};
@@ -278,9 +279,15 @@ public:
     void setBackground(const std::array<float, 4> color);
 	/**
 	 * @brief Sets the gaze point to be used by lbg sampling.
-	 * @param color
+	 * @param gaze_point
 	 */
 	void setGazePoint(QPoint gaze_point);
+
+	/**
+	 * @brief Sets the gaze point to be used by lbg sampling.
+	 * @param gaze_point
+	 */
+	void setGazePoint(cl_float2 gaze_point);
 
     /**
      * @brief Get the execution time of the last kernel run.

@@ -1137,7 +1137,15 @@ void VolumeRenderCL::setBackground(const std::array<float, 4> color)
 
 void VolumeRenderCL::setGazePoint(QPoint gaze_point)
 {
+	cl_float2 gpf = { static_cast<cl_float>(gaze_point.x()), static_cast<cl_float>(gaze_point.y()) };
+	_raycastKernel.setArg(GPOINT, gpf);
+	_interpolateLBGKernel.setArg(IP_GPOINT, gpf);
+}
+
+void VolumeRenderCL::setGazePoint(cl_float2 gaze_point)
+{
 	_raycastKernel.setArg(GPOINT, gaze_point);
+	_interpolateLBGKernel.setArg(IP_GPOINT, gaze_point);
 }
 
 

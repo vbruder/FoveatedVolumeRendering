@@ -618,7 +618,10 @@ void VolumeRenderWidget::paintGL()
    
 	switch (_renderingMethod) {
 	case LBG_Sampling:
-		_volumerender.setGazePoint(_lastLocalCursorPos);
+		cl_float2 lcpf;
+		lcpf.x = static_cast<cl_float>(_lastLocalCursorPos.x() / static_cast<cl_float>(this->size().width()));
+		lcpf.y = static_cast<cl_float>(_lastLocalCursorPos.y() / static_cast<cl_float>(this->size().height()));
+		_volumerender.setGazePoint(lcpf);
 		paintGL_LBG_sampling();
 		break;
 	default:
@@ -740,6 +743,7 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 		{
 
 			if (_useGL) {
+				/*
 				// set first Texture to extends of index map
 				_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()),
 					_tmpTexId);
@@ -749,10 +753,25 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 				fps = _volumerender.getLastExecTime();
 
 				// second texture needs to have one third in each dimension of the index map
-				/*_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0),
-					_outTexId);*/
+				//_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0),
+				//	_outTexId);
 
 				_volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0), _tmpTexId, _outTexId);
+				*/
+
+				generateOutputTextures(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()),
+					&_tmpTexId, GL_TEXTURE1);
+
+				_volumerender.runRaycastLBG(_timestep);
+
+				fps = _volumerender.getLastExecTime();
+
+				// second texture needs to have one third in each dimension of the index map
+				//_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0),
+				//	_outTexId);
+
+				_volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0), _tmpTexId, _outTexId);
+
 			}
 			else
 			{
@@ -859,13 +878,15 @@ void VolumeRenderWidget::resizeGL(const int w, const int h)
 
     try
     {
+		//generateOutputTextures(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()),
+		//	&_outTexId, GL_TEXTURE0);
 		generateOutputTextures(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()), &_tmpTexId, GL_TEXTURE1);
         if(_renderingMethod == LBG_Sampling)
 			generateOutputTextures(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0),
 				&_outTexId, GL_TEXTURE0);
 		else
 			generateOutputTextures(floor(w*_imgSamplingRate), floor(h*_imgSamplingRate),  &_outTexId, GL_TEXTURE0);
-
+			
 		std::cout << "Resize _tmpImgId: (" << floor(_volumerender.getIndexMapExtends().x()) << ", " << floor(_volumerender.getIndexMapExtends().y()) << ")" << std::endl;
 		std::cout << "size / 3.0: (" << floor(_volumerender.getIndexMapExtends().x()) / 3.0 << ", " << floor(_volumerender.getIndexMapExtends().y()) / 3.0 << ")\n" << std::endl;
     }

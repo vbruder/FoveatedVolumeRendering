@@ -403,7 +403,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , __write_only image2d_t outHitImg
                            , const uint imgEss
                            , const uint rmode // selects the rendering mode
-                           , const int2 gpoint // gaze point
+                           , const float2 gpoint // gaze point
                            , const uint sdSamples // amount of samples in samplingData
                            , __read_only image2d_t indexMap
                            , __global samplingDataStruct *samplingData
@@ -411,8 +411,11 @@ __kernel void volumeRender(  __read_only image3d_t volData
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
     int2 img_bounds = get_image_dim(outImg);
+    int2 innerScreenBounds;
     int2 texCoords = globalId;
     uint texId;
+    int2 gp;
+    float aspectRatio;
 
     switch(rmode){
         case 1:
@@ -422,15 +425,19 @@ __kernel void volumeRender(  __read_only image3d_t volData
                 write_imagef(outImg, texCoords, convert_float4(read_imageui(indexMap, texCoords)) / 255.0f);
                 return;
             }*/
+            innerScreenBounds = img_bounds / 3;
+            gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap) / 3) * gpoint);
             texId = index_from_2d(globalId, get_global_size(0));
             if(texId >= sdSamples) return;
-            texCoords = (int2)(samplingData[texId].x, samplingData[texId].y) + gpoint - (int2)(0.5f * get_image_dim(indexMap).x, 0.5f * get_image_dim(indexMap).y);
-            
+            texCoords = (int2)(samplingData[texId].x, samplingData[texId].y) + gp - (int2)(get_image_dim(indexMap).x / 6, get_image_dim(indexMap).y / 6);
+            aspectRatio = native_divide((float)(innerScreenBounds.y), (float)(innerScreenBounds.x));
+            aspectRatio = min(aspectRatio, native_divide((float)(innerScreenBounds.x), (float)(innerScreenBounds.y)));
             // TODO: delete the next line if the sample_image has been properly recomputed
-            texCoords += get_image_dim(indexMap) / 3;
+            // texCoords += get_image_dim(indexMap) / 3;
             break;
         default:
-            
+            aspectRatio = native_divide((float)(img_bounds.y), (float)(img_bounds.x));
+            aspectRatio = min(aspectRatio, native_divide((float)(img_bounds.x), (float)(img_bounds.y)));
             // Standard
             break;
     }
@@ -466,9 +473,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
     float iptr;
     float rand = fract(sin(dot(convert_float2(globalId),
                        (float2)(12.9898f, 78.233f))) * 43758.5453f, &iptr);
-
-    float aspectRatio = native_divide((float)(img_bounds.y), (float)(img_bounds.x));
-    aspectRatio = min(aspectRatio, native_divide((float)(img_bounds.x), (float)(img_bounds.y)));
 
     int maxImgSize = max(img_bounds.x, img_bounds.y);
     float2 imgCoords;
@@ -722,19 +726,25 @@ __kernel void volumeRender(  __read_only image3d_t volData
 __kernel void interpolateLBG(__read_only image2d_t inImg
                             ,__read_only image2d_t indexMap
                             ,__write_only image2d_t outImg
+                            , const float2 gpoint
                             ,const uint sdSamples
                             ,__global samplingDataStruct *samplingData
 ){
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
-    int2 texCoords = globalId;
+    int2 texCoords = globalId;// + gpoint - (int2)(0.5f * get_image_dim(indexMap).x, 0.5f * get_image_dim(indexMap).y);
     
-    /*if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
+    texCoords += get_image_dim(indexMap) / 3; // get middle of index map
+
+    if(any(globalId >= get_image_dim(outImg)) || any(globalId < (int2)(0,0)))
         return;
 
-    write_imagef(outImg, texCoords, read_imagef(inImg, texCoords)); // (float4)(1.0f,0.0f,0.0f,0.0f));//
-    return;*/
+    if(any(texCoords >= get_image_dim(inImg)) || any(texCoords < (int2)(0,0)))
+        return;
 
-    uint4 sample = read_imageui(indexMap, texCoords);
+    write_imagef(outImg, globalId, read_imagef(inImg, texCoords)); // (float4)(1.0f,0.0f,0.0f,0.0f));//
+    return;
+
+    /*uint4 sample = read_imageui(indexMap, texCoords);
     uint sampleId = (0x00 << 24) | (sample.x << 16) | (sample.y << 8) | sample.z;
 
     if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
@@ -752,7 +762,7 @@ __kernel void interpolateLBG(__read_only image2d_t inImg
     }
         
 
-    write_imagef(outImg, texCoords, read_imagef(inImg, sampleCoord));
+    write_imagef(outImg, texCoords, read_imagef(inImg, sampleCoord));*/
 }
 
 
