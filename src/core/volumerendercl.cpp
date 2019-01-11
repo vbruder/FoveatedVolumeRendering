@@ -849,7 +849,7 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 	
 	cl::ImageFormat im_format;
 	im_format.image_channel_data_type = CL_UNSIGNED_INT8;
-	im_format.image_channel_order = CL_BGRA;
+	im_format.image_channel_order = CL_RGBA;
 
 	try {
 		std::cout << "Trying to open: " << fileNameIndexMap << std::endl;
