@@ -594,7 +594,7 @@ void VolumeRenderCL::runRaycastLBG(const size_t t)
 		// std::cout << "total amount of Samples: " << _amountOfSamples << ", xy_samples: " << xy_threads << std::endl;
 
 		cl::NDRange globalThreads(xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE), xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE));
-		cl::NDRange localThreads(LOCAL_SIZE * LOCAL_SIZE);
+		cl::NDRange localThreads(LOCAL_SIZE, LOCAL_SIZE);
 		cl::Event ndrEvt;
 
 		std::vector<cl::Memory> memObj;
@@ -646,7 +646,7 @@ void VolumeRenderCL::interpolateLBG(const size_t width, const size_t height, GLu
 
 		cl::NDRange globalThreads(width + (LOCAL_SIZE - width % LOCAL_SIZE), height
 			+ (LOCAL_SIZE - height % LOCAL_SIZE));
-		cl::NDRange localThreads(LOCAL_SIZE * LOCAL_SIZE);
+		cl::NDRange localThreads(LOCAL_SIZE, LOCAL_SIZE);
 		cl::Event ndrEvt;
 
 		std::vector<cl::Memory> memObj;

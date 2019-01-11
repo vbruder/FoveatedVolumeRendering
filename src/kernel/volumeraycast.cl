@@ -424,8 +424,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
                 return;
             }*/
             // img_bounds /= 3;
-            // gp are the unnormalized coordinates between 0 and one third of the indexMap extends
-            gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap) / 3) * gpoint);
+            // gp are the unnormalized coordinates between 0 and one half of the indexMap extends
+            gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap) / 2) * gpoint);
 
             // used to look up the sampleCoordinates
             texId = index_from_2d(globalId, get_global_size(0));
@@ -434,7 +434,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
             // texCoords are the sampleCoords but with an offset according to gp
             texCoords = (int2)(samplingData[texId].x, samplingData[texId].y) 
                       + gp 
-                      - (img_bounds / 6); // if gp in middle of screen one half of one third, then offset is zero
+                      - (img_bounds / 4); // if gp in middle of screen one half of one half, then offset is zero
             break;
         default:
             
@@ -737,19 +737,19 @@ __kernel void interpolateLBG(__read_only image2d_t inImg
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
     int2 inImg_bounds = get_image_dim(inImg);
     int2 outImg_bounds = get_image_dim(outImg);
-    int2 gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap) / 3) * gpoint);
+    int2 gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap) / 2) * gpoint);
     int2 texCoords = globalId;
-    texCoords += get_image_dim(indexMap) / 3;
+    texCoords += get_image_dim(indexMap) / 4;
 
     // negate mouse offset
-    int2 lookupCoords = texCoords - (gp - (inImg_bounds / 6));
+    int2 lookupCoords = texCoords - (gp - (inImg_bounds / 4));
     
     uint4 sample = read_imageui(indexMap, nearestIntSmp, lookupCoords);
     uint sampleId = (0x00 << 24) | (sample.x << 16) | (sample.y << 8) | sample.z;
     int2 sampleCoord = (int2)(samplingData[sampleId].x, samplingData[sampleId].y);
 
     // add mouse offset
-    sampleCoord += gp - (inImg_bounds / 6);
+    sampleCoord += gp - (inImg_bounds / 4);
 
     /*{
         // debug

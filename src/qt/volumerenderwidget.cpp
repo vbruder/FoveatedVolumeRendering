@@ -753,10 +753,10 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 				fps = _volumerender.getLastExecTime();
 
 				// second texture needs to have one third in each dimension of the index map
-				//_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0),
+				//_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0),
 				//	_outTexId);
 
-				_volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0), _tmpTexId, _outTexId);
+				_volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0), _tmpTexId, _outTexId);
 				
 
 				/*generateOutputTextures(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()),
@@ -767,10 +767,10 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 				fps = _volumerender.getLastExecTime();
 
 				// second texture needs to have one third in each dimension of the index map
-				//_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0),
+				//_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0),
 				//	_outTexId);
 
-				_volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0), _tmpTexId, _outTexId);
+				_volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0), _tmpTexId, _outTexId);
 				*/
 			}
 			else
@@ -882,7 +882,7 @@ void VolumeRenderWidget::resizeGL(const int w, const int h)
 		//	&_outTexId, GL_TEXTURE0);
 		generateOutputTextures(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()), &_tmpTexId, GL_TEXTURE1);
         if(_renderingMethod == LBG_Sampling)
-			generateOutputTextures(floor(_volumerender.getIndexMapExtends().x() / 3.0), floor(_volumerender.getIndexMapExtends().y() / 3.0),
+			generateOutputTextures(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0),
 				&_outTexId, GL_TEXTURE0);
 		else
 			generateOutputTextures(floor(w*_imgSamplingRate), floor(h*_imgSamplingRate),  &_outTexId, GL_TEXTURE0);
@@ -890,7 +890,7 @@ void VolumeRenderWidget::resizeGL(const int w, const int h)
 		/*
 		// Debug
 		std::cout << "Resize _tmpImgId: (" << floor(_volumerender.getIndexMapExtends().x()) << ", " << floor(_volumerender.getIndexMapExtends().y()) << ")" << std::endl;
-		std::cout << "size / 3.0: (" << floor(_volumerender.getIndexMapExtends().x()) / 3.0 << ", " << floor(_volumerender.getIndexMapExtends().y()) / 3.0 << ")\n" << std::endl;
+		std::cout << "size / 2.0: (" << floor(_volumerender.getIndexMapExtends().x()) / 2.0 << ", " << floor(_volumerender.getIndexMapExtends().y()) / 2.0 << ")\n" << std::endl;
 		*/
 	}
     catch (std::runtime_error e)
