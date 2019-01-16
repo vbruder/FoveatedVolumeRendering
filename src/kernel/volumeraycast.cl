@@ -740,15 +740,10 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
     if(any(globalId >= get_image_dim(outImg)) || any(globalId < (int2)(0,0)))
         return;
 
-//write_imagef(outImg, globalId, read_imagef(inImg, linearSmp, globalId));
-//return;
-
     int2 inImg_bounds = get_image_dim(inImg);
     int2 outImg_bounds = get_image_dim(outImg);
     int2 gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap) / 2) * gpoint);
-//    int2 gp = convert_int2_rtz(convert_float2(get_image_dim(outImg)) * gpoint);
     int2 texCoords = globalId;
-    //texCoords += get_image_dim(indexMap) / 4;
 
     // negate mouse offset
     int2 lookupCoords = texCoords - (gp - (inImg_bounds / 2));
