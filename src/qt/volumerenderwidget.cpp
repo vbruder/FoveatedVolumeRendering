@@ -535,7 +535,7 @@ void VolumeRenderWidget::actionSelectMonitor()
 		return_data.device_name = device_names[monitor_index];
 
 		// enumerate display monitors to retrive handles and information
-		EnumDisplayMonitors(NULL, NULL, reinterpret_cast<MONITORENUMPROC>(&VolumeRenderWidget::MonitorEnumProc), reinterpret_cast<LPARAM>(&return_data));
+//		EnumDisplayMonitors(NULL, NULL, reinterpret_cast<MONITORENUMPROC>(&VolumeRenderWidget::MonitorEnumProc), reinterpret_cast<LPARAM>(&return_data));
 
 		if (return_data.success) {
 			_monitor_offset = QPoint(return_data.left, return_data.top);
@@ -548,7 +548,7 @@ void VolumeRenderWidget::actionSelectMonitor()
 	}
 }
 
-bool VolumeRenderWidget::MonitorEnumProc(HMONITOR monitor, HDC hdcMnitor, LPRECT rect, LPARAM param)
+/*bool VolumeRenderWidget::MonitorEnumProc(HMONITOR monitor, HDC hdcMnitor, LPRECT rect, LPARAM param)
 {
 	struct return_data_struct {
 		bool success;
@@ -577,7 +577,7 @@ bool VolumeRenderWidget::MonitorEnumProc(HMONITOR monitor, HDC hdcMnitor, LPRECT
 	}
 
 	return success;
-}
+}*/
 
 bool VolumeRenderWidget::check_eyetracker_availability()
 {
