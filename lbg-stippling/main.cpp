@@ -31,7 +31,7 @@ QImage foveaSampling() {
     const QSizeF foveaPx(screenSizePx.width() / screenSizeCm.width() * foveaCm,
                          screenSizePx.height() / screenSizeCm.height() * foveaCm);
 
-    QImage gaussian(screenSizePx.width() * 3, screenSizePx.height() * 3, QImage::Format_Grayscale8);
+    QImage gaussian(screenSizePx.width() * 2, screenSizePx.height() * 2, QImage::Format_Grayscale8);
     //QImage gaussian(screenSizePx.width() , screenSizePx.height() , QImage::Format_Grayscale8);
     for (int y = 0; y < gaussian.height(); ++y) {
         uchar* line = gaussian.scanLine(y);
