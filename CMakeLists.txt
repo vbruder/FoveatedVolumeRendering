@@ -143,9 +143,11 @@ endif()
 
 # include tobii research sdk
 find_library(TOBII_LIBRARY NAME "tobii_research" PATHS "${CMAKE_CURRENT_SOURCE_DIR}/lib/")
-target_link_libraries(${PROJECT} PRIVATE ${TOBII_LIBRARY})
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/lib/tobii_research.dll" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Release/tobii_research.dll" COPYONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/lib/tobii_research.dll" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/tobii_research.dll" COPYONLY)
+if(TOBII_LIBRARY)
+    target_link_libraries(${PROJECT} PRIVATE ${TOBII_LIBRARY})
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/lib/tobii_research.dll" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Release/tobii_research.dll" COPYONLY)
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/lib/tobii_research.dll" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/tobii_research.dll" COPYONLY)
+endif()
 
 # copy runtime files
 IF(MSVC)

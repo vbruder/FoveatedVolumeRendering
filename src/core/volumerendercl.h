@@ -23,11 +23,11 @@
 
 #define CL_QUEUE_PROFILING_ENABLE
 #define CL_HPP_ENABLE_EXCEPTIONS
+#include <QImage>
 #include "src/oclutil/openclglutilities.h"
 #include "src/oclutil/openclutilities.h"
 
 #include "src/io/datrawreader.h"
-#include <qimage.h>
 
 #include <valarray>
 
@@ -154,7 +154,7 @@ public:
 	   Has to be less or equal the one third of the height of the lbg sampling texture.
 	 * @param t time series id, defaults to 0 if no time series
 	 */
-	 void runRaycastLBG(const size_t t);
+     void runRaycastLBG(const size_t t);
 
 	 /**
 	  * @brief Run the actual OpenCL volume raycasting kernel without OpenGL context shring.

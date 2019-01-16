@@ -371,12 +371,12 @@ float calcAO(float3 n, uint4 *taus, image3d_t volData, float3 pos, float stepSiz
 }
 
 typedef struct {
-    uint x;
-    uint y;
+    uint2 id;
 } samplingDataStruct;
 
 // returns the 1D index for a 2D coordinate (coord) in a grid with width m
-int index_from_2d(int2 coord, int m){
+int index_from_2d(int2 coord, int m)
+{
     return coord.y * m + coord.x;
 }
 
@@ -425,19 +425,19 @@ __kernel void volumeRender(  __read_only image3d_t volData
             }*/
             // img_bounds /= 3;
             // gp are the unnormalized coordinates between 0 and one half of the indexMap extends
-            gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap) / 2) * gpoint);
+            gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap)/2) * gpoint);
+//            gp += get_image_dim(indexMap) / (int2)(2);
 
             // used to look up the sampleCoordinates
-            texId = index_from_2d(globalId, get_global_size(0));
+            texId = globalId.x; //index_from_2d(globalId, get_global_size(0));
             if(texId >= sdSamples) return;
-            
+
             // texCoords are the sampleCoords but with an offset according to gp
-            texCoords = (int2)(samplingData[texId].x, samplingData[texId].y) 
-                      + gp 
+            texCoords = convert_int2(samplingData[texId].id)
+                      + gp
                       - (img_bounds / 4); // if gp in middle of screen one half of one half, then offset is zero
             break;
         default:
-            
             // Standard
             break;
     }
@@ -474,15 +474,16 @@ __kernel void volumeRender(  __read_only image3d_t volData
     float rand = fract(sin(dot(convert_float2(globalId),
                        (float2)(12.9898f, 78.233f))) * 43758.5453f, &iptr);
 
-    float aspectRatio = native_divide((float)(img_bounds.y), (float)(img_bounds.x));
-    aspectRatio = min(aspectRatio, native_divide((float)(img_bounds.x), (float)(img_bounds.y)));
+    float aspectRatio = img_bounds.x > img_bounds.y ?
+                              native_divide((float)(img_bounds.y), (float)(img_bounds.x))
+                            : native_divide((float)(img_bounds.x), (float)(img_bounds.y));
 
     int maxImgSize = max(img_bounds.x, img_bounds.y);
     float2 imgCoords;
-    imgCoords.x = native_divide((texCoords.x + 0.5f), convert_float(maxImgSize)) * 2.f;
-    imgCoords.y = native_divide((texCoords.y + 0.5f), convert_float(maxImgSize)) * 2.f;
+    imgCoords.x = native_divide((texCoords.x + 0.f), convert_float(maxImgSize)) * 2.f;
+    imgCoords.y = native_divide((texCoords.y + 0.f), convert_float(maxImgSize)) * 2.f;
     // calculate correct offset based on aspect ratio
-    imgCoords -= get_global_size(0) > get_global_size(1) ?
+    imgCoords -= img_bounds.x > img_bounds.y ?
                         (float2)(1.0f, aspectRatio) : (float2)(aspectRatio, 1.0);
     imgCoords.y *= -1.f;   // flip y coord
 
@@ -726,27 +727,35 @@ __kernel void volumeRender(  __read_only image3d_t volData
 }
 
 //************************** Interpolation Kernel for LBG Sampling ***********
-__kernel void interpolateLBG(__read_only image2d_t inImg
-                            ,__read_only image2d_t indexMap
-                            ,__write_only image2d_t outImg
+__kernel void interpolateLBG( __read_only image2d_t inImg
+                            , __read_only image2d_t indexMap
+                            , __write_only image2d_t outImg
                             , const float2 gpoint
-                            ,const uint sdSamples
-                            ,__global samplingDataStruct *samplingData
-){
+                            , const uint sdSamples
+                            , __global samplingDataStruct *samplingData
+                            )
+{
     // position to write back
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
+    if(any(globalId >= get_image_dim(outImg)) || any(globalId < (int2)(0,0)))
+        return;
+
+//write_imagef(outImg, globalId, read_imagef(inImg, linearSmp, globalId));
+//return;
+
     int2 inImg_bounds = get_image_dim(inImg);
     int2 outImg_bounds = get_image_dim(outImg);
     int2 gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap) / 2) * gpoint);
+//    int2 gp = convert_int2_rtz(convert_float2(get_image_dim(outImg)) * gpoint);
     int2 texCoords = globalId;
-    texCoords += get_image_dim(indexMap) / 4;
+    //texCoords += get_image_dim(indexMap) / 4;
 
     // negate mouse offset
-    int2 lookupCoords = texCoords - (gp - (inImg_bounds / 4));
+    int2 lookupCoords = texCoords - (gp - (inImg_bounds / 2));
     
     uint4 sample = read_imageui(indexMap, nearestIntSmp, lookupCoords);
     uint sampleId = (0x00 << 24) | (sample.z << 16) | (sample.y << 8) | sample.x;
-    int2 sampleCoord = (int2)(samplingData[sampleId].x, samplingData[sampleId].y);
+    int2 sampleCoord = convert_int2(samplingData[sampleId].id);
 
     // add mouse offset
     sampleCoord += gp - (inImg_bounds / 4);

@@ -56,14 +56,14 @@ static unsigned int RoundPow2(const unsigned int n)
  * @brief VolumeRenderCL::VolumeRenderCL
  */
 VolumeRenderCL::VolumeRenderCL() :
-    _volLoaded(false)
+    _indexMapExtends({3,3})
+  , _amountOfSamples(0)
+  , _imsmLoaded(false)
+  , _volLoaded(false)
   , _lastExecTime(0.0)
   , _modelScale{1.0, 1.0, 1.0}
   , _useGL(true)
   , _useImgESS(false)
-  , _imsmLoaded(false)
-  , _amountOfSamples(0)
-  , _indexMapExtends({3,3})
 {
 }
 
@@ -587,21 +587,23 @@ void VolumeRenderCL::runRaycastLBG(const size_t t)
 		setMemObjectsRaycast(t);
 		
 		size_t total_threads = _amountOfSamples;
-		size_t xy_threads = std::sqrt(total_threads) + 1;
-		
+        //size_t xy_threads = static_cast<size_t>(ceil(std::sqrt(total_threads)));
+
 		_raycastKernel.setArg(SDSAMPLES, static_cast<cl_uint>(total_threads));	// sets the amount of samples so they won't be taken from undefined memory
 
 		// std::cout << "total amount of Samples: " << _amountOfSamples << ", xy_samples: " << xy_threads << std::endl;
+//		cl::NDRange globalThreads(xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE), xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE));
+//		cl::NDRange localThreads(LOCAL_SIZE, LOCAL_SIZE);
 
-		cl::NDRange globalThreads(xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE), xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE));
-		cl::NDRange localThreads(LOCAL_SIZE, LOCAL_SIZE);
+        cl::NDRange globalThreads(total_threads, 1);
+        cl::NDRange localThreads(LOCAL_SIZE * LOCAL_SIZE, 1);
 		cl::Event ndrEvt;
 
 		std::vector<cl::Memory> memObj;
 		memObj.push_back(_outputMem);
 		_queueCL.enqueueAcquireGLObjects(&memObj);
 		_queueCL.enqueueNDRangeKernel(
-			_raycastKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
+            _raycastKernel, cl::NullRange, globalThreads, cl::NullRange, nullptr, &ndrEvt);
 		_queueCL.enqueueReleaseGLObjects(&memObj);
 		_queueCL.finish();    // global sync
 
@@ -639,14 +641,17 @@ void VolumeRenderCL::interpolateLBG(const size_t width, const size_t height, GLu
 	try // opencl scope
 	{
 		setMemObjectsInterpolationLBG(inTexId, outTexId);
-
 		_interpolateLBGKernel.setArg(IP_SDSAMPLES, static_cast<uint>(_amountOfSamples));
 
 		// std::cout << "total amount of Samples: " << _amountOfSamples << ", xy_samples: " << xy_threads << std::endl;
+        size_t w = width;
+        size_t h = height;
+        // round global size to next multiple of local size
+        w += (w % LOCAL_SIZE) > 0 ? LOCAL_SIZE - w % LOCAL_SIZE : 0;
+        h += (h % LOCAL_SIZE) > 0 ? LOCAL_SIZE - h % LOCAL_SIZE : 0;
 
-		cl::NDRange globalThreads(width + (LOCAL_SIZE - width % LOCAL_SIZE), height
-			+ (LOCAL_SIZE - height % LOCAL_SIZE));
-		cl::NDRange localThreads(LOCAL_SIZE, LOCAL_SIZE);
+        cl::NDRange globalThreads(w, h);
+        cl::NDRange localThreads(LOCAL_SIZE, LOCAL_SIZE);
 		cl::Event ndrEvt;
 
 		std::vector<cl::Memory> memObj;
@@ -654,7 +659,7 @@ void VolumeRenderCL::interpolateLBG(const size_t width, const size_t height, GLu
 		memObj.push_back(_inputMem);
 		_queueCL.enqueueAcquireGLObjects(&memObj);
 		_queueCL.enqueueNDRangeKernel(
-			_interpolateLBGKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
+            _interpolateLBGKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
 		_queueCL.enqueueReleaseGLObjects(&memObj);
 		_queueCL.finish();    // global sync
 
@@ -869,12 +874,13 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 		QImage sm = QImage(QString::fromStdString(fileNameSamplingMap));
 		std::cout << "Loaded Sampling Map with size: " << sm.sizeInBytes() << " bytes and format: " << sm.format() << std::endl;
 		
-		struct indexStruct {
-		public:
-			indexStruct(cl_uint x, cl_uint y) : x_coord(x), y_coord(y) {};
-
-			cl_uint x_coord;
-			cl_uint y_coord;
+        struct indexStruct
+        {
+            indexStruct(cl_uint x, cl_uint y)
+            {
+                coord = {{x, y}};
+            }
+            cl_uint2 coord;
 		};
 
 		std::vector<indexStruct> index_data;
@@ -888,9 +894,10 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 		cl_uint * firstLine = reinterpret_cast<cl_uint*>(scanLine0);
 		cl_uint * secondLine = reinterpret_cast<cl_uint*>(scanLine1);
 
-		unsigned int pixelsPerLine = sm.bytesPerLine() / 4;
+        unsigned int pixelsPerLine = sm.bytesPerLine() / 4;
 		// std::cout << "SM: Pixels per Line: " << pixelsPerLine << std::endl;
-		for (unsigned int i = 0; i < pixelsPerLine; i++) {
+        for (unsigned int i = 0; i < pixelsPerLine; i++)
+        {
 			uchar bx = scanLine0[0 + i * 4];
 			uchar gx = scanLine0[1 + i * 4];
 			uchar rx = scanLine0[2 + i * 4];
@@ -901,8 +908,8 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 			uchar ry = scanLine1[2 + i * 4];
 			// uchar ay = scanLine1[3 + i * 4];
 
-			cl_uint x = (0x00 << 24) | (rx << 16) | (gx << 8) | bx;
-			cl_uint y = (0x00 << 24) | (ry << 16) | (gy << 8) | by;
+            cl_uint x = (0x00u << 24) | (rx << 16) | (gx << 8) | bx;
+            cl_uint y = (0x00u << 24) | (ry << 16) | (gy << 8) | by;
 
 			/*if (i <5) {
 				std::cout << "b: " << std::to_string(b) << ", g: " << std::to_string(g) << ", r: " << std::to_string(r) << ", a: " << std::to_string(a) << std::endl;

@@ -376,6 +376,7 @@ void VolumeRenderWidget::setRenderingMethod(int rm)
 	this->resizeGL(this->size().width(), this->size().height()); // calling resize to create new textures
 }
 
+#ifdef _WIN32
 void VolumeRenderWidget::setEyetracking(bool eyetracking)
 {
 	if (check_eyetracker_availability()) {
@@ -604,6 +605,7 @@ bool VolumeRenderWidget::check_eyetracker_availability()
 	}
 
 }
+#endif
 
 void VolumeRenderWidget::gaze_data_callback(TobiiResearchGazeData * gaze_data, void * user_data)
 {
@@ -745,10 +747,11 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 			if (_useGL) {
 				
 				// set first Texture to extends of index map
-				_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()),
-					_tmpTexId);
+                _volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x()),
+                                              floor(_volumerender.getIndexMapExtends().y()),
+                                              _tmpTexId);
 
-				_volumerender.runRaycastLBG(_timestep);
+                _volumerender.runRaycastLBG(_timestep);
 
 				fps = _volumerender.getLastExecTime();
 
@@ -756,7 +759,9 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 				//_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0),
 				//	_outTexId);
 
-				_volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0), _tmpTexId, _outTexId);
+                _volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 2.0),
+                                             floor(_volumerender.getIndexMapExtends().y() / 2.0),
+                                             _tmpTexId, _outTexId);
 				
 
 				/*generateOutputTextures(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()),

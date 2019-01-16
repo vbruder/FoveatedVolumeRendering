@@ -102,7 +102,9 @@ public:
 	void setEyetracking(bool eyetracking);
 	void showSelectEyetrackingDevice();
 	void actionSelectMonitor();
-	static bool MonitorEnumProc(HMONITOR monitor, HDC hdcMnitor, LPRECT rect, LPARAM param);
+#ifdef WIN_32
+    static bool MonitorEnumProc(HMONITOR monitor, HDC hdcMnitor, LPRECT rect, LPARAM param);
+#endif
 
 public slots:
     void cleanup();
