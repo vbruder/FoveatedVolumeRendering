@@ -1,6 +1,5 @@
 #include "lbgstippling.h"
 
-
 #include <cassert>
 
 #include <QFile>
@@ -81,7 +80,7 @@ float currentHysteresis(size_t i, const Params& params) {
 }
 
 bool notFinished(const Status& status, const Params& params) {
-    auto[iteration, size, splits, merges, hysteresis] = status;
+    auto [iteration, size, splits, merges, hysteresis] = status;
     return !((splits == 0 && merges == 0) || (iteration == params.maxIterations));
 }
 
@@ -99,8 +98,7 @@ void LBGStippling::setStippleCallback(Report<std::vector<Stipple>> stippleCB) {
     m_stippleCallback = stippleCB;
 }
 
-void LBGStippling::setCellCallback(Report<IndexMap> cellCB)
-{
+void LBGStippling::setCellCallback(Report<IndexMap> cellCB) {
     m_cellCallback = cellCB;
 }
 
@@ -118,18 +116,20 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
     Status status = {0, 0, 1, 1};
 
+    QVector<QVector2D> points;
+
     while (notFinished(status, params)) {
         status.splits = 0;
         status.merges = 0;
 
-        auto points = sites(stipples);
+        points = sites(stipples);
         if (points.empty()) {
             // Stop if image is empty (all white).
             m_stippleCallback(stipples);
             break;
         }
 
-         indexMap = voronoi.calculate(points);
+        indexMap = voronoi.calculate(points);
         std::vector<VoronoiCell> cells = accumulateCells(indexMap, densityGray);
 
         assert(cells.size() == stipples.size());
@@ -193,7 +193,58 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
         ++status.iteration;
     }
-    return {stipples, indexMap};
+
+    QVector<QVector2D> pointsModified;
+    const int BucketCount = 8;
+    std::vector<float> neighborWeightMap;
+     std::vector<uint32_t > neighborIndexMap ;
+
+     neighborWeightMap.resize( indexMap.width * indexMap.height * BucketCount, 0);
+     neighborIndexMap.resize( indexMap.width * indexMap.height * BucketCount, 0);
+
+
+    for (int y = 0; y < indexMap.height; ++y) {
+        for (int x = 0; x < indexMap.width; ++x) {
+
+            // Insert point at pixel to compute the modified voronoi diagram.
+            QVector2D modifierPoint(x, y);
+            pointsModified = points;
+            pointsModified.append(QVector2D(x, y));
+            IndexMap indexMapModified = voronoi.calculate(pointsModified);
+
+            float intersectionSum = 0;
+            QMap<uint32_t, float> intersectionSet;
+
+            // Count intersection for each cell in the original index map.
+            auto modifierPointIndex = indexMapModified.get(x,y);
+            for (int yy = 0; yy < indexMapModified.height; ++yy) {
+                for (int xx = 0; xx < indexMapModified.width; ++xx) {
+                    if (indexMapModified.get(xx, yy) == modifierPointIndex) {
+                        auto originalIndex = indexMap.get(xx,yy);
+                        intersectionSet[originalIndex]++;
+                        intersectionSum++;
+                    }
+
+                }
+            }
+
+            assert(intersectionSet.size() < BucketCount && "Mehr geht halt net erstmal...");
+
+
+            // Normalize
+           size_t bucketIndex = 0;
+            for (auto key:intersectionSet.keys()) {
+                intersectionSet[key] = intersectionSet[key] / intersectionSum;
+                auto offset = (y * indexMap.width + x) * BucketCount + bucketIndex;
+                neighborIndexMap[offset] = key;
+                neighborWeightMap[offset] = intersectionSet[key];
+                bucketIndex++;
+            }
+        }
+    }
+
+    return {stipples, indexMap,    neighborWeightMap,
+         neighborIndexMap };
 }
 
 void LBGStippling::Params::saveParametersJSON(const QString& path) {

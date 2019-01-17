@@ -195,6 +195,20 @@ int main(int argc, char* argv[]) {
                 }
                 indexMap.save("indexMap.png");
 
+                // TODO: schreib den rest
+
+                QFile neighborIndexMapFile("neighborIndexMap.u32.bin");
+                neighborIndexMapFile.open(QIODevice::WriteOnly);
+                neighborIndexMapFile.write( reinterpret_cast<  char*>(result.neighborIndexMap.data()), result.neighborIndexMap.size() * sizeof(uint32_t));
+                neighborIndexMapFile.close();
+
+                QFile neighborWeightMapFile("neighborWeightMap.f32.bin");
+                neighborWeightMapFile.open(QIODevice::WriteOnly);
+                neighborWeightMapFile.write( reinterpret_cast<  char*>(result.neighborWeightMap.data()), result.neighborWeightMap.size()  * sizeof(float));
+                neighborWeightMapFile.close();
+
+
+
 //                QSvgGenerator generator;
 //                generator.setFileName(out);
 //                generator.setSize(density.size());

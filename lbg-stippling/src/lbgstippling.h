@@ -55,6 +55,8 @@ class LBGStippling {
     struct Result {
         std::vector<Stipple> stipples;
         IndexMap indexMap;
+        std::vector<float> neighborWeightMap;
+         std::vector<uint32_t > neighborIndexMap ;
     };
 
     template <class T>
