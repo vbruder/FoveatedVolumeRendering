@@ -17,7 +17,7 @@ using Params = LBGStippling::Params;
 using Status = LBGStippling::Status;
 
 QVector<QVector2D> sites(const std::vector<Stipple>& stipples) {
-    QVector<QVector2D> sites(stipples.size());
+    QVector<QVector2D> sites(static_cast<int>(stipples.size()));
     std::transform(stipples.begin(), stipples.end(), sites.begin(),
                    [](const auto& s) { return s.pos; });
     return sites;
@@ -105,7 +105,8 @@ void LBGStippling::setCellCallback(Report<IndexMap> cellCB) {
 LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& params) const {
     QImage densityGray =
         density
-            .scaledToWidth(params.superSamplingFactor * density.width(), Qt::SmoothTransformation)
+            .scaledToWidth(static_cast<int>(params.superSamplingFactor) * density.width(),
+                           Qt::SmoothTransformation)
             .convertToFormat(QImage::Format_Grayscale8);
 
     VoronoiDiagram voronoi(densityGray);
@@ -117,6 +118,8 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     Status status = {0, 0, 1, 1};
 
     QVector<QVector2D> points;
+
+    qDebug() << "LBG: Starting...";
 
     while (notFinished(status, params)) {
         status.splits = 0;
@@ -194,46 +197,48 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
         ++status.iteration;
     }
 
-    QVector<QVector2D> pointsModified;
-    const int BucketCount = 8;
+    qDebug() << "LBG: Done";
+
+    const size_t BucketCount = 8;
+    std::vector<uint32_t> neighborIndexMap;
     std::vector<float> neighborWeightMap;
-     std::vector<uint32_t > neighborIndexMap ;
 
-     neighborWeightMap.resize( indexMap.width * indexMap.height * BucketCount, 0);
-     neighborIndexMap.resize( indexMap.width * indexMap.height * BucketCount, 0);
-
+    neighborIndexMap.resize(indexMap.width * indexMap.height * BucketCount, 0);
+    neighborWeightMap.resize(indexMap.width * indexMap.height * BucketCount, 0.0f);
 
     for (int y = 0; y < indexMap.height; ++y) {
         for (int x = 0; x < indexMap.width; ++x) {
+            float pointsTotal = static_cast<float>(indexMap.width * indexMap.height);
+            float pointsProgress = static_cast<float>(y * indexMap.width + x) / pointsTotal;
+            qDebug() << "Natural Neighbor" << qSetRealNumberPrecision(6)
+                     << (pointsProgress * 100.0f) << "%";
 
             // Insert point at pixel to compute the modified voronoi diagram.
             QVector2D modifierPoint(x, y);
-            pointsModified = points;
-            pointsModified.append(QVector2D(x, y));
+            QVector<QVector2D> pointsModified = points;
+            pointsModified.append(modifierPoint);
             IndexMap indexMapModified = voronoi.calculate(pointsModified);
 
             float intersectionSum = 0;
             QMap<uint32_t, float> intersectionSet;
 
             // Count intersection for each cell in the original index map.
-            auto modifierPointIndex = indexMapModified.get(x,y);
+            auto modifierPointIndex = indexMapModified.get(x, y);
             for (int yy = 0; yy < indexMapModified.height; ++yy) {
                 for (int xx = 0; xx < indexMapModified.width; ++xx) {
                     if (indexMapModified.get(xx, yy) == modifierPointIndex) {
-                        auto originalIndex = indexMap.get(xx,yy);
+                        auto originalIndex = indexMap.get(xx, yy);
                         intersectionSet[originalIndex]++;
                         intersectionSum++;
                     }
-
                 }
             }
 
             assert(intersectionSet.size() < BucketCount && "Mehr geht halt net erstmal...");
 
-
-            // Normalize
-           size_t bucketIndex = 0;
-            for (auto key:intersectionSet.keys()) {
+            // Normalize weights and copy to neighbor maps.
+            size_t bucketIndex = 0;
+            for (auto key : intersectionSet.keys()) {
                 intersectionSet[key] = intersectionSet[key] / intersectionSum;
                 auto offset = (y * indexMap.width + x) * BucketCount + bucketIndex;
                 neighborIndexMap[offset] = key;
@@ -243,8 +248,9 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
         }
     }
 
-    return {stipples, indexMap,    neighborWeightMap,
-         neighborIndexMap };
+    qDebug() << "Natural Neighbor: Done";
+
+    return {stipples, indexMap, neighborWeightMap, neighborIndexMap};
 }
 
 void LBGStippling::Params::saveParametersJSON(const QString& path) {
