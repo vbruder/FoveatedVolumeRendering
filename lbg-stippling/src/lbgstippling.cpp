@@ -265,7 +265,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
     for (int y = 0; y < indexMap.height; ++y) {
         for (int x = 0; x < indexMap.width; ++x) {
-            if (x % 10 == 0) {
+            if (x % 10 == 1) {
                 float pointsTotal = static_cast<float>(indexMap.width * indexMap.height);
                 float pointsProgress = static_cast<float>(y * indexMap.width + x) / pointsTotal;
                 auto elapsedTime = progressTimer.elapsed();
