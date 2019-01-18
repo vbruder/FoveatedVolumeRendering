@@ -25,16 +25,17 @@ struct QVectorAdaptor {
     inline const QVector<QVector2D>& derived() const { return obj; }
 
     // Must return the number of data points
-    inline size_t kdtree_get_point_count() const { return derived().length(); }
+    inline size_t kdtree_get_point_count() const { return derived().size(); }
 
     // Returns the dim'th component of the idx'th point in the class:
     // Since this is inlined and the "dim" argument is typically an immediate value, the
     //  "if/else's" are actually solved at compile time.
     inline float kdtree_get_pt(const size_t idx, const size_t dim) const {
+        const auto& point = derived()[idx];
         if (dim == 0)
-            return derived()[idx].x();
+            return point.x();
         else
-            return derived()[idx].y();
+            return point.y();
     }
 
     // Optional bounding-box computation: return false to default to a standard bbox computation
@@ -248,12 +249,10 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
     using namespace nanoflann;
 
-    typedef KDTreeSingleIndexAdaptor<L2_Simple_Adaptor<float, QVectorAdaptor>, QVectorAdaptor,
-                                     2 /* dim */
-                                     >
+    typedef KDTreeSingleIndexAdaptor<L2_Simple_Adaptor<float, QVectorAdaptor>, QVectorAdaptor, 2>
         my_kd_tree_t;
 
-    my_kd_tree_t index(2 /*dim*/, points, KDTreeSingleIndexAdaptorParams(10 /* max leaf */));
+    my_kd_tree_t index(2, points, KDTreeSingleIndexAdaptorParams(10));
     index.buildIndex();
 
     QElapsedTimer progressTimer;
