@@ -2,11 +2,51 @@
 
 #include <cassert>
 
+#include <QElapsedTimer>
+
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QtMath>
+
+#include <nanoflann.hpp>
+
+// And this is the "dataset to kd-tree" adaptor class:
+
+struct QVectorAdaptor {
+
+    const QVector<QVector2D>& obj; //!< A const ref to the data set origin
+
+    /// The constructor that sets the data set source
+    QVectorAdaptor(const QVector<QVector2D>& obj_) : obj(obj_) {}
+
+    /// CRTP helper method
+    inline const QVector<QVector2D>& derived() const { return obj; }
+
+    // Must return the number of data points
+    inline size_t kdtree_get_point_count() const { return derived().length(); }
+
+    // Returns the dim'th component of the idx'th point in the class:
+    // Since this is inlined and the "dim" argument is typically an immediate value, the
+    //  "if/else's" are actually solved at compile time.
+    inline float kdtree_get_pt(const size_t idx, const size_t dim) const {
+        if (dim == 0)
+            return derived()[idx].x();
+        else
+            return derived()[idx].y();
+    }
+
+    // Optional bounding-box computation: return false to default to a standard bbox computation
+    // loop.
+    //   Return true if the BBOX was already computed by the class and returned in "bb" so it can be
+    //   avoided to redo it again. Look at bb.size() to find out the expected dimensionality (e.g. 2
+    //   or 3 for point clouds)
+    template <class BBOX>
+    bool kdtree_get_bbox(BBOX& /*bb*/) const {
+        return false;
+    }
+};
 
 namespace Random {
 std::random_device rd;
@@ -206,16 +246,43 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     neighborIndexMap.resize(indexMap.width * indexMap.height * BucketCount, 0);
     neighborWeightMap.resize(indexMap.width * indexMap.height * BucketCount, 0.0f);
 
+    using namespace nanoflann;
+
+    typedef KDTreeSingleIndexAdaptor<L2_Simple_Adaptor<float, QVectorAdaptor>, QVectorAdaptor,
+                                     2 /* dim */
+                                     >
+        my_kd_tree_t;
+
+    my_kd_tree_t index(2 /*dim*/, points, KDTreeSingleIndexAdaptorParams(10 /* max leaf */));
+    index.buildIndex();
+
+    QElapsedTimer progressTimer;
+    progressTimer.start();
+
+    const size_t k = 16;
+    std::vector<size_t> ret_indices(k);
+    std::vector<float> out_dists_sqr(k);
+
     for (int y = 0; y < indexMap.height; ++y) {
         for (int x = 0; x < indexMap.width; ++x) {
-            float pointsTotal = static_cast<float>(indexMap.width * indexMap.height);
-            float pointsProgress = static_cast<float>(y * indexMap.width + x) / pointsTotal;
-            qDebug() << "Natural Neighbor" << qSetRealNumberPrecision(6)
-                     << (pointsProgress * 100.0f) << "%";
+            if (x % 10 == 0) {
+                float pointsTotal = static_cast<float>(indexMap.width * indexMap.height);
+                float pointsProgress = static_cast<float>(y * indexMap.width + x) / pointsTotal;
+                auto elapsedTime = progressTimer.elapsed();
+                auto remainingTime = ((1.0 - pointsProgress) / pointsProgress) * elapsedTime;
+                qDebug() << "Natural Neighbor" << qSetRealNumberPrecision(9) << pointsProgress
+                         << elapsedTime << "ms" << remainingTime << "ms";
+            }
 
             // Insert point at pixel to compute the modified voronoi diagram.
             QVector2D modifierPoint(x, y);
-            QVector<QVector2D> pointsModified = points;
+            QVector<QVector2D> pointsModified; // = points;
+            float query_pt[2] = {x, y};
+
+            nanoflann::KNNResultSet<float> resultSet(k);
+            resultSet.init(&ret_indices[0], &out_dists_sqr[0]);
+            index.findNeighbors(resultSet, &query_pt[0], nanoflann::SearchParams(10));
+            for (size_t i = 0; i < k; ++i) { pointsModified.append(points[ret_indices[i]]); }
             pointsModified.append(modifierPoint);
             IndexMap indexMapModified = voronoi.calculate(pointsModified);
 

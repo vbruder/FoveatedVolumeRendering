@@ -168,12 +168,11 @@ IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
     IndexMap idxMap(m_fbo->width(), m_fbo->height(), points.size());
 
     for (int y = 0; y < m_fbo->height(); ++y) {
+        QRgb *rowData = (QRgb*)voronoiDiagram.constScanLine(y);
         for (int x = 0; x < m_fbo->width(); ++x) {
-            QRgb voroPixel = voronoiDiagram.pixel(x, y);
-
-            uint8_t r = qRed(voroPixel);
-            uint8_t g = qGreen(voroPixel);
-            uint8_t b = qBlue(voroPixel);
+            uint8_t r = qRed(rowData[x]);
+            uint8_t g = qGreen(rowData[x]);
+            uint8_t b = qBlue(rowData[x]);
 
             size_t index = CellEncoder::decode(r, g, b);
             assert(index <= points.size());
@@ -181,6 +180,7 @@ IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
             idxMap.set(x, y, index);
         }
     }
+
     return idxMap;
 }
 

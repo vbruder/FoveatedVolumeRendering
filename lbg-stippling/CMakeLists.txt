@@ -17,6 +17,7 @@ set(HEADERS
         ${PROJECT_DIR}/src/voronoicell.h
         ${PROJECT_DIR}/src/lbgstippling.h
         ${PROJECT_DIR}/src/settingswidget.h
+        ${PROJECT_DIR}/src/nanoflann.hpp
 )
 
 # add sources to project
