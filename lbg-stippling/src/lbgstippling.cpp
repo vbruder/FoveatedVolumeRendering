@@ -15,21 +15,14 @@
 // And this is the "dataset to kd-tree" adaptor class:
 
 struct QVectorAdaptor {
-
     const QVector<QVector2D>& obj; //!< A const ref to the data set origin
 
-    /// The constructor that sets the data set source
     QVectorAdaptor(const QVector<QVector2D>& obj_) : obj(obj_) {}
 
-    /// CRTP helper method
     inline const QVector<QVector2D>& derived() const { return obj; }
 
-    // Must return the number of data points
     inline size_t kdtree_get_point_count() const { return derived().size(); }
 
-    // Returns the dim'th component of the idx'th point in the class:
-    // Since this is inlined and the "dim" argument is typically an immediate value, the
-    //  "if/else's" are actually solved at compile time.
     inline float kdtree_get_pt(const size_t idx, const size_t dim) const {
         const auto& point = derived()[idx];
         if (dim == 0)
@@ -38,11 +31,6 @@ struct QVectorAdaptor {
             return point.y();
     }
 
-    // Optional bounding-box computation: return false to default to a standard bbox computation
-    // loop.
-    //   Return true if the BBOX was already computed by the class and returned in "bb" so it can be
-    //   avoided to redo it again. Look at bb.size() to find out the expected dimensionality (e.g. 2
-    //   or 3 for point clouds)
     template <class BBOX>
     bool kdtree_get_bbox(BBOX& /*bb*/) const {
         return false;
@@ -252,7 +240,8 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     typedef KDTreeSingleIndexAdaptor<L2_Simple_Adaptor<float, QVectorAdaptor>, QVectorAdaptor, 2>
         my_kd_tree_t;
 
-    my_kd_tree_t index(2, points, KDTreeSingleIndexAdaptorParams(10));
+    QVectorAdaptor adaptor(points);
+    my_kd_tree_t index(2, adaptor, KDTreeSingleIndexAdaptorParams(10));
     index.buildIndex();
 
     QElapsedTimer progressTimer;
