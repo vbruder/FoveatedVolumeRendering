@@ -31,8 +31,7 @@ uint32_t decode(const uint8_t& r, const uint8_t& g, const uint8_t& b) {
 ////////////////////////////////////////////////////////////////////////////////
 /// Index Map
 
-IndexMap::IndexMap(size_t w, size_t h, size_t count) : width(w), height(h), m_numEncoded(count) {
-    m_data = std::vector<uint32_t>(w * h);
+IndexMap::IndexMap(size_t w, size_t h, size_t count) : width(w), height(h), m_numEncoded(count), m_data(w * h, 0) {
 }
 
 void IndexMap::set(size_t x, size_t y, uint32_t value) {

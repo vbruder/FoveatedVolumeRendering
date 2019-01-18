@@ -235,6 +235,8 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     neighborIndexMap.resize(indexMap.width * indexMap.height * BucketCount, 0);
     neighborWeightMap.resize(indexMap.width * indexMap.height * BucketCount, 0.0f);
 
+#if 1
+
     using namespace nanoflann;
 
     typedef KDTreeSingleIndexAdaptor<L2_Simple_Adaptor<float, QVectorAdaptor>, QVectorAdaptor, 2>
@@ -264,20 +266,21 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
             // Insert point at pixel to compute the modified voronoi diagram.
             QVector2D modifierPoint(x, y);
-            QVector<QVector2D> pointsModified; // = points;
-            float query_pt[2] = {x, y};
+            QVector<QVector2D> pointsModified;
 
+            float query_pt[2] = {x, y};
             nanoflann::KNNResultSet<float> resultSet(k);
             resultSet.init(&ret_indices[0], &out_dists_sqr[0]);
-            index.findNeighbors(resultSet, &query_pt[0], nanoflann::SearchParams(10));
+            bool yay = index.findNeighbors(resultSet, &query_pt[0], nanoflann::SearchParams());
+            assert(yay && "Ohne KNN gehts halt net");
             for (size_t i = 0; i < k; ++i) { pointsModified.append(points[ret_indices[i]]); }
+
             pointsModified.append(modifierPoint);
             IndexMap indexMapModified = voronoi.calculate(pointsModified);
 
+            // Count intersection for each cell in the original index map.
             float intersectionSum = 0;
             QMap<uint32_t, float> intersectionSet;
-
-            // Count intersection for each cell in the original index map.
             auto modifierPointIndex = indexMapModified.get(x, y);
             for (int yy = 0; yy < indexMapModified.height; ++yy) {
                 for (int xx = 0; xx < indexMapModified.width; ++xx) {
@@ -304,7 +307,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     }
 
     qDebug() << "Natural Neighbor: Done";
-
+#endif
     return {stipples, indexMap, neighborWeightMap, neighborIndexMap};
 }
 
