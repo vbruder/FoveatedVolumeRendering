@@ -159,7 +159,7 @@ IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
     m_vao->release();
 
     QImage voronoiDiagram = m_fbo->toImage();
-    //  voronoiDiagram.save("voronoiDiagram.png");
+//    voronoiDiagram.save("voronoiDiagram.png");
 
     m_fbo->release();
     m_context->doneCurrent();

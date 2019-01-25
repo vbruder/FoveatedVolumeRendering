@@ -265,10 +265,11 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
             }
 
             // Insert point at pixel to compute the modified voronoi diagram.
-            QVector2D modifierPoint(x, y);
+            QVector2D modifierPoint(static_cast<float>(x) / indexMap.width,
+                                    static_cast<float>(y) / indexMap.height);
             QVector<QVector2D> pointsModified;
 
-            float query_pt[2] = {x, y};
+            float query_pt[2] = {modifierPoint.x(), modifierPoint.y()};
             nanoflann::KNNResultSet<float> resultSet(k);
             resultSet.init(&ret_indices[0], &out_dists_sqr[0]);
             bool yay = index.findNeighbors(resultSet, &query_pt[0], nanoflann::SearchParams());
@@ -281,7 +282,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
             // Count intersection for each cell in the original index map.
             float intersectionSum = 0;
             QMap<uint32_t, float> intersectionSet;
-            auto modifierPointIndex = indexMapModified.get(x, y);
+            uint32_t modifierPointIndex = indexMapModified.get(x, y);
             for (int yy = 0; yy < indexMapModified.height; ++yy) {
                 for (int xx = 0; xx < indexMapModified.width; ++xx) {
                     if (indexMapModified.get(xx, yy) == modifierPointIndex) {
