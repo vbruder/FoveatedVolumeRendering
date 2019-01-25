@@ -249,6 +249,9 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     QElapsedTimer progressTimer;
     progressTimer.start();
 
+    QElapsedTimer perfTimer;
+    perfTimer.start();
+
     const size_t k = 16;
     std::vector<size_t> ret_indices(k);
     std::vector<float> out_dists_sqr(k);
@@ -283,8 +286,10 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
             float intersectionSum = 0;
             QMap<uint32_t, float> intersectionSet;
             uint32_t modifierPointIndex = indexMapModified.get(x, y);
-            for (int yy = 0; yy < indexMapModified.height; ++yy) {
-                for (int xx = 0; xx < indexMapModified.width; ++xx) {
+
+#pragma omp parallel for
+            for (int yy = std::max(y - 200, 0); yy <  std::min(y + 200, static_cast<int>(indexMapModified.height)); ++yy) {
+                for (int xx = std::max(x - 200, 0); xx < std::min(x + 200, static_cast<int>(indexMapModified.width)); ++xx) {
                     if (indexMapModified.get(xx, yy) == modifierPointIndex) {
                         auto originalIndex = indexMap.get(xx, yy);
                         intersectionSet[originalIndex]++;
@@ -292,7 +297,6 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
                     }
                 }
             }
-
             assert(intersectionSet.size() < BucketCount && "Mehr geht halt net erstmal...");
 
             // Normalize weights and copy to neighbor maps.

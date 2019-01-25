@@ -6,9 +6,12 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLFramebufferObjectFormat>
 #include <QOpenGLFunctions_3_3_Core>
+#include <QElapsedTimer>
 
 #include "shader/Voronoi.frag.h"
 #include "shader/Voronoi.vert.h"
+
+#include <omp.h>
 
 const float pi = 3.14159265358979323846f;
 
@@ -105,6 +108,8 @@ VoronoiDiagram::~VoronoiDiagram() {
 
 IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
     assert(!points.empty());
+    QElapsedTimer progressTimer;
+    progressTimer.start();
 
     m_context->makeCurrent(m_surface);
 
@@ -139,36 +144,35 @@ IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
     vboColors.release();
 
     m_fbo->bind();
-
     gl->glViewport(0, 0, m_densityMap.width(), m_densityMap.height());
-
     gl->glDisable(GL_MULTISAMPLE);
     gl->glDisable(GL_DITHER);
-
     gl->glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
-
     gl->glEnable(GL_DEPTH_TEST);
-
     gl->glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     gl->glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, m_coneVertices, points.size());
 
     m_shaderProgram->release();
-
     m_vao->release();
 
     QImage voronoiDiagram = m_fbo->toImage();
 //    voronoiDiagram.save("voronoiDiagram.png");
 
-    m_fbo->release();
-    m_context->doneCurrent();
+//    m_fbo->release();
+//    m_context->doneCurrent();
+
+//    qDebug() << "v calculate gl " << progressTimer.restart();
 
     IndexMap idxMap(m_fbo->width(), m_fbo->height(), points.size());
 
-    for (int y = 0; y < m_fbo->height(); ++y) {
+#pragma omp parallel for
+    for (int y = 0; y < m_fbo->height(); ++y)
+    {
         QRgb *rowData = (QRgb*)voronoiDiagram.constScanLine(y);
-        for (int x = 0; x < m_fbo->width(); ++x) {
+#pragma omp parallel for
+        for (int x = 0; x < m_fbo->width(); ++x)
+        {
             uint8_t r = qRed(rowData[x]);
             uint8_t g = qGreen(rowData[x]);
             uint8_t b = qBlue(rowData[x]);
@@ -179,6 +183,8 @@ IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
             idxMap.set(x, y, index);
         }
     }
+
+//    qDebug() << "v calculate index map " << progressTimer.restart();
 
     return idxMap;
 }
