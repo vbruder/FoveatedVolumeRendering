@@ -263,7 +263,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
     for (int y = batchNo*batchSize; y < batchNo*batchSize + batchSize; ++y) {
         for (int x = 0; x < indexMap.width; ++x) {
-            if (x % 10 == 1) {
+            if (x % 20 == 1) {
                 float pointsTotal = static_cast<float>(indexMap.width * batchSize);
 
                 float pointsProgress = static_cast<float>(y * indexMap.width + x) / pointsTotal;
@@ -321,6 +321,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     }
 
     qDebug() << "Natural Neighbor: Done";
+	qDebug() << "Batch no" << batchNo;
 #endif
     return {stipples, indexMap, neighborWeightMap, neighborIndexMap};
 }

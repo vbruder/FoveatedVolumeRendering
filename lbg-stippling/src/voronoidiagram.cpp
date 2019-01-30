@@ -61,7 +61,7 @@ VoronoiDiagram::VoronoiDiagram(QImage& density) : m_densityMap(density) {
     m_context->setFormat(format);
     m_context->create();
 
-    m_surface = new QOffscreenSurface(Q_NULLPTR, m_context);
+    m_surface = new QOffscreenSurface(Q_NULLPTR);
     m_surface->setFormat(m_context->format());
     m_surface->create();
 
