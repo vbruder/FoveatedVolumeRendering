@@ -229,7 +229,6 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
     qDebug() << "LBG: Done";
 
-
     const size_t batchSize = indexMap.height / batchCount;
     const size_t BucketCount = 8;
     std::vector<uint32_t> neighborIndexMap;
@@ -240,6 +239,8 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
 #if true
     qDebug() << "Starting batch" << batchNo << "/" << batchCount << "with size" << batchSize;
+    neighborIndexMap.resize(indexMap.width * indexMap.height * BucketCount, 0);
+    neighborWeightMap.resize(indexMap.width * indexMap.height * BucketCount, 0.0f);
 
     using namespace nanoflann;
 
@@ -264,11 +265,13 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
         for (int x = 0; x < indexMap.width; ++x) {
             if (x % 10 == 1) {
                 float pointsTotal = static_cast<float>(indexMap.width * batchSize);
+
                 float pointsProgress = static_cast<float>(y * indexMap.width + x) / pointsTotal;
                 auto elapsedTime = progressTimer.elapsed();
                 auto remainingTime = ((1.0 - pointsProgress) / pointsProgress) * elapsedTime;
                 qDebug() << "Natural Neighbor" << qSetRealNumberPrecision(9) << pointsProgress
                          << elapsedTime << "ms" << remainingTime / 1000. / 60./ 60. << "h";
+
             }
 
             // Insert point at pixel to compute the modified voronoi diagram.
