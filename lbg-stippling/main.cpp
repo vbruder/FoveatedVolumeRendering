@@ -23,15 +23,15 @@ QImage foveaSampling() {
         return qExp(-((x * x) / (2.0 * sigmaX * sigmaX) + (y * y) / (2.0 * sigmaY * sigmaY)));
     };
 
-    const QSize screenSizePx(1920, 1080);
-    const QSizeF screenSizeCm(60, 33.5);
+    const QSize screenSizePx(1280, 1280);
+    const QSizeF screenSizeCm(30, 30); // 80, 33.5
     const qreal viewDistanceCm = 80;
     const qreal foveaAlpha = 4.0 / 180.0 * M_PI;
     const qreal foveaCm = viewDistanceCm * qSin(foveaAlpha);
     const QSizeF foveaPx(screenSizePx.width() / screenSizeCm.width() * foveaCm,
                          screenSizePx.height() / screenSizeCm.height() * foveaCm);
 
-    QImage gaussian(screenSizePx.width() * 2, screenSizePx.height() * 2, QImage::Format_Grayscale8);
+    QImage gaussian(screenSizePx.width() * 1.6, screenSizePx.height() * 1.6, QImage::Format_Grayscale8);
     //QImage gaussian(screenSizePx.width() , screenSizePx.height() , QImage::Format_Grayscale8);
     for (int y = 0; y < gaussian.height(); ++y) {
         uchar* line = gaussian.scanLine(y);
@@ -76,6 +76,10 @@ int main(int argc, char* argv[]) {
                        {"hystd", QCoreApplication::translate(c, "Hysteresis delta per iteration."),
                         QCoreApplication::translate(c, "value")},
                        {"output", QCoreApplication::translate(c, "Output file."),
+                        QCoreApplication::translate(c, "file")},
+                       {"batchCount", QCoreApplication::translate(c, "Total number of batches."),
+                        QCoreApplication::translate(c, "file")},
+                       {"batchNo", QCoreApplication::translate(c, "Batch id of this run."),
                         QCoreApplication::translate(c, "file")},
                        {"params", QCoreApplication::translate(c, "JSON parameter file."),
                         QCoreApplication::translate(c, "params")}});
@@ -155,7 +159,18 @@ int main(int argc, char* argv[]) {
 //                const QString& in = inputList.at(i);
 //                const QString& out = outputList.at(i);
 //                //density = QImage(in);
-                auto result = stippling.stipple(density, params);
+
+            int batchCount = 1;
+            int batchNo = 0;
+            if (parser.isSet("batchCount"))
+            {
+                batchCount = parser.value("batchCount").toInt();
+                if (parser.isSet("batchNo"))
+                    batchNo = parser.value("batchNo").toInt();
+            }
+
+
+                auto result = stippling.stipple(density, params, batchCount, batchNo);
                 std::vector<Stipple> stipples = result.stipples;
                 auto map = result.indexMap;
 
@@ -194,6 +209,20 @@ int main(int argc, char* argv[]) {
                     }
                 }
                 indexMap.save("indexMap.png");
+
+                // TODO: schreib den rest
+
+                QFile neighborIndexMapFile("neighborIndexMap.u32.bin");
+                neighborIndexMapFile.open(QIODevice::WriteOnly);
+                neighborIndexMapFile.write( reinterpret_cast<  char*>(result.neighborIndexMap.data()), result.neighborIndexMap.size() * sizeof(uint32_t));
+                neighborIndexMapFile.close();
+
+                QFile neighborWeightMapFile("neighborWeightMap.f32.bin");
+                neighborWeightMapFile.open(QIODevice::WriteOnly);
+                neighborWeightMapFile.write( reinterpret_cast<  char*>(result.neighborWeightMap.data()), result.neighborWeightMap.size()  * sizeof(float));
+                neighborWeightMapFile.close();
+
+
 
 //                QSvgGenerator generator;
 //                generator.setFileName(out);

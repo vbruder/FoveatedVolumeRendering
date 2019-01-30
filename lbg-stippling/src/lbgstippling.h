@@ -25,7 +25,7 @@ class LBGStippling {
     enum PointMappingFunction { LINEAR = 0, SQUAREROOT = 1, EXPONENTIAL = 2, SQUARE = 3 };
 
     struct Params {
-        int initialPoints = 1000;
+        int initialPoints = 50000;
         double initialPointSize = 4.0;
 
         bool adaptivePointSize = true;
@@ -55,6 +55,8 @@ class LBGStippling {
     struct Result {
         std::vector<Stipple> stipples;
         IndexMap indexMap;
+        std::vector<float> neighborWeightMap;
+         std::vector<uint32_t > neighborIndexMap ;
     };
 
     template <class T>
@@ -62,7 +64,8 @@ class LBGStippling {
 
     LBGStippling();
 
-    Result stipple(const QImage& density, const Params& params) const;
+    Result stipple(const QImage& density, const Params& params, const int batchCount = 1,
+                   const int batchNo = 0) const;
 
     // TODO: Rename and method chaining.
     void setStatusCallback(Report<Status> statusCB);

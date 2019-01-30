@@ -1,13 +1,41 @@
 #include "lbgstippling.h"
 
-
 #include <cassert>
+
+#include <QElapsedTimer>
 
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QtMath>
+
+#include <nanoflann.hpp>
+
+// And this is the "dataset to kd-tree" adaptor class:
+
+struct QVectorAdaptor {
+    const QVector<QVector2D>& obj; //!< A const ref to the data set origin
+
+    QVectorAdaptor(const QVector<QVector2D>& obj_) : obj(obj_) {}
+
+    inline const QVector<QVector2D>& derived() const { return obj; }
+
+    inline size_t kdtree_get_point_count() const { return derived().size(); }
+
+    inline float kdtree_get_pt(const size_t idx, const size_t dim) const {
+        const auto& point = derived()[idx];
+        if (dim == 0)
+            return point.x();
+        else
+            return point.y();
+    }
+
+    template <class BBOX>
+    bool kdtree_get_bbox(BBOX& /*bb*/) const {
+        return false;
+    }
+};
 
 namespace Random {
 std::random_device rd;
@@ -18,7 +46,7 @@ using Params = LBGStippling::Params;
 using Status = LBGStippling::Status;
 
 QVector<QVector2D> sites(const std::vector<Stipple>& stipples) {
-    QVector<QVector2D> sites(stipples.size());
+    QVector<QVector2D> sites(static_cast<int>(stipples.size()));
     std::transform(stipples.begin(), stipples.end(), sites.begin(),
                    [](const auto& s) { return s.pos; });
     return sites;
@@ -81,7 +109,7 @@ float currentHysteresis(size_t i, const Params& params) {
 }
 
 bool notFinished(const Status& status, const Params& params) {
-    auto[iteration, size, splits, merges, hysteresis] = status;
+    auto [iteration, size, splits, merges, hysteresis] = status;
     return !((splits == 0 && merges == 0) || (iteration == params.maxIterations));
 }
 
@@ -99,15 +127,16 @@ void LBGStippling::setStippleCallback(Report<std::vector<Stipple>> stippleCB) {
     m_stippleCallback = stippleCB;
 }
 
-void LBGStippling::setCellCallback(Report<IndexMap> cellCB)
-{
+void LBGStippling::setCellCallback(Report<IndexMap> cellCB) {
     m_cellCallback = cellCB;
 }
 
-LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& params) const {
+LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& params,
+                                           const int batchCount, const int batchNo) const {
     QImage densityGray =
         density
-            .scaledToWidth(params.superSamplingFactor * density.width(), Qt::SmoothTransformation)
+            .scaledToWidth(static_cast<int>(params.superSamplingFactor) * density.width(),
+                           Qt::SmoothTransformation)
             .convertToFormat(QImage::Format_Grayscale8);
 
     VoronoiDiagram voronoi(densityGray);
@@ -118,18 +147,22 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
     Status status = {0, 0, 1, 1};
 
+    QVector<QVector2D> points;
+
+    qDebug() << "LBG: Starting...";
+
     while (notFinished(status, params)) {
         status.splits = 0;
         status.merges = 0;
 
-        auto points = sites(stipples);
+        points = sites(stipples);
         if (points.empty()) {
             // Stop if image is empty (all white).
             m_stippleCallback(stipples);
             break;
         }
 
-         indexMap = voronoi.calculate(points);
+        indexMap = voronoi.calculate(points);
         std::vector<VoronoiCell> cells = accumulateCells(indexMap, densityGray);
 
         assert(cells.size() == stipples.size());
@@ -193,7 +226,100 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
         ++status.iteration;
     }
-    return {stipples, indexMap};
+
+    qDebug() << "LBG: Done";
+
+
+    const size_t batchSize = indexMap.height / batchCount;
+    const size_t BucketCount = 8;
+    std::vector<uint32_t> neighborIndexMap;
+    std::vector<float> neighborWeightMap;
+
+    neighborIndexMap.resize(indexMap.width * batchSize * BucketCount, 0);
+    neighborWeightMap.resize(indexMap.width * batchSize * BucketCount, 0.0f);
+
+#if true
+    qDebug() << "Starting batch" << batchNo << "/" << batchCount << "with size" << batchSize;
+
+    using namespace nanoflann;
+
+    typedef KDTreeSingleIndexAdaptor<L2_Simple_Adaptor<float, QVectorAdaptor>, QVectorAdaptor, 2>
+        my_kd_tree_t;
+
+    QVectorAdaptor adaptor(points);
+    my_kd_tree_t index(2, adaptor, KDTreeSingleIndexAdaptorParams(10));
+    index.buildIndex();
+
+    QElapsedTimer progressTimer;
+    progressTimer.start();
+
+    QElapsedTimer perfTimer;
+    perfTimer.start();
+
+    const size_t k = 16;
+    std::vector<size_t> ret_indices(k);
+    std::vector<float> out_dists_sqr(k);
+
+    for (int y = batchNo*batchSize; y < batchNo*batchSize + batchSize; ++y) {
+        for (int x = 0; x < indexMap.width; ++x) {
+            if (x % 10 == 1) {
+                float pointsTotal = static_cast<float>(indexMap.width * batchSize);
+                float pointsProgress = static_cast<float>(y * indexMap.width + x) / pointsTotal;
+                auto elapsedTime = progressTimer.elapsed();
+                auto remainingTime = ((1.0 - pointsProgress) / pointsProgress) * elapsedTime;
+                qDebug() << "Natural Neighbor" << qSetRealNumberPrecision(9) << pointsProgress
+                         << elapsedTime << "ms" << remainingTime / 1000. / 60./ 60. << "h";
+            }
+
+            // Insert point at pixel to compute the modified voronoi diagram.
+            QVector2D modifierPoint(static_cast<float>(x) / indexMap.width,
+                                    static_cast<float>(y) / indexMap.height);
+            QVector<QVector2D> pointsModified;
+
+            float query_pt[2] = {modifierPoint.x(), modifierPoint.y()};
+            nanoflann::KNNResultSet<float> resultSet(k);
+            resultSet.init(&ret_indices[0], &out_dists_sqr[0]);
+            bool yay = index.findNeighbors(resultSet, &query_pt[0], nanoflann::SearchParams());
+            assert(yay && "Ohne KNN gehts halt net");
+            for (size_t i = 0; i < k; ++i) { pointsModified.append(points[ret_indices[i]]); }
+
+            pointsModified.append(modifierPoint);
+            IndexMap indexMapModified = voronoi.calculate(pointsModified);
+
+            // Count intersection for each cell in the original index map.
+            float intersectionSum = 0;
+            QMap<uint32_t, float> intersectionSet;
+            uint32_t modifierPointIndex = indexMapModified.get(x, y);
+
+#pragma omp parallel for
+//            for (int yy = std::max(y - 300, 0); yy <  std::min(y + 300, static_cast<int>(indexMapModified.height)); ++yy) {
+//                for (int xx = std::max(x - 300, 0); xx < std::min(x + 300, static_cast<int>(indexMapModified.width)); ++xx) {
+            for (int yy = 0; yy <  static_cast<int>(indexMapModified.height); ++yy) {
+                for (int xx = 0; xx < static_cast<int>(indexMapModified.width); ++xx) {
+                    if (indexMapModified.get(xx, yy) == modifierPointIndex) {
+                        auto originalIndex = indexMap.get(xx, yy);
+                        intersectionSet[originalIndex]++;
+                        intersectionSum++;
+                    }
+                }
+            }
+            assert(intersectionSet.size() < BucketCount && "Mehr geht halt net erstmal...");
+
+            // Normalize weights and copy to neighbor maps.
+            size_t bucketIndex = 0;
+            for (auto key : intersectionSet.keys()) {
+                intersectionSet[key] = intersectionSet[key] / intersectionSum;
+                auto offset = (y * indexMap.width + x) * BucketCount + bucketIndex;
+                neighborIndexMap[offset] = key;
+                neighborWeightMap[offset] = intersectionSet[key];
+                bucketIndex++;
+            }
+        }
+    }
+
+    qDebug() << "Natural Neighbor: Done";
+#endif
+    return {stipples, indexMap, neighborWeightMap, neighborIndexMap};
 }
 
 void LBGStippling::Params::saveParametersJSON(const QString& path) {

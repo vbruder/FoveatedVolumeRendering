@@ -1124,14 +1124,20 @@ void VolumeRenderWidget::setVolumeData(const QString &fileName)
     update();
 }
 
-void VolumeRenderWidget::setIndexandSamplingMap(const QString &fileNameIndexMap, const QString &fileNameSamplingMap)
+void VolumeRenderWidget::setIndexandSamplingMap(const QString &fileNameIndexMap,
+                                                const QString &fileNameSamplingMap,
+                                                const QString &fileNameNeighborIndex,
+                                                const QString &fileNameNeighborWeights)
 {
 	this->_noUpdate = true;
 	// qDebug() << fileNameIndexMap << " " << fileNameSamplingMap;
 
 	try
 	{
-		_volumerender.loadIndexAndSamplingMap(fileNameIndexMap.toStdString(), fileNameSamplingMap.toStdString());
+        _volumerender.loadIndexAndSamplingMap(fileNameIndexMap.toStdString(),
+                                              fileNameSamplingMap.toStdString(),
+                                              fileNameNeighborIndex,
+                                              fileNameNeighborWeights);
 	}
 	catch (std::invalid_argument e)
 	{

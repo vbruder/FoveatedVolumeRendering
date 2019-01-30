@@ -251,6 +251,8 @@ void VolumeRenderCL::setMemObjectsInterpolationLBG(GLuint inTexId, GLuint outTex
 	if (_imsmLoaded) {
 		_interpolateLBGKernel.setArg(IP_IMAP, _indexMap);
 		_interpolateLBGKernel.setArg(IP_SDATA, _samplingMapData);
+        _interpolateLBGKernel.setArg(IP_ID, _neighborIdMap);
+        _interpolateLBGKernel.setArg(IP_WEIGHT, _neighborWeightMap);
 	}
 
 }
@@ -848,7 +850,10 @@ size_t VolumeRenderCL::loadVolumeData(const std::string fileName)
 }
 
 
-void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap, const std::string fileNameSamplingMap)
+void VolumeRenderCL::loadIndexAndSamplingMap(const std::string &fileNameIndexMap,
+                                             const std::string &fileNameSamplingMap,
+                                             const QString &fileNameNeighborIndex,
+                                             const QString &fileNameNeighborWeights)
 {
 	cl_int err;
 	
@@ -867,7 +872,6 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 	catch (cl::Error e) {
 		throw std::runtime_error(std::string("Failed to create cl::Image2D for index map. Error: ").append(std::to_string(e.err())).c_str());
 	}
-	
 	
 	try {
 		std::cout << "Trying to open: " << fileNameSamplingMap << std::endl;
@@ -935,9 +939,6 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 			std::cout << "xmin: " << xmin << ", xmax: " << xmax << ", ymin: " << ymin << ", ymax: " << ymax << std::endl;
 		}*/
 
-
-		
-
 		_amountOfSamples = pixelsPerLine;
 
 		/*
@@ -952,8 +953,48 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string fileNameIndexMap,
 	catch (cl::Error e) {
 		throw std::runtime_error(std::string("Failed to create Buffer for Sampling Map Image. Error: ").append(std::to_string(e.err())).c_str());
 	}
-	_imsmLoaded = true;
+
+    QFile fileId(fileNameNeighborIndex);
+    if (!fileId.open(QIODevice::ReadOnly)) return;
+    QByteArray neighborIndices = fileId.readAll();
+
+    std::vector<cl_uint> nIds;
+    for (int i = 0; i < neighborIndices.size(); i += 4)
+    {
+        cl_uint ui;
+        char b[] = {neighborIndices[i+0],
+                    neighborIndices[i+1],
+                    neighborIndices[i+2],
+                    neighborIndices[i+3]};
+        memcpy(&ui, &b, sizeof(ui));
+        nIds.push_back(ui);
+    }
+    _neighborIdMap = cl::Buffer(_contextCL, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                nIds.size() * sizeof(cl_uint),
+                                nIds.data(), &err);
+
+    QFile fileWeights(fileNameNeighborWeights);
+    if (!fileWeights.open(QIODevice::ReadOnly)) return;
+    QByteArray neighborWeights = fileWeights.readAll();
+
+    std::vector<cl_float> nWeights;
+    for (int i = 0; i < neighborWeights.size(); i += 4)
+    {
+        cl_float f;
+        char b[] = {neighborWeights[i+0],
+                    neighborWeights[i+1],
+                    neighborWeights[i+2],
+                    neighborWeights[i+3]};
+        memcpy(&f, &b, sizeof(f));
+        nWeights.push_back(f);
+    }
+    _neighborWeightMap = cl::Buffer(_contextCL, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                    nWeights.size() * sizeof(cl_float),
+                                    nWeights.data(), &err);
+
+    _imsmLoaded = true;
 }
+
 
 /**
  * @brief VolumeRenderCL::hasData

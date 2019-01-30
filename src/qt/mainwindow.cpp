@@ -608,7 +608,8 @@ void MainWindow::loadRawTff()
 }
 
 // TODO: make it save, e.g. picked wrong file.
-void MainWindow::loadIndex_and_Sampling_Map() {
+void MainWindow::loadIndex_and_Sampling_Map()
+{
 	bool imap = false;
 	bool smap = false;
 	QFileDialog dialog0;
@@ -639,9 +640,41 @@ void MainWindow::loadIndex_and_Sampling_Map() {
 		qCritical() << "Failed to pick file for sampling map.\n";
 	}
 
-	if (imap && smap) ui->volumeRenderWidget->setIndexandSamplingMap(_settings->value("LastIndexMapFile").toString(), 
-		_settings->value("LastSamplingMapFile").toString());
-	else qCritical() << "Failed to set index map and sampling map.\n";
+    QFileDialog dialog2;
+    defaultPath = _settings->value("LastNeighborIdMapFile").toString();
+    QString neighborIdMapFile = dialog2.getOpenFileName(
+        this, tr("Open Neighbor Index Map"), defaultPath,
+        tr("Neighbor Index Map Files (*.bin);; All files (*)"));
+    if (!neighborIdMapFile.isEmpty())
+    {
+        smap = true;
+        _settings->setValue("LastNeighborIdMapFile", neighborIdMapFile);
+    }
+    else {
+        qCritical() << "Failed to pick file for sampling map.\n";
+    }
+
+    QFileDialog dialog3;
+    defaultPath = _settings->value("LastNeighborWeightMapFile").toString();
+    QString neighborWeightMapFile = dialog3.getOpenFileName(
+        this, tr("Open Neighbor Weight Map"), defaultPath,
+        tr("Neighbor Weight Map Files (*.bin);; All files (*)"));
+    if (!neighborWeightMapFile.isEmpty())
+    {
+        smap = true;
+        _settings->setValue("LastNeighborWeightMapFile", neighborWeightMapFile);
+    }
+    else {
+        qCritical() << "Failed to pick file for sampling map.\n";
+    }
+
+    if (imap && smap) ui->volumeRenderWidget->setIndexandSamplingMap(
+                _settings->value("LastIndexMapFile").toString(),
+                _settings->value("LastSamplingMapFile").toString(),
+                _settings->value("LastNeighborIdMapFile").toString(),
+                _settings->value("LastNeighborWeightMapFile").toString()
+                );
+    else qCritical() << "Failed to set index, sampling, and/or neighbor maps.\n";
 }
 
 /**

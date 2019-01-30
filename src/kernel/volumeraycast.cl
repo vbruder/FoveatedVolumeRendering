@@ -194,6 +194,30 @@ float getf4(float4 v, int id)
     if (id == 3) return v.w;
 }
 
+uint getui8(uint8 v, int id)
+{
+    if (id == 0) return v.s0;
+    if (id == 1) return v.s1;
+    if (id == 2) return v.s2;
+    if (id == 3) return v.s3;
+    if (id == 4) return v.s4;
+    if (id == 5) return v.s5;
+    if (id == 6) return v.s6;
+    if (id == 7) return v.s7;
+}
+
+float getf8(float8 v, int id)
+{
+    if (id == 0) return v.s0;
+    if (id == 1) return v.s1;
+    if (id == 2) return v.s2;
+    if (id == 3) return v.s3;
+    if (id == 4) return v.s4;
+    if (id == 5) return v.s5;
+    if (id == 6) return v.s6;
+    if (id == 7) return v.s7;
+}
+
 // Compute gradient using a sobel filter (1,2,4)
 float4 gradientSobel(read_only image3d_t vol, const float4 pos)
 {
@@ -733,6 +757,8 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
                             , const float2 gpoint
                             , const uint sdSamples
                             , __global samplingDataStruct *samplingData
+                            , __global uint8 *ids
+                            , __global float8 *weights
                             )
 {
     // position to write back
@@ -748,20 +774,38 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
     // negate mouse offset
     int2 lookupCoords = texCoords - (gp - (inImg_bounds / 2));
     
-    uint4 sample = read_imageui(indexMap, nearestIntSmp, lookupCoords);
-    uint sampleId = (0x00 << 24) | (sample.z << 16) | (sample.y << 8) | sample.x;
-    int2 sampleCoord = convert_int2(samplingData[sampleId].id);
+//    uint4 sample = read_imageui(indexMap, nearestIntSmp, lookupCoords);
+//    uint sampleId = (0x00 << 24) | (sample.z << 16) | (sample.y << 8) | sample.x;
+//    int2 sampleCoord = convert_int2(samplingData[sampleId].id);
+//    // add mouse offset
+//    sampleCoord += gp - (inImg_bounds / 4);
+//    write_imagef(outImg, globalId, read_imagef(inImg, nearestIntSmp, sampleCoord));
 
-    // add mouse offset
-    sampleCoord += gp - (inImg_bounds / 4);
+    float4 result = (float4)(0.f);
+    int mapId = lookupCoords.x + lookupCoords.y * inImg_bounds.x;
+    uint8 neighborIds = ids[mapId];
+    float8 neighborWeights = weights[mapId];
+    int2 sampleCoord;
+    for (int i = 0; i < 8; ++i)
+    {
+        uint neighbor = getui8(neighborIds, i);
+        if (neighbor > 0)
+        {
+            sampleCoord = convert_int2(samplingData[neighbor].id);
+            sampleCoord += gp - (inImg_bounds / 4);
+            float4 sampleColor = read_imagef(inImg, nearestIntSmp, sampleCoord);
+            result += sampleColor * getf8(neighborWeights, i);
+        }
+    }
 
-    /*{
-        // debug
-        write_imagef(outImg, globalId, convert_float4(read_imageui(indexMap, texCoords)) / 255.0f);
-        return;
-    }*/
+//    {
+//        // debug
+//        write_imagef(outImg, globalId, convert_float4(read_imageui(indexMap, texCoords)) / 255.0f);
+//        return;
+//    }
 
-    write_imagef(outImg, globalId, read_imagef(inImg, nearestIntSmp, sampleCoord));
+    result.w = 1.f;
+    write_imagef(outImg, globalId, result);
     return;
 }
 

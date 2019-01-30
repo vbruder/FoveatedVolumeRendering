@@ -17,6 +17,7 @@ set(HEADERS
         ${PROJECT_DIR}/src/voronoicell.h
         ${PROJECT_DIR}/src/lbgstippling.h
         ${PROJECT_DIR}/src/settingswidget.h
+        ${PROJECT_DIR}/src/nanoflann.hpp
 )
 
 # add sources to project
@@ -33,6 +34,13 @@ set(SOURCES
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 find_package(Qt5 COMPONENTS Core Widgets Svg PrintSupport REQUIRED)
+
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+endif()
 
 add_executable(${PROJECT_NAME} ${HEADERS} ${SOURCES} resources.qrc)
 

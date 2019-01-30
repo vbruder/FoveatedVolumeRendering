@@ -23,7 +23,10 @@
 
 #define CL_QUEUE_PROFILING_ENABLE
 #define CL_HPP_ENABLE_EXCEPTIONS
+
 #include <QImage>
+#include <QFile>
+
 #include "src/oclutil/openclglutilities.h"
 #include "src/oclutil/openclutilities.h"
 
@@ -76,6 +79,8 @@ public:
 		, IP_GPOINT
 		, IP_SDSAMPLES
 		, IP_SDATA
+        , IP_ID
+        , IP_WEIGHT
 	};
 
     // mipmap down-scaling metric
@@ -188,7 +193,10 @@ public:
 	 * @param fileNameSamplingMap The full path to the sampling map file.
 	 * @return void
 	 */
-	void loadIndexAndSamplingMap(const std::string fileNameIndexMap, const std::string fileNameSamplingMap);
+    void loadIndexAndSamplingMap(const std::string &fileNameIndexMap,
+                                 const std::string &fileNameSamplingMap,
+                                 const QString &fileNameNeighborIndex,
+                                 const QString &fileNameNeighborWeights);
 
     /**
      * @brief Answers if volume data has been loaded.
@@ -443,7 +451,10 @@ private:
 	cl::Image2D _place_holder_imap;
 	cl::Buffer _samplingMapData; // The width of the sample map defines the total number of work items to be started for lbg sampling raycast
 	cl::Image2D _indexMap;
-	QPoint _indexMapExtends; // The width and height of the Index Map
+    cl::Buffer _neighborIdMap;
+    cl::Buffer _neighborWeightMap;
+
+    QPoint _indexMapExtends; // The width and height of the Index Map
 	size_t _amountOfSamples;	// The indexes of the samplingMap (scanlLine width).
 
 	bool _imsmLoaded;	// is set to true iff _samplingMapData and _indexMap have been loaded successfully.
