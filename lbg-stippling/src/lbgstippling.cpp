@@ -266,7 +266,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
             if (x % 20 == 1) {
                 float pointsTotal = static_cast<float>(indexMap.width * batchSize);
 
-                float pointsProgress = static_cast<float>(y * indexMap.width + x) / pointsTotal;
+                float pointsProgress = static_cast<float>((y- batchNo * batchSize) * indexMap.width + x) / pointsTotal;
                 auto elapsedTime = progressTimer.elapsed();
                 auto remainingTime = ((1.0 - pointsProgress) / pointsProgress) * elapsedTime;
                 qDebug() << "Natural Neighbor" << qSetRealNumberPrecision(9) << pointsProgress
