@@ -239,9 +239,6 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
 #if true
     qDebug() << "Starting batch" << batchNo << "/" << batchCount << "with size" << batchSize;
-    neighborIndexMap.resize(indexMap.width * indexMap.height * BucketCount, 0);
-    neighborWeightMap.resize(indexMap.width * indexMap.height * BucketCount, 0.0f);
-
     using namespace nanoflann;
 
     typedef KDTreeSingleIndexAdaptor<L2_Simple_Adaptor<float, QVectorAdaptor>, QVectorAdaptor, 2>
