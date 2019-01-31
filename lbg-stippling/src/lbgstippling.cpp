@@ -258,17 +258,19 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     std::vector<size_t> ret_indices(k);
     std::vector<float> out_dists_sqr(k);
 
-    for (int y = batchNo*batchSize; y < batchNo*batchSize + batchSize; ++y) {
-        for (int x = 0; x < indexMap.width; ++x) {
-            if (x % 20 == 1) {
+    for (int y = batchNo*batchSize; y < batchNo*batchSize + batchSize; ++y)
+    {
+        int yOffset = (y - batchNo * batchSize);
+        for (int x = 0; x < indexMap.width; ++x)
+        {
+            if (x % 100 == 1)
+            {
                 float pointsTotal = static_cast<float>(indexMap.width * batchSize);
-
-                float pointsProgress = static_cast<float>((y- batchNo * batchSize) * indexMap.width + x) / pointsTotal;
+                float pointsProgress = static_cast<float>(yOffset * indexMap.width + x) / pointsTotal;
                 auto elapsedTime = progressTimer.elapsed();
                 auto remainingTime = ((1.0 - pointsProgress) / pointsProgress) * elapsedTime;
                 qDebug() << "Natural Neighbor" << qSetRealNumberPrecision(9) << pointsProgress
-                         << elapsedTime << "ms" << remainingTime / 1000. / 60./ 60. << "h";
-
+                         << elapsedTime << "ms" << remainingTime / 1000. / 60. << "min";
             }
 
             // Insert point at pixel to compute the modified voronoi diagram.
@@ -291,25 +293,40 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
             QMap<uint32_t, float> intersectionSet;
             uint32_t modifierPointIndex = indexMapModified.get(x, y);
 
+//            int windowHeight = indexMapModified.height /4;
+//            int windowWidth = indexMapModified.width /4;
+//            for (int yy = std::max(y - windowHeight, 0); yy <  std::min(y + windowHeight, static_cast<int>(indexMapModified.height)); ++yy)
+//            {
+//                for (int xx = std::max(x - windowWidth, 0); xx < std::min(x + windowWidth, static_cast<int>(indexMapModified.width)); ++xx)
+//                {
 #pragma omp parallel for
-//            for (int yy = std::max(y - 300, 0); yy <  std::min(y + 300, static_cast<int>(indexMapModified.height)); ++yy) {
-//                for (int xx = std::max(x - 300, 0); xx < std::min(x + 300, static_cast<int>(indexMapModified.width)); ++xx) {
-            for (int yy = 0; yy <  static_cast<int>(indexMapModified.height); ++yy) {
-                for (int xx = 0; xx < static_cast<int>(indexMapModified.width); ++xx) {
-                    if (indexMapModified.get(xx, yy) == modifierPointIndex) {
+            for (int yy = 0; yy < static_cast<int>(indexMapModified.height); ++yy)
+            {
+                for (int xx = 0; xx < static_cast<int>(indexMapModified.width); ++xx)
+                {
+                    if (indexMapModified.get(xx, yy) == modifierPointIndex)
+                    {
                         auto originalIndex = indexMap.get(xx, yy);
                         intersectionSet[originalIndex]++;
                         intersectionSum++;
                     }
                 }
             }
-            assert(intersectionSet.size() < BucketCount && "Mehr geht halt net erstmal...");
+
+//            assert(intersectionSet.size() < BucketCount && "Mehr geht halt net erstmal...");
+            while (intersectionSet.size() > BucketCount)
+            {
+                qDebug() << "__Bucket overflow on id" << modifierPointIndex;
+                intersectionSet.erase(intersectionSet.end());
+                // TODO: intelligent erasing and weight redistribution
+            }
 
             // Normalize weights and copy to neighbor maps.
             size_t bucketIndex = 0;
-            for (auto key : intersectionSet.keys()) {
+            for (auto key : intersectionSet.keys())
+            {
                 intersectionSet[key] = intersectionSet[key] / intersectionSum;
-                auto offset = (y * indexMap.width + x) * BucketCount + bucketIndex;
+                auto offset = (yOffset * indexMap.width + x) * BucketCount + bucketIndex;
                 neighborIndexMap[offset] = key;
                 neighborWeightMap[offset] = intersectionSet[key];
                 bucketIndex++;
@@ -318,7 +335,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     }
 
     qDebug() << "Natural Neighbor: Done";
-	qDebug() << "Batch no" << batchNo;
+    qDebug() << "Batch no" << batchNo << " / " << batchCount;
 #endif
     return {stipples, indexMap, neighborWeightMap, neighborIndexMap};
 }
