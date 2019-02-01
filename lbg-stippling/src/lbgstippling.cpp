@@ -251,8 +251,8 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     QElapsedTimer progressTimer;
     progressTimer.start();
 
-    QElapsedTimer perfTimer;
-    perfTimer.start();
+//    QElapsedTimer perfTimer;
+//    perfTimer.start();
 
     const size_t k = 16;
     std::vector<size_t> ret_indices(k);
@@ -293,33 +293,33 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
             QMap<uint32_t, float> intersectionSet;
             uint32_t modifierPointIndex = indexMapModified.get(x, y);
 
-//            int windowHeight = indexMapModified.height /4;
-//            int windowWidth = indexMapModified.width /4;
-//            for (int yy = std::max(y - windowHeight, 0); yy <  std::min(y + windowHeight, static_cast<int>(indexMapModified.height)); ++yy)
+            int kernelHeight = 20;//indexMapModified.height /4;
+            int kernelWidth = 20;//indexMapModified.width /4;
+//            for (int yy = 0; yy < static_cast<int>(indexMapModified.height); ++yy)
 //            {
-//                for (int xx = std::max(x - windowWidth, 0); xx < std::min(x + windowWidth, static_cast<int>(indexMapModified.width)); ++xx)
+//                for (int xx = 0; xx < static_cast<int>(indexMapModified.width); ++xx)
 //                {
-#pragma omp parallel for
-            for (int yy = 0; yy < static_cast<int>(indexMapModified.height); ++yy)
+//            perfTimer.restart();
+//#pragma omp parallel for
+            for (int yy = std::max(yOffset - kernelHeight, 0); yy < std::min(y + kernelHeight, static_cast<int>(indexMapModified.height)); ++yy)
             {
-                for (int xx = 0; xx < static_cast<int>(indexMapModified.width); ++xx)
+                for (int xx = std::max(x - kernelWidth, 0); xx < std::min(x + kernelWidth, static_cast<int>(indexMapModified.width)); ++xx)
                 {
                     if (indexMapModified.get(xx, yy) == modifierPointIndex)
                     {
+                        if (intersectionSet.size() == BucketCount)
+                        {
+                            qDebug() << "__Bucket overflow on id" << modifierPointIndex;
+                            break;
+                        }
                         auto originalIndex = indexMap.get(xx, yy);
                         intersectionSet[originalIndex]++;
                         intersectionSum++;
                     }
                 }
             }
-
+//            qDebug() << "# pixels" << intersectionSum << "time " << perfTimer.restart();
 //            assert(intersectionSet.size() < BucketCount && "Mehr geht halt net erstmal...");
-            while (intersectionSet.size() > BucketCount)
-            {
-                qDebug() << "__Bucket overflow on id" << modifierPointIndex;
-                intersectionSet.erase(intersectionSet.end());
-                // TODO: intelligent erasing and weight redistribution
-            }
 
             // Normalize weights and copy to neighbor maps.
             size_t bucketIndex = 0;

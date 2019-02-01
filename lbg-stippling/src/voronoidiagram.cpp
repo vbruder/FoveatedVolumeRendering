@@ -108,8 +108,8 @@ VoronoiDiagram::~VoronoiDiagram() {
 
 IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
     assert(!points.empty());
-    QElapsedTimer progressTimer;
-    progressTimer.start();
+//    QElapsedTimer progressTimer;
+//    progressTimer.start();
 
     m_context->makeCurrent(m_surface);
 
@@ -158,10 +158,8 @@ IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
 
     QImage voronoiDiagram = m_fbo->toImage();
 //    voronoiDiagram.save("voronoiDiagram.png");
-
     m_fbo->release();
 //    m_context->doneCurrent();
-
 //    qDebug() << "v calculate gl " << progressTimer.restart();
 
     IndexMap idxMap(m_fbo->width(), m_fbo->height(), points.size());
@@ -176,14 +174,11 @@ IndexMap VoronoiDiagram::calculate(const QVector<QVector2D>& points) {
             uint8_t r = qRed(rowData[x]);
             uint8_t g = qGreen(rowData[x]);
             uint8_t b = qBlue(rowData[x]);
-
             size_t index = CellEncoder::decode(r, g, b);
-            assert(index <= points.size());
-
+//            assert(index <= points.size());
             idxMap.set(x, y, index);
         }
     }
-
 //    qDebug() << "v calculate index map " << progressTimer.restart();
 
     return idxMap;

@@ -23,7 +23,7 @@ QImage foveaSampling() {
         return qExp(-((x * x) / (2.0 * sigmaX * sigmaX) + (y * y) / (2.0 * sigmaY * sigmaY)));
     };
 
-    const QSize screenSizePx(1280, 1280);
+    const QSize screenSizePx(2048, 2048);
     const QSizeF screenSizeCm(30, 30); // 80, 33.5
     const qreal viewDistanceCm = 80;
     const qreal foveaAlpha = 4.0 / 180.0 * M_PI;
@@ -31,17 +31,17 @@ QImage foveaSampling() {
     const QSizeF foveaPx(screenSizePx.width() / screenSizeCm.width() * foveaCm,
                          screenSizePx.height() / screenSizeCm.height() * foveaCm);
 
-    QImage gaussian(screenSizePx.width() * 1.6, screenSizePx.height() * 1.6, QImage::Format_Grayscale8);
+    QImage gaussian(screenSizePx.width() * 1.0, screenSizePx.height() * 1.0, QImage::Format_Grayscale8);
     //QImage gaussian(screenSizePx.width() , screenSizePx.height() , QImage::Format_Grayscale8);
     for (int y = 0; y < gaussian.height(); ++y) {
         uchar* line = gaussian.scanLine(y);
         for (int x = 0; x < gaussian.width(); ++x) {
             float g = ellipticalGauss2DAppox(x - gaussian.width() / 2, y - gaussian.height() / 2, //
-                                             foveaPx.width(), foveaPx.height());
+                                             foveaPx.width()*1.2, foveaPx.height()*1.2);
             line[x] = qMin(static_cast<int>((1.0 - g) * 255.0), 254);
         }
     }
-
+    gaussian.save("gaussian.png");
     return gaussian;
 }
 int main(int argc, char* argv[]) {
