@@ -768,7 +768,9 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
 
     int2 inImg_bounds = get_image_dim(inImg);
     int2 outImg_bounds = get_image_dim(outImg);
-    int2 gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap) / 2) * gpoint);
+    float2 normGaze = clamp(gpoint, (float2)(0.f), (float2)(1.f));
+    int2 gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap) / 2) * normGaze);
+
     int2 texCoords = globalId;
 
     // negate mouse offset
@@ -800,11 +802,13 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
 
 //    {
 //        // debug
-//        write_imagef(outImg, globalId, convert_float4(read_imageui(indexMap, texCoords)) / 255.0f);
+//        write_imagef(outImg, globalId, convert_float4(read_imageui(indexMap, lookupCoords)) / 255.0f);
 //        return;
 //    }
+    float4 indexCol = convert_float4(read_imageui(indexMap, lookupCoords)) / 255.0f;
 
     result.w = 1.f;
+//    write_imagef(outImg, globalId, mix(result, indexCol, (float4)(0.25f)));
     write_imagef(outImg, globalId, result);
     return;
 }
