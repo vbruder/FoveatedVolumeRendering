@@ -744,12 +744,10 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 		try
 		{
 
-			if (_useGL) {
-				
+            if (_useGL)
+            {
 				// set first Texture to extends of index map
-                _volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x()),
-                                              floor(_volumerender.getIndexMapExtends().y()),
-                                              _tmpTexId);
+                _volumerender.updateOutputTex(_tmpTexId);
 
                 _volumerender.runRaycastLBG(_timestep);
 
@@ -789,7 +787,7 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 					floor(this->size().height()* _imgSamplingRate),
 					0, GL_RGBA, GL_FLOAT,
 					d.data());
-				glGenerateMipmap(GL_TEXTURE_2D);
+                //glGenerateMipmap(GL_TEXTURE_2D);
 				_volumerender.updateOutputImg(static_cast<size_t>(width()),
 					static_cast<size_t>(height()), _outTexId);
 			}
@@ -885,13 +883,17 @@ void VolumeRenderWidget::resizeGL(const int w, const int h)
     {
 		//generateOutputTextures(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()),
 		//	&_outTexId, GL_TEXTURE0);
-		generateOutputTextures(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()), &_tmpTexId, GL_TEXTURE1);
-        if(_renderingMethod == LBG_Sampling)
-			generateOutputTextures(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0),
-				&_outTexId, GL_TEXTURE0);
-		else
-			generateOutputTextures(floor(w*_imgSamplingRate), floor(h*_imgSamplingRate),  &_outTexId, GL_TEXTURE0);
-			
+        generateOutputTextures(floor(_volumerender.getIndexMapExtends().x()),
+                               floor(_volumerender.getIndexMapExtends().y()),
+                               &_tmpTexId, GL_TEXTURE1);
+//        if(_renderingMethod == LBG_Sampling)
+//            generateOutputTextures(floor(_volumerender.getIndexMapExtends().x() / 2.0),
+//                                   floor(_volumerender.getIndexMapExtends().y() / 2.0),
+//                                   &_outTexId, GL_TEXTURE0);
+//		else
+            generateOutputTextures(floor(w*_imgSamplingRate), floor(h*_imgSamplingRate),
+                                   &_outTexId, GL_TEXTURE0);
+
 		/*
 		// Debug
 		std::cout << "Resize _tmpImgId: (" << floor(_volumerender.getIndexMapExtends().x()) << ", " << floor(_volumerender.getIndexMapExtends().y()) << ")" << std::endl;
@@ -910,7 +912,8 @@ void VolumeRenderWidget::resizeGL(const int w, const int h)
 /**
  * @brief VolumeRenderWidget::generateOutputTextures
  */
-void VolumeRenderWidget::generateOutputTextures(const int width, const int height, GLuint* texture, GLuint tex_unit)
+void VolumeRenderWidget::generateOutputTextures(const int width, const int height,
+                                                GLuint* texture, GLuint tex_unit)
 {
 	glDeleteTextures(1, texture);
 	glGenTextures(1, texture);

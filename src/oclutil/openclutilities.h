@@ -34,10 +34,10 @@
 #pragma once
 
 #define CL_HPP_ENABLE_EXCEPTIONS    // cl2.h
-#define __CL_ENABLE_EXCEPTIONS      // cl.h
-#define CL_USE_DEPRECATED_OPENCL_1_2_APIS 0
+//#define __CL_ENABLE_EXCEPTIONS      // cl.h
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS false
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
-#define CL_HPP_TARGET_OPENCL_VERSION 120
+#define CL_HPP_TARGET_OPENCL_VERSION 200
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"

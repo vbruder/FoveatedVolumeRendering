@@ -35,7 +35,7 @@ class LBGStippling {
         PointMappingFunction mapping = PointMappingFunction::SQUAREROOT;
 
         size_t superSamplingFactor = 1;
-        size_t maxIterations = 16;
+        size_t maxIterations = 50;
 
         double hysteresis = 0.5;
         double hysteresisDelta = 0.01;

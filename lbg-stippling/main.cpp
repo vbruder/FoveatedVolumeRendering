@@ -37,7 +37,7 @@ QImage foveaSampling() {
         uchar* line = gaussian.scanLine(y);
         for (int x = 0; x < gaussian.width(); ++x) {
             float g = ellipticalGauss2DAppox(x - gaussian.width() / 2, y - gaussian.height() / 2, //
-                                             foveaPx.width()*1.2, foveaPx.height()*1.2);
+                                             foveaPx.width()*1., foveaPx.height()*1.);
             line[x] = qMin(static_cast<int>((1.0 - g) * 255.0), 254);
         }
     }

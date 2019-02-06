@@ -67,7 +67,7 @@ public:
 		, RMODE			 // rendering mode							cl_uint
 		, GPOINT		 // gaze point								cl_int2
 		, SDSAMPLES		 // amount of samples						cl_uint
-		, IMAP			 // Indexmap Image							image2d_t
+        , IMAP			 // Index map extends						cl_uint2    // image2d_t
 		, SDATA			 // Sampling map buffer						(buffer)
 	};
 
@@ -76,11 +76,15 @@ public:
 		  IP_INIMG = 0
 		, IP_IMAP
 		, IP_OUTIMG
+        , IP_LAST_FRAMES
 		, IP_GPOINT
-		, IP_SDSAMPLES
+        , IP_SDSAMPLES
+        , IP_FRAME_ID
 		, IP_SDATA
         , IP_ID
         , IP_WEIGHT
+        , IP_THIS_FRAME
+        , IP_FRAME_CNT
 	};
 
     // mipmap down-scaling metric
@@ -123,6 +127,12 @@ public:
      * @param samplingRate the sampling rate relative per voxel.
      */
     void updateSamplingRate(const double samplingRate);
+
+    /**
+     * @brief updateOutputTex
+     * @param texId
+     */
+    void updateOutputTex(const GLuint texId);
 
     /**
      * @brief Update the output image kernel argument and vector size.
@@ -451,19 +461,25 @@ private:
 	cl::Image2D _place_holder_imap;
 	cl::Buffer _samplingMapData; // The width of the sample map defines the total number of work items to be started for lbg sampling raycast
 	cl::Image2D _indexMap;
+    cl::Image2DArray _lastFramesMem;
+    cl::Image2D _thisFrameMem;
     cl::Buffer _neighborIdMap;
     cl::Buffer _neighborWeightMap;
 
     QPoint _indexMapExtends; // The width and height of the Index Map
 	size_t _amountOfSamples;	// The indexes of the samplingMap (scanlLine width).
 
-	bool _imsmLoaded;	// is set to true iff _samplingMapData and _indexMap have been loaded successfully.
-    bool _volLoaded;
-    double _lastExecTime;
+    bool _imsmLoaded = false;	// is set to true iff _samplingMapData and _indexMap have been loaded successfully.
+    bool _volLoaded = false;
+    double _lastExecTime = 1.0;
     std::valarray<float> _modelScale;
-    bool _useGL;
-    bool _useImgESS;
+    bool _useGL = true;
+    bool _useImgESS = false;
     std::string _currentDevice;
+    cl_uint _frameId = 0;
+    cl_uint _frameIpCnt = 5;    // max 8
+
+    std::vector<float> _output;
 
     DatRawReader _dr;
 };

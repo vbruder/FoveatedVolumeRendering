@@ -56,14 +56,15 @@ static unsigned int RoundPow2(const unsigned int n)
  * @brief VolumeRenderCL::VolumeRenderCL
  */
 VolumeRenderCL::VolumeRenderCL() :
-    _indexMapExtends({3,3})
-  , _amountOfSamples(0)
+    _indexMapExtends({2048,2048})
+  , _amountOfSamples(50000)
   , _imsmLoaded(false)
   , _volLoaded(false)
   , _lastExecTime(0.0)
   , _modelScale{1.0, 1.0, 1.0}
   , _useGL(true)
   , _useImgESS(false)
+  , _frameId(0)
 {
 }
 
@@ -216,8 +217,8 @@ void VolumeRenderCL::setMemObjectsRaycast(const size_t t)
     _raycastKernel.setArg(BRICKS, _bricksMem.at(t));
     _raycastKernel.setArg(TFF, _tffMem);
 	
-	if (_useGL)
-		_raycastKernel.setArg(OUTPUT, _outputMem);
+    if (_useGL)
+        _raycastKernel.setArg(OUTPUT, _outputMem);
 	else
 		_raycastKernel.setArg(OUTPUT, _outputMemNoGL);
 
@@ -228,8 +229,11 @@ void VolumeRenderCL::setMemObjectsRaycast(const size_t t)
     _raycastKernel.setArg(IN_HIT_IMG, _inputHitMem);
     _raycastKernel.setArg(OUT_HIT_IMG, _outputHitMem);
 
-	if (_imsmLoaded) {
-		_raycastKernel.setArg(IMAP, _indexMap);
+    if (_imsmLoaded)
+    {
+        cl_uint2 extend = {{static_cast<cl_uint>(_indexMapExtends.x()),
+                            static_cast<cl_uint>(_indexMapExtends.y())}};
+        _raycastKernel.setArg(IMAP, extend);
 		_raycastKernel.setArg(SDATA, _samplingMapData);
 	}
 }
@@ -237,20 +241,27 @@ void VolumeRenderCL::setMemObjectsRaycast(const size_t t)
 void VolumeRenderCL::setMemObjectsInterpolationLBG(GLuint inTexId, GLuint outTexId)
 {
 	// input is previous output
-	if (_useGL) {
-		_inputMem = cl::ImageGL(_contextCL, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, inTexId);
+    if (_useGL)
+    {
+        _inputMem = cl::ImageGL(_contextCL, CL_MEM_READ_ONLY, GL_TEXTURE_2D, 0, inTexId);
 		_outputMem = cl::ImageGL(_contextCL, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, outTexId);
 
-		_interpolateLBGKernel.setArg(IP_INIMG, _inputMem); // in Data
+        _interpolateLBGKernel.setArg(IP_INIMG, _inputMem);      // in Data
 		_interpolateLBGKernel.setArg(IP_OUTIMG, _outputMem);	// out Data
+
+        _interpolateLBGKernel.setArg(IP_THIS_FRAME, _thisFrameMem);
+        _interpolateLBGKernel.setArg(IP_LAST_FRAMES, _lastFramesMem); // last frames
 	}
-	else {
+    else
+    {
 		throw std::runtime_error("Add interpolationLBG for NoGL Image Obejcts!");
 	}
 
-	if (_imsmLoaded) {
+    if (_imsmLoaded)
+    {
 		_interpolateLBGKernel.setArg(IP_IMAP, _indexMap);
 		_interpolateLBGKernel.setArg(IP_SDATA, _samplingMapData);
+        _interpolateLBGKernel.setArg(IP_FRAME_ID, _frameId);
         _interpolateLBGKernel.setArg(IP_ID, _neighborIdMap);
         _interpolateLBGKernel.setArg(IP_WEIGHT, _neighborWeightMap);
 	}
@@ -446,6 +457,17 @@ void VolumeRenderCL::updateSamplingRate(const double samplingRate)
     }
 }
 
+void VolumeRenderCL::updateOutputTex(const GLuint texId)
+{
+    try
+    {
+        _outputMem = cl::ImageGL(_contextCL, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texId);
+    }
+    catch (cl::Error err)
+    {
+        logCLerror(err);
+    }
+}
 
 /**
  * @brief VolumeRenderCL::updateOutputImg
@@ -457,17 +479,24 @@ void VolumeRenderCL::updateOutputImg(const size_t width, const size_t height, co
     cl::ImageFormat format;
     format.image_channel_order = CL_RGBA;
     format.image_channel_data_type = CL_FLOAT;
+
+    _output.resize(width*height*4, 0.f);
     try
     {
         if (_useGL)
         {
             _outputMem = cl::ImageGL(_contextCL, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texId);
+//            _outputMemNoGL = cl::Image2D(_contextCL, CL_MEM_WRITE_ONLY, format, width, height);
         }
         else
         {
             _outputMemNoGL = cl::Image2D(_contextCL, CL_MEM_WRITE_ONLY, format, width, height);
             _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
         }
+
+        _lastFramesMem = cl::Image2DArray(_contextCL, CL_MEM_READ_ONLY, format,
+                                       8, width, height, 0, 0);
+        _thisFrameMem = cl::Image2D(_contextCL, CL_MEM_WRITE_ONLY, format, width, height);
 
         std::vector<unsigned int> initBuff((width/LOCAL_SIZE+ 1)*(height/LOCAL_SIZE+ 1), 1u);
         format = cl::ImageFormat(CL_R, CL_UNSIGNED_INT8);
@@ -586,14 +615,15 @@ void VolumeRenderCL::runRaycastLBG(const size_t t)
 		return;
 	try // opencl scope
 	{
-		setMemObjectsRaycast(t);
+        setMemObjectsRaycast(t);
 		
 		size_t total_threads = _amountOfSamples;
         //size_t xy_threads = static_cast<size_t>(ceil(std::sqrt(total_threads)));
 
 		_raycastKernel.setArg(SDSAMPLES, static_cast<cl_uint>(total_threads));	// sets the amount of samples so they won't be taken from undefined memory
+//        _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
 
-		// std::cout << "total amount of Samples: " << _amountOfSamples << ", xy_samples: " << xy_threads << std::endl;
+//         std::cout << "total amount of Samples: " << _amountOfSamples << std::endl;
 //		cl::NDRange globalThreads(xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE), xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE));
 //		cl::NDRange localThreads(LOCAL_SIZE, LOCAL_SIZE);
 
@@ -601,14 +631,20 @@ void VolumeRenderCL::runRaycastLBG(const size_t t)
         cl::NDRange localThreads(LOCAL_SIZE * LOCAL_SIZE, 1);
 		cl::Event ndrEvt;
 
-		std::vector<cl::Memory> memObj;
-		memObj.push_back(_outputMem);
-		_queueCL.enqueueAcquireGLObjects(&memObj);
+        std::vector<cl::Memory> memObj;
+        memObj.push_back(_outputMem);
+        _queueCL.enqueueAcquireGLObjects(&memObj);
 		_queueCL.enqueueNDRangeKernel(
             _raycastKernel, cl::NullRange, globalThreads, cl::NullRange, nullptr, &ndrEvt);
-		_queueCL.enqueueReleaseGLObjects(&memObj);
-		_queueCL.finish();    // global sync
+        _queueCL.enqueueReleaseGLObjects(&memObj);
 
+//        _queueCL.enqueueReadImage(_outputMemNoGL,
+//                                  CL_TRUE,
+//                                  {0,0,0}, {1024, 1024, 1}, 0, 0,
+//                                  _output.data());
+//        std::cout << "raycast  " << _output.at(0) << " " << _output.at(1) << " " << _output.at(2) << std::endl;
+
+        _queueCL.finish();    // global sync
 		if (_useImgESS)
 		{
 			// swap hit test buffers
@@ -634,20 +670,26 @@ void VolumeRenderCL::runRaycastLBG(const size_t t)
 
 void VolumeRenderCL::runRaycastLBGNoGL(const size_t width, const size_t height, const size_t t, std::vector<float>& output)
 {
+
 }
 
-void VolumeRenderCL::interpolateLBG(const size_t width, const size_t height, GLuint inTexId, GLuint outTexId)
+void VolumeRenderCL::interpolateLBG(const size_t width, const size_t height,
+                                    GLuint inTexId, GLuint outTexId)
 {
 	if (!this->_volLoaded || !this->_imsmLoaded)
 		return;
 	try // opencl scope
 	{
-		setMemObjectsInterpolationLBG(inTexId, outTexId);
+        setMemObjectsInterpolationLBG(inTexId, outTexId);
 		_interpolateLBGKernel.setArg(IP_SDSAMPLES, static_cast<uint>(_amountOfSamples));
+        _interpolateLBGKernel.setArg(IP_FRAME_ID, _frameId);
+        _interpolateLBGKernel.setArg(IP_THIS_FRAME, _thisFrameMem);
+        _interpolateLBGKernel.setArg(IP_FRAME_CNT, _frameIpCnt);
 
 		// std::cout << "total amount of Samples: " << _amountOfSamples << ", xy_samples: " << xy_threads << std::endl;
         size_t w = width;
         size_t h = height;
+
         // round global size to next multiple of local size
         w += (w % LOCAL_SIZE) > 0 ? LOCAL_SIZE - w % LOCAL_SIZE : 0;
         h += (h % LOCAL_SIZE) > 0 ? LOCAL_SIZE - h % LOCAL_SIZE : 0;
@@ -658,20 +700,23 @@ void VolumeRenderCL::interpolateLBG(const size_t width, const size_t height, GLu
 
 		std::vector<cl::Memory> memObj;
 		memObj.push_back(_outputMem);
-		memObj.push_back(_inputMem);
+        memObj.push_back(_inputMem);
 		_queueCL.enqueueAcquireGLObjects(&memObj);
 		_queueCL.enqueueNDRangeKernel(
             _interpolateLBGKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
-		_queueCL.enqueueReleaseGLObjects(&memObj);
-		_queueCL.finish();    // global sync
 
+        _queueCL.enqueueCopyImage(_thisFrameMem, _lastFramesMem, {0,0,0}, {0,0,_frameId % _frameIpCnt},
+                                 {width, height, 1});
+        _frameId++;
+        _queueCL.enqueueReleaseGLObjects(&memObj);
+        _queueCL.finish();    // global sync
 
 #ifdef CL_QUEUE_PROFILING_ENABLE
 		cl_ulong start = 0;
 		cl_ulong end = 0;
 		ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
 		ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
-		_lastExecTime = static_cast<double>(end - start)*1e-9;
+        _lastExecTime = static_cast<double>(end - start)*1e-9;  // ns -> sec
 		//        std::cout << "Kernel time: " << _lastExecTime << std::endl << std::endl;
 #endif
 	}
@@ -680,6 +725,7 @@ void VolumeRenderCL::interpolateLBG(const size_t width, const size_t height, GLu
 		logCLerror(err);
 	}
 }
+
 
 /**
  * @brief VolumeRenderCL::generateBricks
@@ -866,8 +912,8 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string &fileNameIndexMap
 		QImage im = QImage(QString::fromStdString(fileNameIndexMap));
 		std::cout << "Loaded Index Map with size: " << im.sizeInBytes() << " bytes and format: " << im.format() << std::endl;
 		// std::cout << "width: " << im.width() << std::endl;
-		_indexMap = cl::Image2D(_contextCL, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, im_format, im.width(), im.height(), 0, im.bits(), &err);
-		_indexMapExtends = { im.size().width(), im.size().height() };
+        _indexMap = cl::Image2D(_contextCL, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, im_format, im.width(), im.height(), 0, im.bits());
+        _indexMapExtends = { im.width(), im.height() };
 	}
 	catch (cl::Error e) {
 		throw std::runtime_error(std::string("Failed to create cl::Image2D for index map. Error: ").append(std::to_string(e.err())).c_str());
@@ -948,7 +994,8 @@ void VolumeRenderCL::loadIndexAndSamplingMap(const std::string &fileNameIndexMap
 		std::cout << "Total size of index_data: " << index_data.size() * sizeof(indexStruct) << std::endl;
 		*/
 
-		_samplingMapData = cl::Buffer(_contextCL, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, index_data.size() * sizeof(indexStruct), index_data.data(), &err);
+        _samplingMapData = cl::Buffer(_contextCL, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                      index_data.size() * sizeof(indexStruct), index_data.data(), &err);
 	}
 	catch (cl::Error e) {
 		throw std::runtime_error(std::string("Failed to create Buffer for Sampling Map Image. Error: ").append(std::to_string(e.err())).c_str());
@@ -1180,7 +1227,7 @@ void VolumeRenderCL::setObjEss(const bool useEss)
 #ifdef _WIN32
     initKernel("kernels//volumeraycast.cl", "-DCL_STD=CL1.2 " + ess);
 #else
-    initKernel("kernels/volumeraycast.cl", "-DCL_STD=CL1.2 " + ess);
+    initKernel("kernels/volumeraycast.cl", "-DCL_STD=CL1.2" + ess);
 #endif // _WIN32
     // upload volume data if already loaded
     if (_dr.has_data())

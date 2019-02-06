@@ -237,7 +237,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     neighborIndexMap.resize(indexMap.width * batchSize * BucketCount, 0);
     neighborWeightMap.resize(indexMap.width * batchSize * BucketCount, 0.0f);
 
-#if false
+#if true
     qDebug() << "Starting batch" << batchNo << "/" << batchCount << "with size" << batchSize;
     using namespace nanoflann;
 
@@ -254,7 +254,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 //    QElapsedTimer perfTimer;
 //    perfTimer.start();
 
-    const size_t k = 16;
+    const size_t k = 12;
     std::vector<size_t> ret_indices(k);
     std::vector<float> out_dists_sqr(k);
 

@@ -429,7 +429,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , const uint rmode // selects the rendering mode
                            , const float2 gpoint // gaze point
                            , const uint sdSamples // amount of samples in samplingData
-                           , __read_only image2d_t indexMap
+//                           , __read_only image2d_t indexMap
+                           , const uint2 imExtends
                            , __global samplingDataStruct *samplingData
                            )
 {
@@ -449,7 +450,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
             }*/
             // img_bounds /= 3;
             // gp are the unnormalized coordinates between 0 and one half of the indexMap extends
-            gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap)/2) * gpoint);
+            gp = convert_int2_rtz(convert_float2(imExtends/2) * gpoint);
 //            gp += get_image_dim(indexMap) / (int2)(2);
 
             // used to look up the sampleCoordinates
@@ -468,7 +469,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
 
     if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
         return;
-
 
     // TODO: Check if get_group_id() is related to the number of total work items and if it results in an error when using lbg-sampling.
     local uint hits;
@@ -754,11 +754,15 @@ __kernel void volumeRender(  __read_only image3d_t volData
 __kernel void interpolateLBG( __read_only image2d_t inImg
                             , __read_only image2d_t indexMap
                             , __write_only image2d_t outImg
+                            , __read_only image2d_array_t lastFrames
                             , const float2 gpoint
                             , const uint sdSamples
+                            , const uint frameId
                             , __global samplingDataStruct *samplingData
                             , __global uint8 *ids
                             , __global float8 *weights
+                            , __write_only image2d_t thisFrame
+                            , const uint frameCnt
                             )
 {
     // position to write back
@@ -770,19 +774,20 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
     int2 outImg_bounds = get_image_dim(outImg);
     float2 normGaze = clamp(gpoint, (float2)(0.f), (float2)(1.f));
     int2 gp = convert_int2_rtz(convert_float2(get_image_dim(indexMap) / 2) * normGaze);
-
     int2 texCoords = globalId;
 
     // negate mouse offset
     int2 lookupCoords = texCoords - (gp - (inImg_bounds / 2));
     
-//    uint4 sample = read_imageui(indexMap, nearestIntSmp, lookupCoords);
-//    uint sampleId = (0x00 << 24) | (sample.z << 16) | (sample.y << 8) | sample.x;
-//    int2 sampleCoord = convert_int2(samplingData[sampleId].id);
-//    // add mouse offset
-//    sampleCoord += gp - (inImg_bounds / 4);
-//    write_imagef(outImg, globalId, read_imagef(inImg, nearestIntSmp, sampleCoord));
-
+//#define NAIVE
+#ifdef NAIVE
+    uint4 sample = read_imageui(indexMap, nearestIntSmp, lookupCoords);
+    uint sampleId = (0x00 << 24) | (sample.z << 16) | (sample.y << 8) | sample.x;
+    int2 sampleCoord = convert_int2(samplingData[sampleId].id);
+    // add mouse offset
+    sampleCoord += gp - (inImg_bounds / 4);
+    write_imagef(outImg, globalId, read_imagef(inImg, nearestIntSmp, sampleCoord));
+#else
     float4 result = (float4)(0.f);
     int mapId = lookupCoords.x + lookupCoords.y * inImg_bounds.x;
     uint8 neighborIds = ids[mapId];
@@ -799,17 +804,32 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
             result += sampleColor * getf8(neighborWeights, i);
         }
     }
+    result.w = 1.f;
+    write_imagef(thisFrame, globalId, result);
+
+    // Temporal interpolation of last frames
+    if (frameId > frameCnt)
+    {
+        for (uint i = 0; i < frameCnt; ++i)
+        {
+            float4 last = read_imagef(lastFrames, nearestIntSmp,
+                                      (int4)(globalId, (frameId-(i+1)) % frameCnt, 0));
+            result += last;
+        }
+        result /= convert_float(frameCnt + 1);
+    }
+    result.w = 1.f;
+    write_imagef(outImg, globalId, result);
+
+#endif
 
 //    {
 //        // debug
 //        write_imagef(outImg, globalId, convert_float4(read_imageui(indexMap, lookupCoords)) / 255.0f);
 //        return;
-//    }
-    float4 indexCol = convert_float4(read_imageui(indexMap, lookupCoords)) / 255.0f;
-
-    result.w = 1.f;
+//        float4 indexCol = convert_float4(read_imageui(indexMap, lookupCoords)) / 255.0f;
 //    write_imagef(outImg, globalId, mix(result, indexCol, (float4)(0.25f)));
-    write_imagef(outImg, globalId, result);
+//    }
     return;
 }
 
