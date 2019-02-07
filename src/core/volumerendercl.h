@@ -69,6 +69,10 @@ public:
 		, SDSAMPLES		 // amount of samples						cl_uint
         , IMAP			 // Index map extends						cl_uint2    // image2d_t
 		, SDATA			 // Sampling map buffer						(buffer)
+        , MIP_1
+        , MIP_2
+        , MIP_3
+        , MIP_4
 	};
 
 	enum ip_kernel_arg
@@ -218,7 +222,7 @@ public:
      * @brief Return spacial and temporal resolution of loaded volume data set.
      * @return 4D array containing the resolution in x,y,z direction and number of time steps.
      */
-    const std::array<unsigned int, 4> getResolution() const;
+    const std::array<size_t, 4> getResolution() const;
 
     /**
      * @brief Set the transfer function for the volume raycast as a kernel argument.
@@ -350,10 +354,16 @@ public:
      * @param t Timestep to be downsampled
      * @param factor downsampling factor, uniform for all 3 dimensions
      */
-    const std::string volumeDownsampling(const size_t t, const int factor);
+    const std::string generateVolumeDownsampling(const size_t t, const int factor);
 
 	// Returns the extends of the index map. {0,0} if it hasn't been loaded yet.
 	QPoint getIndexMapExtends();
+
+    /**
+     * @brief Generate a full mipmap stack of the currently loaded volume texture.
+     * @param levelCnt Number of mipmap levels.
+     */
+    void generateMipmaps(size_t levelCnt);
 
 private:
     /**
@@ -361,6 +371,13 @@ private:
      * @param volumeData
      */
     void generateBricks();
+
+    /**
+     * @brief Downsample a volume data set.
+     */
+    cl::Image3D downsampleVolume(const cl::ImageFormat &format,
+                                       const std::array<size_t, 3> &newSize,
+                                       const cl::Image3D &volumeMem);
 
     /**
      * @brief Calculate the scaling vector for the volume data.
@@ -465,6 +482,7 @@ private:
     cl::Image2D _thisFrameMem;
     cl::Buffer _neighborIdMap;
     cl::Buffer _neighborWeightMap;
+    std::vector<cl::Image3D> _volMipmapsMem;
 
     QPoint _indexMapExtends; // The width and height of the Index Map
 	size_t _amountOfSamples;	// The indexes of the samplingMap (scanlLine width).

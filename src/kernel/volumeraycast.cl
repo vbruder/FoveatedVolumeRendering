@@ -432,6 +432,10 @@ __kernel void volumeRender(  __read_only image3d_t volData
 //                           , __read_only image2d_t indexMap
                            , const uint2 imExtends
                            , __global samplingDataStruct *samplingData
+                           , __read_only image3d_t volMip1
+                           , __read_only image3d_t volMip2
+                           , __read_only image3d_t volMip3
+                           , __read_only image3d_t volMip4
                            )
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
@@ -439,14 +443,13 @@ __kernel void volumeRender(  __read_only image3d_t volData
     int2 texCoords = globalId;
     uint texId;
     int2 gp;
+    int mipLvl = 0;
 
     switch(rmode){
         case 1:
             // LBG-Sampling
             /*{
                 // debug
-                write_imagef(outImg, texCoords, convert_float4(read_imageui(indexMap, texCoords)) / 255.0f);
-                return;
             }*/
             // img_bounds /= 3;
             // gp are the unnormalized coordinates between 0 and one half of the indexMap extends
@@ -457,10 +460,22 @@ __kernel void volumeRender(  __read_only image3d_t volData
             texId = globalId.x; //index_from_2d(globalId, get_global_size(0));
             if(texId >= sdSamples) return;
 
+            int2 sampleCoords = convert_int2(samplingData[texId].id);
             // texCoords are the sampleCoords but with an offset according to gp
-            texCoords = convert_int2(samplingData[texId].id)
-                      + gp
-                      - (img_bounds / 4); // if gp in middle of screen one half of one half, then offset is zero
+            // if gp in middle of screen one half of one half, then offset is zero
+            texCoords = sampleCoords + gp - (img_bounds / 4);
+
+            // FIXME
+            // 1 divided by number of mip levels + 1 (for original) times image resolution
+            int2 mipDiv = convert_int2(convert_float2(img_bounds) * (float2)(1.f/5.f));
+            if (any(sampleCoords < mipDiv*1) || any(sampleCoords > img_bounds - mipDiv*1))
+                mipLvl = 4;
+            if (any(sampleCoords < mipDiv*2) || any(sampleCoords > img_bounds - mipDiv*2))
+                mipLvl = 3;
+            if (any(sampleCoords < mipDiv*3) || any(sampleCoords > img_bounds - mipDiv*3))
+                mipLvl = 2;
+            if (any(sampleCoords < mipDiv*4) || any(sampleCoords > img_bounds - mipDiv*4))
+                mipLvl = 1;
             break;
         default:
             // Standard
@@ -661,8 +676,17 @@ __kernel void volumeRender(  __read_only image3d_t volData
             }
             else    // density based shading and optional illumination
             {
-                density = useLinear ? read_imagef(volData,  linearSmp, (float4)(pos, 1.f)).x :
-                                      read_imagef(volData, nearestSmp, (float4)(pos, 1.f)).x;
+                switch (mipLvl)
+                {
+                case 0: density = useLinear ? read_imagef(volData,  linearSmp, (float4)(pos, 1.f)).x :
+                                              read_imagef(volData, nearestSmp, (float4)(pos, 1.f)).x;
+                        break;
+                case 1: density = 0.25f;break;//read_imagef(volMip1, linearSmp, (float4)(pos, 1.f)).x; break;
+                case 2: density = 0.5f;break;//read_imagef(volMip2, linearSmp, (float4)(pos, 1.f)).x; break;
+                case 3: density = 0.75f;break;//read_imagef(volMip3, linearSmp, (float4)(pos, 1.f)).x; break;
+                case 4: density = 1.f;break;// read_imagef(volMip4, linearSmp, (float4)(pos, 1.f)).x; break;
+                }
+
                 tfColor = read_imagef(tffData, linearSmp, density);  // map density to color
                 if (tfColor.w > 0.1f && illumType)
                 {
@@ -779,8 +803,8 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
     // negate mouse offset
     int2 lookupCoords = texCoords - (gp - (inImg_bounds / 2));
     
-//#define NAIVE
-#ifdef NAIVE
+//#define NEAREST
+#ifdef NEAREST  // nearest neighbor interpolation
     uint4 sample = read_imageui(indexMap, nearestIntSmp, lookupCoords);
     uint sampleId = (0x00 << 24) | (sample.z << 16) | (sample.y << 8) | sample.x;
     int2 sampleCoord = convert_int2(samplingData[sampleId].id);
@@ -788,6 +812,7 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
     sampleCoord += gp - (inImg_bounds / 4);
     write_imagef(outImg, globalId, read_imagef(inImg, nearestIntSmp, sampleCoord));
 #else
+    // natural neighbot interpolation
     float4 result = (float4)(0.f);
     int mapId = lookupCoords.x + lookupCoords.y * inImg_bounds.x;
     uint8 neighborIds = ids[mapId];
@@ -806,7 +831,6 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
     }
     result.w = 1.f;
     write_imagef(thisFrame, globalId, result);
-
     // Temporal interpolation of last frames
     if (frameId > frameCnt)
     {
@@ -820,7 +844,6 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
     }
     result.w = 1.f;
     write_imagef(outImg, globalId, result);
-
 #endif
 
 //    {

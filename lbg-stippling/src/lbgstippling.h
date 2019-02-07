@@ -25,7 +25,7 @@ class LBGStippling {
     enum PointMappingFunction { LINEAR = 0, SQUAREROOT = 1, EXPONENTIAL = 2, SQUARE = 3 };
 
     struct Params {
-        int initialPoints = 12000;
+        int initialPoints = 32768;
         double initialPointSize = 1.0;
 
         bool adaptivePointSize = false;

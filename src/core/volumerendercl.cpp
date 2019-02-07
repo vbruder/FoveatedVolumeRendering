@@ -280,25 +280,65 @@ void VolumeRenderCL::setMemObjectsBrickGen(const size_t t)
     _genBricksKernel.setArg(BRICKS, _bricksMem.at(t));
 }
 
+/**
+ * @brief VolumeRenderCL::downsampleVolume
+ * @param format
+ * @return
+ */
+cl::Image3D VolumeRenderCL::downsampleVolume(const cl::ImageFormat &format,
+                                                   const std::array<size_t, 3> &newSize,
+                                                   const cl::Image3D &volumeMem)
+{
+    try
+    {
+        cl::Image3D lowResVol = cl::Image3D(_contextCL,
+                                            CL_MEM_WRITE_ONLY,
+                                            format,
+                                            newSize.at(0), newSize.at(1), newSize.at(2),
+                                            0, 0, nullptr);
+        _downsamplingKernel.setArg(VOLUME, volumeMem);
+        _downsamplingKernel.setArg(1, lowResVol);
+
+        cl::NDRange globalThreads(newSize.at(0), newSize.at(1), newSize.at(2));
+        cl::Event ndrEvt;
+        _queueCL.enqueueNDRangeKernel(_downsamplingKernel, cl::NullRange,
+                                      globalThreads, cl::NullRange, nullptr, &ndrEvt);
+        _queueCL.flush();    // global sync
+
+        // copy back to host and create new image memory object as mipmap layer
+        // TODO: (How) is it possible to use device memory directly?
+        std::array<size_t, 3> origin = {{0, 0, 0}};
+        std::vector<char> hostMem(newSize.at(0) * newSize.at(1) * newSize.at(2));
+        _queueCL.enqueueReadImage(lowResVol, CL_TRUE, origin, newSize, 0, 0, hostMem.data());
+        cl::Image3D scaledVol = cl::Image3D(_contextCL, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                             format, newSize[0], newSize[1], newSize[2],
+                                             0, 0, hostMem.data());
+        return scaledVol;
+    }
+    catch (cl::Error err)
+    {
+        logCLerror(err);
+    }
+}
 
 /**
  * @brief VolumeRenderCL::setMemObjectsDownsampling
  *
  * TODO: Add support for downsampling of whole timeseries.
  */
-const std::string VolumeRenderCL::volumeDownsampling(const size_t t, const int factor)
+const std::string VolumeRenderCL::generateVolumeDownsampling(const size_t t, const int factor)
 {
     if (!_dr.has_data())
         throw std::runtime_error("No volume data is loaded.");
     if (factor < 2)
         throw std::invalid_argument("Factor must be greater or equal 2.");
 
-    std::array<unsigned int, 3> texSize = {1u, 1u, 1u};
-    texSize.at(0) = static_cast<unsigned int>(ceil(_dr.properties().volume_res.at(0) /
+    std::array<size_t, 3> texSize = {1u, 1u, 1u};
+    texSize.at(0) = static_cast<size_t>(ceil(_dr.properties().volume_res.at(0) /
                                                          static_cast<double>(factor)));
-    texSize.at(1) = static_cast<unsigned int>(ceil(_dr.properties().volume_res.at(1) /
+    texSize.at(1) = static_cast<size_t>(ceil(_dr.properties().volume_res.at(1) /
                                                          static_cast<double>(factor)));
-    texSize.at(2) = static_cast<unsigned int>(ceil(_dr.properties().volume_res.at(2) /
+    texSize.at(2) = static_cast<size_t>(ceil(_dr.properties().volume_res.at(2) /
                                                          static_cast<double>(factor)));
 
     if (texSize.at(0) < 64)
@@ -311,80 +351,68 @@ const std::string VolumeRenderCL::volumeDownsampling(const size_t t, const int f
 
     cl::ImageFormat format;
     format.image_channel_order = CL_R;
-    unsigned int formatMultiplier = 1;
+    unsigned int formatFactor = sizeof(cl_uchar);
 
     if (_dr.properties().format == "UCHAR")
         format.image_channel_data_type = CL_UNORM_INT8;
     else if (_dr.properties().format == "USHORT")
     {
         format.image_channel_data_type = CL_UNORM_INT16;
-        formatMultiplier = 2;
+        formatFactor = 2;
     }
     else if (_dr.properties().format == "FLOAT")
     {
         format.image_channel_data_type = CL_FLOAT;
-        formatMultiplier = 4;
+        formatFactor = sizeof(cl_float);
     }
     else
         throw std::invalid_argument("Unknown or invalid volume data format.");
 
+    cl::Image3D lowResVol = downsampleVolume(format, texSize, _volumesMem.at(t));
+
+    std::vector<unsigned char> outputData(texSize[0]*texSize[1]*texSize[2]*formatFactor);
     try
     {
-        cl::Image3D lowResVol = cl::Image3D(_contextCL,
-                                            CL_MEM_WRITE_ONLY,
-                                            format,
-                                            texSize.at(0), texSize.at(1), texSize.at(2),
-                                            0, 0, nullptr);
-        _downsamplingKernel.setArg(VOLUME, _volumesMem.at(t));
-        _downsamplingKernel.setArg(1, lowResVol);
-
-        cl::NDRange globalThreads(texSize.at(0), texSize.at(1), texSize.at(2));
-        cl::Event ndrEvt;
-        _queueCL.enqueueNDRangeKernel(_downsamplingKernel, cl::NullRange,
-                                      globalThreads, cl::NullRange, nullptr, &ndrEvt);
-        _queueCL.finish();    // global sync
-
-        // read back volume data
-        std::vector<unsigned char> outputData(texSize.at(0)*texSize.at(1)*texSize.at(2)
-                                              *formatMultiplier);
+        // transfer volume data to host
         std::array<size_t, 3> origin = {{0, 0, 0}};
         std::array<size_t, 3> region = {{texSize.at(0), texSize.at(1), texSize.at(2)}};
         _queueCL.enqueueReadImage(lowResVol, CL_TRUE, origin, region, 0, 0, outputData.data());
         _queueCL.flush();    // global sync
 
-        // dump to file
-        size_t lastindex = _dr.properties().dat_file_name.find_last_of(".");
-        std::string rawname = _dr.properties().dat_file_name.substr(0, lastindex);
-        rawname += "_";
-        rawname += std::to_string(texSize.at(0));
-        std::ofstream file(rawname + ".raw", std::ios::out|std::ios::binary);
-        std::cout << "Writing downsampled volume data to "
-                  << rawname << "_" << std::to_string(texSize.at(0)) << ".raw ...";
-        std::copy(outputData.cbegin(), outputData.cend(),
-                  std::ostream_iterator<unsigned char>(file));
-        file.close();
-
-        // Generate .dat file and write out
-        std::ofstream datFile(rawname + ".dat", std::ios::out);
-        lastindex = rawname.find_last_of(".");
-        size_t firstindex = rawname.find_last_of("/\\");
-        std::string rawnameShort = rawname.substr(firstindex + 1, lastindex);
-        datFile << "ObjectFileName: \t" << rawnameShort << ".raw\n";
-        datFile << "Resolution: \t\t" << texSize.at(0) << " " << texSize.at(1) << " "
-                                      << texSize.at(2) << "\n";
-        datFile << "SliceThickness: \t" << _dr.properties().slice_thickness.at(0) << " "
-                << _dr.properties().slice_thickness.at(1) << " "
-                << _dr.properties().slice_thickness.at(2)
-                << "\n";
-        datFile << "Format: \t\t\t" << _dr.properties().format << "\n";
-        datFile.close();
-        std::cout << " Done." << std::endl;
-        return rawname;
     }
     catch (cl::Error err)
     {
         logCLerror(err);
     }
+
+    // dump to file
+    size_t lastindex = _dr.properties().dat_file_name.find_last_of(".");
+    std::string rawname = _dr.properties().dat_file_name.substr(0, lastindex);
+    rawname += "_";
+    rawname += std::to_string(texSize.at(0));
+    std::ofstream file(rawname + ".raw", std::ios::out|std::ios::binary);
+    std::cout << "Writing downsampled volume data to "
+              << rawname << "_" << std::to_string(texSize.at(0)) << ".raw ...";
+    std::copy(outputData.cbegin(), outputData.cend(),
+              std::ostream_iterator<unsigned char>(file));
+    file.close();
+
+    // Generate .dat file and write out
+    std::ofstream datFile(rawname + ".dat", std::ios::out);
+    lastindex = rawname.find_last_of(".");
+    size_t firstindex = rawname.find_last_of("/\\");
+    std::string rawnameShort = rawname.substr(firstindex + 1, lastindex);
+    datFile << "ObjectFileName: \t" << rawnameShort << ".raw\n";
+    datFile << "Resolution: \t\t" << texSize.at(0) << " " << texSize.at(1) << " "
+                                  << texSize.at(2) << "\n";
+    datFile << "SliceThickness: \t" << _dr.properties().slice_thickness.at(0) << " "
+            << _dr.properties().slice_thickness.at(1) << " "
+            << _dr.properties().slice_thickness.at(2)
+            << "\n";
+    datFile << "Format: \t\t\t" << _dr.properties().format << "\n";
+    datFile.close();
+    std::cout << " Done." << std::endl;
+    return rawname;
 }
 
 QPoint VolumeRenderCL::getIndexMapExtends()
@@ -890,8 +918,9 @@ size_t VolumeRenderCL::loadVolumeData(const std::string fileName)
 
     std::partial_sum(prefixSum.begin(), prefixSum.end(), prefixSum.begin());
     setTffPrefixSum(prefixSum);
-
     this->_volLoaded = true;
+    generateMipmaps(4);
+
     return _dr.data().size();
 }
 
@@ -1057,10 +1086,10 @@ bool VolumeRenderCL::hasData() const
  * @brief VolumeRenderCL::getResolution
  * @return
  */
-const std::array<unsigned int, 4> VolumeRenderCL::getResolution() const
+const std::array<size_t, 4> VolumeRenderCL::getResolution() const
 {
     if (!_dr.has_data())
-        return std::array<unsigned int, 4> {{0, 0, 0, 1}};
+        return std::array<size_t, 4> {{0, 0, 0, 1}};
     return _dr.properties().volume_res;
 }
 
@@ -1344,4 +1373,37 @@ const std::vector<std::string> VolumeRenderCL::getDeviceNames(const size_t platf
 const std::string & VolumeRenderCL::getCurrentDeviceName() const
 {
     return _currentDevice;
+}
+
+/**
+ * @brief VolumeRenderCL::generateMipmaps
+ * @param levelCnt
+ */
+void VolumeRenderCL::generateMipmaps(size_t levelCnt)
+{
+    cl::ImageFormat format = {CL_R, CL_UNORM_INT8};
+    if (_dr.properties().format == "USHORT")
+        format.image_channel_data_type = CL_UNORM_INT16;
+    else if (_dr.properties().format == "FLOAT")
+        format.image_channel_data_type = CL_FLOAT;
+    else if (_dr.properties().format != "UCHAR")
+        throw std::invalid_argument("Unknown or invalid volume data format.");
+
+    const std::array<size_t, 4> volRes = _dr.properties().volume_res;
+
+    _volMipmapsMem.clear();
+    for (size_t i = 1; i <= levelCnt; ++i)
+    {
+        std::array<size_t, 3> newSize = {1u, 1u, 1u};
+        newSize[0] = static_cast<size_t>(ceil(volRes.at(0) / static_cast<double>(1<<i)));
+        newSize[1] = static_cast<size_t>(ceil(volRes.at(1) / static_cast<double>(1<<i)));
+        newSize[2] = static_cast<size_t>(ceil(volRes.at(2) / static_cast<double>(1<<i)));
+
+        if (i == 1)
+            _volMipmapsMem.push_back(downsampleVolume(format, newSize, _volumesMem.at(0)));
+        else
+            _volMipmapsMem.push_back(downsampleVolume(format, newSize, _volMipmapsMem.back()));
+
+        _raycastKernel.setArg(MIP_1 + (i-1), _volMipmapsMem.back());
+    }
 }

@@ -131,6 +131,37 @@ void LBGStippling::setCellCallback(Report<IndexMap> cellCB) {
     m_cellCallback = cellCB;
 }
 
+/**
+ * @brief encodeMorton
+ * @see http://www.graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN
+ * @param p point
+ * @param width Index map width
+ * @param height Index map height
+ * @return morton encoded index
+ */
+unsigned int encodeMorton(QVector2D p, size_t width, size_t height)
+{
+    static const unsigned int B[] = {0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF};
+    static const unsigned int S[] = {1, 2, 4, 8};
+
+    // x and y must initially be less than 65536.
+    unsigned int x = static_cast<unsigned int>(p.x() * width); // Interleave lower 16 bits of x and y, so the bits of x
+    unsigned int y = static_cast<unsigned int>(p.y() * height); // are in the even positions and bits from y in the odd;
+
+    x = (x | (x << S[3])) & B[3];
+    x = (x | (x << S[2])) & B[2];
+    x = (x | (x << S[1])) & B[1];
+    x = (x | (x << S[0])) & B[0];
+
+    y = (y | (y << S[3])) & B[3];
+    y = (y | (y << S[2])) & B[2];
+    y = (y | (y << S[1])) & B[1];
+    y = (y | (y << S[0])) & B[0];
+
+    // return the resulting 32-bit Morton Number.
+    return  x | (y << 1);
+}
+
 LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& params,
                                            const int batchCount, const int batchNo) const {
     QImage densityGray =
@@ -226,8 +257,17 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
         ++status.iteration;
     }
-
     qDebug() << "LBG: Done";
+
+    // stipples+points -> z ordering -> map -> new index map
+    QMap<unsigned int, unsigned int> mortonMap;
+    for (unsigned int i = 0; i < points.size(); ++i)
+    {
+        unsigned int mc = encodeMorton(points.at(i), indexMap.width, indexMap.height);
+        mortonMap.insert(mc, i);
+    }
+//    qDebug() << mortonMap;
+    qDebug() << mortonMap.size();
 
     const size_t batchSize = indexMap.height / batchCount;
     const size_t BucketCount = 8;
@@ -237,7 +277,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     neighborIndexMap.resize(indexMap.width * batchSize * BucketCount, 0);
     neighborWeightMap.resize(indexMap.width * batchSize * BucketCount, 0.0f);
 
-#if true
+#if false
     qDebug() << "Starting batch" << batchNo << "/" << batchCount << "with size" << batchSize;
     using namespace nanoflann;
 
@@ -254,7 +294,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 //    QElapsedTimer perfTimer;
 //    perfTimer.start();
 
-    const size_t k = 12;
+    const size_t k = BucketCount;
     std::vector<size_t> ret_indices(k);
     std::vector<float> out_dists_sqr(k);
 
@@ -263,7 +303,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
         int yOffset = (y - batchNo * batchSize);
         for (int x = 0; x < indexMap.width; ++x)
         {
-            if (x % 100 == 1)
+            if (x % 1000 == 1)
             {
                 float pointsTotal = static_cast<float>(indexMap.width * batchSize);
                 float pointsProgress = static_cast<float>(yOffset * indexMap.width + x) / pointsTotal;

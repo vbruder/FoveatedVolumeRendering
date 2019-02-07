@@ -1710,8 +1710,8 @@ void VolumeRenderWidget::generateLowResVolume()
     {
         try
         {
-            std::string name = _volumerender.volumeDownsampling(static_cast<size_t>(_timestep),
-                                                                factor);
+            std::string name = _volumerender.generateVolumeDownsampling(
+                        static_cast<size_t>(_timestep),factor);
             QLoggingCategory category("volumeDownSampling");
             qCInfo(category, "Successfully created down-sampled volume data set: '%s.raw'",
                    name.c_str());

@@ -35,7 +35,7 @@ struct Properties
     std::vector<std::string> raw_file_names;
     size_t raw_file_size = 0;
 
-    std::array<unsigned int, 4> volume_res = {{0, 0, 0, 1}};     // x, y, z, t
+    std::array<size_t, 4> volume_res = {{0, 0, 0, 1}};     // x, y, z, t
     std::array<double, 3> slice_thickness = {{1.0, 1.0, 1.0}};
     std::string format = "";     // UCHAR, USHORT, FLOAT
     std::string node_file_name = "";
