@@ -465,17 +465,13 @@ __kernel void volumeRender(  __read_only image3d_t volData
             // if gp in middle of screen one half of one half, then offset is zero
             texCoords = sampleCoords + gp - (img_bounds / 4);
 
-            // FIXME
             // 1 divided by number of mip levels + 1 (for original) times image resolution
-            int2 mipDiv = convert_int2(convert_float2(img_bounds) * (float2)(1.f/5.f));
-            if (any(sampleCoords < mipDiv*1) || any(sampleCoords > img_bounds - mipDiv*1))
-                mipLvl = 4;
-            if (any(sampleCoords < mipDiv*2) || any(sampleCoords > img_bounds - mipDiv*2))
-                mipLvl = 3;
-            if (any(sampleCoords < mipDiv*3) || any(sampleCoords > img_bounds - mipDiv*3))
-                mipLvl = 2;
-            if (any(sampleCoords < mipDiv*4) || any(sampleCoords > img_bounds - mipDiv*4))
-                mipLvl = 1;
+            sampleCoords /= 2;
+            sampleCoords -= img_bounds/4;
+            float mipDiv = (convert_float2(max(img_bounds.x, img_bounds.y)/4) * (float)(1.f/4.f));
+            if (length(convert_float2(sampleCoords)) > mipDiv*1.f) mipLvl = 1;
+            if (length(convert_float2(sampleCoords)) > mipDiv*2.f) mipLvl = 2;
+            if (length(convert_float2(sampleCoords)) > mipDiv*3.f) mipLvl = 3;
             break;
         default:
             // Standard
@@ -681,10 +677,10 @@ __kernel void volumeRender(  __read_only image3d_t volData
                 case 0: density = useLinear ? read_imagef(volData,  linearSmp, (float4)(pos, 1.f)).x :
                                               read_imagef(volData, nearestSmp, (float4)(pos, 1.f)).x;
                         break;
-                case 1: density = 0.25f;break;//read_imagef(volMip1, linearSmp, (float4)(pos, 1.f)).x; break;
-                case 2: density = 0.5f;break;//read_imagef(volMip2, linearSmp, (float4)(pos, 1.f)).x; break;
-                case 3: density = 0.75f;break;//read_imagef(volMip3, linearSmp, (float4)(pos, 1.f)).x; break;
-                case 4: density = 1.f;break;// read_imagef(volMip4, linearSmp, (float4)(pos, 1.f)).x; break;
+                case 1: density = read_imagef(volMip1, linearSmp, (float4)(pos, 1.f)).x; break;
+                case 2: density = read_imagef(volMip2, linearSmp, (float4)(pos, 1.f)).x; break;
+                case 3: density = read_imagef(volMip3, linearSmp, (float4)(pos, 1.f)).x; break;
+               // case 4: density = read_imagef(volMip4, linearSmp, (float4)(pos, 1.f)).x; break;
                 }
 
                 tfColor = read_imagef(tffData, linearSmp, density);  // map density to color

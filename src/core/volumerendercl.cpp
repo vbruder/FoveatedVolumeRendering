@@ -289,6 +289,7 @@ cl::Image3D VolumeRenderCL::downsampleVolume(const cl::ImageFormat &format,
                                                    const std::array<size_t, 3> &newSize,
                                                    const cl::Image3D &volumeMem)
 {
+    // FIXME: non power of 2 resolutions
     try
     {
         cl::Image3D lowResVol = cl::Image3D(_contextCL,
@@ -308,7 +309,10 @@ cl::Image3D VolumeRenderCL::downsampleVolume(const cl::ImageFormat &format,
         // copy back to host and create new image memory object as mipmap layer
         // TODO: (How) is it possible to use device memory directly?
         std::array<size_t, 3> origin = {{0, 0, 0}};
-        std::vector<char> hostMem(newSize.at(0) * newSize.at(1) * newSize.at(2));
+        size_t factor = format.image_channel_data_type == CL_UNORM_INT16 ? 2 : sizeof(cl_uchar);
+        factor = format.image_channel_data_type == CL_FLOAT ? sizeof(cl_float) : factor;
+
+        std::vector<char> hostMem(newSize.at(0) * newSize.at(1) * newSize.at(2) * factor);
         _queueCL.enqueueReadImage(lowResVol, CL_TRUE, origin, newSize, 0, 0, hostMem.data());
         cl::Image3D scaledVol = cl::Image3D(_contextCL, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
                                              format, newSize[0], newSize[1], newSize[2],
