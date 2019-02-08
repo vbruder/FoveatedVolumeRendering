@@ -168,8 +168,6 @@ int main(int argc, char* argv[]) {
                 if (parser.isSet("batchNo"))
                     batchNo = parser.value("batchNo").toInt();
             }
-
-
                 auto result = stippling.stipple(density, params, batchCount, batchNo);
                 std::vector<Stipple> stipples = result.stipples;
                 auto map = result.indexMap;
@@ -185,9 +183,10 @@ int main(int argc, char* argv[]) {
 //                QRgb* stippleLine7 = reinterpret_cast<QRgb*>(stippleMap.scanLine(7));
                 for (int i = 0; i < stipples.size(); ++i) {
                     // Pos
-                    stippleLine0[i] = static_cast<uint>(stipples[i].pos.x() * density.width() );
-                    stippleLine1[i] = static_cast<uint>(stipples[i].pos.y() * density.height() );
-
+                    unsigned int mc = result.point2morton.value(i);
+//                    if (i < 100) qDebug() << i << mc << stipples[i].pos;
+                    stippleLine0[mc] = static_cast<uint>(stipples[i].pos.x() * density.width() );
+                    stippleLine1[mc] = static_cast<uint>(stipples[i].pos.y() * density.height() );
 //                    // Inner indices
 //                    stippleLine2[i] = i;
 //                    stippleLine3[i] = i;

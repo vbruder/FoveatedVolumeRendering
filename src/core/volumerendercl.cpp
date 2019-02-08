@@ -286,8 +286,8 @@ void VolumeRenderCL::setMemObjectsBrickGen(const size_t t)
  * @return
  */
 cl::Image3D VolumeRenderCL::downsampleVolume(const cl::ImageFormat &format,
-                                                   const std::array<size_t, 3> &newSize,
-                                                   const cl::Image3D &volumeMem)
+                                             const std::array<size_t, 3> &newSize,
+                                             const cl::Image3D &volumeMem)
 {
     // FIXME: non power of 2 resolutions
     try

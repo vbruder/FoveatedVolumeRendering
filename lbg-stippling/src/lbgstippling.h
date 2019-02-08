@@ -56,7 +56,8 @@ class LBGStippling {
         std::vector<Stipple> stipples;
         IndexMap indexMap;
         std::vector<float> neighborWeightMap;
-         std::vector<uint32_t > neighborIndexMap ;
+        std::vector<uint32_t > neighborIndexMap ;
+        QList<unsigned int> point2morton;
     };
 
     template <class T>

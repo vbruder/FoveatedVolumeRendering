@@ -258,16 +258,17 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
         ++status.iteration;
     }
     qDebug() << "LBG: Done";
+    qDebug() << "Number of points: " << points.size();
 
-    // stipples+points -> z ordering -> map -> new index map
+    // stipples+points -> z ordering map
     QMap<unsigned int, unsigned int> mortonMap;
     for (unsigned int i = 0; i < points.size(); ++i)
     {
         unsigned int mc = encodeMorton(points.at(i), indexMap.width, indexMap.height);
         mortonMap.insert(mc, i);
     }
-//    qDebug() << mortonMap;
-    qDebug() << mortonMap.size();
+    // map: point id -> morton order id (compacted)
+    QList<unsigned int> point2morton = mortonMap.values();
 
     const size_t batchSize = indexMap.height / batchCount;
     const size_t BucketCount = 8;
@@ -277,7 +278,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     neighborIndexMap.resize(indexMap.width * batchSize * BucketCount, 0);
     neighborWeightMap.resize(indexMap.width * batchSize * BucketCount, 0.0f);
 
-#if false
+#if true
     qDebug() << "Starting batch" << batchNo << "/" << batchCount << "with size" << batchSize;
     using namespace nanoflann;
 
@@ -294,7 +295,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 //    QElapsedTimer perfTimer;
 //    perfTimer.start();
 
-    const size_t k = BucketCount;
+    const size_t k = BucketCount + 4;
     std::vector<size_t> ret_indices(k);
     std::vector<float> out_dists_sqr(k);
 
@@ -303,7 +304,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
         int yOffset = (y - batchNo * batchSize);
         for (int x = 0; x < indexMap.width; ++x)
         {
-            if (x % 1000 == 1)
+            if (x % 10000 == 1)
             {
                 float pointsTotal = static_cast<float>(indexMap.width * batchSize);
                 float pointsProgress = static_cast<float>(yOffset * indexMap.width + x) / pointsTotal;
@@ -335,11 +336,6 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
             int kernelHeight = 20;//indexMapModified.height /4;
             int kernelWidth = 20;//indexMapModified.width /4;
-//            for (int yy = 0; yy < static_cast<int>(indexMapModified.height); ++yy)
-//            {
-//                for (int xx = 0; xx < static_cast<int>(indexMapModified.width); ++xx)
-//                {
-//            perfTimer.restart();
 //#pragma omp parallel for
             for (int yy = std::max(yOffset - kernelHeight, 0); yy < std::min(y + kernelHeight, static_cast<int>(indexMapModified.height)); ++yy)
             {
@@ -352,7 +348,8 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
                             qDebug() << "__Bucket overflow on id" << modifierPointIndex;
                             break;
                         }
-                        auto originalIndex = indexMap.get(xx, yy);
+                        // encode in morton order
+                        auto originalIndex = point2morton.value(indexMap.get(xx, yy));
                         intersectionSet[originalIndex]++;
                         intersectionSum++;
                     }
@@ -376,8 +373,9 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
     qDebug() << "Natural Neighbor: Done";
     qDebug() << "Batch no" << batchNo << " / " << batchCount;
+    qDebug() << "Number of points: " << points.size();
 #endif
-    return {stipples, indexMap, neighborWeightMap, neighborIndexMap};
+    return {stipples, indexMap, neighborWeightMap, neighborIndexMap, point2morton};
 }
 
 void LBGStippling::Params::saveParametersJSON(const QString& path) {
