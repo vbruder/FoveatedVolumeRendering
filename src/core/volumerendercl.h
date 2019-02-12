@@ -89,6 +89,8 @@ public:
         , IP_WEIGHT
         , IP_THIS_FRAME
         , IP_FRAME_CNT
+        , IP_VIEW_CHANGED
+        , IP_GAZE_CHANGED
 	};
 
     // mipmap down-scaling metric
@@ -496,6 +498,9 @@ private:
     std::string _currentDevice;
     cl_uint _frameId = 0;
     cl_uint _frameIpCnt = 5;    // max 8
+    cl_uint _viewChanged = false;
+    cl_uint _gazeChanged = false;
+    cl_float2 _gazePoint = {{0,0}};
 
     std::vector<float> _output;
 

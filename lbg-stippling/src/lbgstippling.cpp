@@ -9,6 +9,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QtMath>
+#include <QPainter>
 
 #include <nanoflann.hpp>
 
@@ -267,6 +268,24 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
         unsigned int mc = encodeMorton(points.at(i), indexMap.width, indexMap.height);
         mortonMap.insert(mc, i);
     }
+
+    // debug: draw morton ordering
+    QImage dbgImg = QPixmap(2048,2048).toImage();
+    dbgImg.fill(Qt::white);
+    QPainter dbgPainter(&dbgImg);
+    QMapIterator<unsigned int, unsigned int> it(mortonMap);
+    QVector<QPointF> dbgPoints;
+    for (int i = 0; i < points.size(); ++i)
+    {
+        it.next();
+        dbgPoints.push_back(points.at(it.value()).toPointF()*2048.);
+//        dbgPoints.push_back(points.at(i).toPointF()*1024.);
+//        qDebug() << points.at(it.value()).toPointF()*1024.;
+    }
+    dbgPainter.drawPolyline(dbgPoints);
+    dbgPainter.end();
+    dbgImg.save("mortonOrder.png");
+
     // map: point id -> morton order id (compacted)
     QList<unsigned int> point2morton = mortonMap.values();
 
@@ -279,9 +298,10 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     neighborWeightMap.resize(indexMap.width * batchSize * BucketCount, 0.0f);
 
 #if true
-    qDebug() << "Starting batch" << batchNo << "/" << batchCount << "with size" << batchSize;
-    using namespace nanoflann;
+    qDebug() << "Starting batch" << batchNo << "/" << batchCount << "with size" << batchSize
+             << indexMap.width << "x" << indexMap.height;
 
+    using namespace nanoflann;
     typedef KDTreeSingleIndexAdaptor<L2_Simple_Adaptor<float, QVectorAdaptor>, QVectorAdaptor, 2>
         my_kd_tree_t;
 
@@ -309,9 +329,9 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
                 float pointsTotal = static_cast<float>(indexMap.width * batchSize);
                 float pointsProgress = static_cast<float>(yOffset * indexMap.width + x) / pointsTotal;
                 auto elapsedTime = progressTimer.elapsed();
-                auto remainingTime = ((1.0 - pointsProgress) / pointsProgress) * elapsedTime;
-                qDebug() << "Natural Neighbor" << qSetRealNumberPrecision(9) << pointsProgress
-                         << elapsedTime << "ms" << remainingTime / 1000. / 60. << "min";
+                auto remainingTime = ((1. - pointsProgress) / pointsProgress) * elapsedTime;
+                qDebug() << "Natural Neighbor" << qSetRealNumberPrecision(5) << pointsProgress
+                         << elapsedTime / 1000. << "sec" << remainingTime / 1000. / 60. << "min";
             }
 
             // Insert point at pixel to compute the modified voronoi diagram.
@@ -334,8 +354,8 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
             QMap<uint32_t, float> intersectionSet;
             uint32_t modifierPointIndex = indexMapModified.get(x, y);
 
-            int kernelHeight = 20;//indexMapModified.height /4;
-            int kernelWidth = 20;//indexMapModified.width /4;
+            int kernelHeight = 20;  //indexMapModified.height /4;
+            int kernelWidth = 20;   //indexMapModified.width /4;
 //#pragma omp parallel for
             for (int yy = std::max(yOffset - kernelHeight, 0); yy < std::min(y + kernelHeight, static_cast<int>(indexMapModified.height)); ++yy)
             {
@@ -373,7 +393,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
     qDebug() << "Natural Neighbor: Done";
     qDebug() << "Batch no" << batchNo << " / " << batchCount;
-    qDebug() << "Number of points: " << points.size();
+    qDebug() << "Number of points: " << points.size() << params.pointSizeMin << params.pointSizeMax;
 #endif
     return {stipples, indexMap, neighborWeightMap, neighborIndexMap, point2morton};
 }

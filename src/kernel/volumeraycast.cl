@@ -466,13 +466,12 @@ __kernel void volumeRender(  __read_only image3d_t volData
             // if gp in middle of screen one half of one half, then offset is zero
             texCoords = sampleCoords + gp - (img_bounds / 4);
 
-            // 1 divided by number of mip levels + 1 (for original) times image resolution
             sampleCoords /= 2;
             sampleCoords -= img_bounds/4;
-            float mipDiv = (convert_float2(max(img_bounds.x, img_bounds.y)/4) * (float)(1.f/4.f));
-            float mipDist = length(convert_float2(sampleCoords)) / (mipDiv * M_SQRT2_F);
-            mipMix = fract(mipDist, &mipMix);
-            mipLvl = floor(mipDist);
+//            float mipDiv = (convert_float2(max(img_bounds.x, img_bounds.y)/4) * (float)(1.f/4.f));
+//            float mipDist = length(convert_float2(sampleCoords)) / (mipDiv * 2.f);// M_SQRT2_F);
+//            mipMix = fract(mipDist, &mipMix);
+//            mipLvl = floor(mipDist);
 //            if (length(convert_float2(sampleCoords)) > mipDiv*1.f) mipLvl = 1;
 //            if (length(convert_float2(sampleCoords)) > mipDiv*2.f) mipLvl = 2;
 //            if (length(convert_float2(sampleCoords)) > mipDiv*3.f) mipLvl = 3;
@@ -481,9 +480,11 @@ __kernel void volumeRender(  __read_only image3d_t volData
             // Standard
             break;
     }
-
     if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
         return;
+
+//        write_imagef(outImg, texCoords, (float4)(mipDist/5.f, 0,0,1));
+//        return;
 
     // TODO: Check if get_group_id() is related to the number of total work items and if it results in an error when using lbg-sampling.
     local uint hits;
@@ -661,7 +662,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
             }
         }
 #endif  // ESS
-
         // standard raycasting loop
         while (t < t_exit)
         {
@@ -695,8 +695,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
                         density2 = read_imagef(volMip3, linearSmp, (float4)(pos, 1.f)).x;
                         density = mix(density, density2, mipMix);
                         break;
-                case 4: density = read_imagef(volMip2, linearSmp, (float4)(pos, 1.f)).x;
-                        density2 = read_imagef(volMip3, linearSmp, (float4)(pos, 1.f)).x;
+                case 4: density = read_imagef(volMip3, linearSmp, (float4)(pos, 1.f)).x;
+                        density2 = read_imagef(volMip4, linearSmp, (float4)(pos, 1.f)).x;
                         density = mix(density, density2, mipMix);
                         break;
                 }
@@ -801,6 +801,8 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
                             , __global float8 *weights
                             , __write_only image2d_t thisFrame
                             , const uint frameCnt
+                            , const uint viewChanged
+                            , const uint gazeChanged
                             )
 {
     // position to write back
@@ -844,10 +846,11 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
         }
     }
     result.w = 1.f;
-    write_imagef(thisFrame, globalId, result);
+    if (gazeChanged && !viewChanged)   // not a still image
+        write_imagef(thisFrame, globalId, result); // write frame for temporal interpolation
     // Temporal interpolation of last frames
-    if (frameId > frameCnt)
-    {
+    if (frameId > frameCnt && !viewChanged)
+    {                       
         for (uint i = 0; i < frameCnt; ++i)
         {
             float4 last = read_imagef(lastFrames, nearestIntSmp,

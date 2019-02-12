@@ -248,9 +248,8 @@ void VolumeRenderCL::setMemObjectsInterpolationLBG(GLuint inTexId, GLuint outTex
 
         _interpolateLBGKernel.setArg(IP_INIMG, _inputMem);      // in Data
 		_interpolateLBGKernel.setArg(IP_OUTIMG, _outputMem);	// out Data
-
-        _interpolateLBGKernel.setArg(IP_THIS_FRAME, _thisFrameMem);
         _interpolateLBGKernel.setArg(IP_LAST_FRAMES, _lastFramesMem); // last frames
+        _interpolateLBGKernel.setArg(IP_THIS_FRAME, _thisFrameMem);
 	}
     else
     {
@@ -260,10 +259,14 @@ void VolumeRenderCL::setMemObjectsInterpolationLBG(GLuint inTexId, GLuint outTex
     if (_imsmLoaded)
     {
 		_interpolateLBGKernel.setArg(IP_IMAP, _indexMap);
-		_interpolateLBGKernel.setArg(IP_SDATA, _samplingMapData);
+        _interpolateLBGKernel.setArg(IP_SDSAMPLES, static_cast<uint>(_amountOfSamples));
         _interpolateLBGKernel.setArg(IP_FRAME_ID, _frameId);
+        _interpolateLBGKernel.setArg(IP_SDATA, _samplingMapData);
         _interpolateLBGKernel.setArg(IP_ID, _neighborIdMap);
         _interpolateLBGKernel.setArg(IP_WEIGHT, _neighborWeightMap);
+        _interpolateLBGKernel.setArg(IP_FRAME_CNT, _frameIpCnt);
+        _interpolateLBGKernel.setArg(IP_VIEW_CHANGED, _viewChanged);
+        _interpolateLBGKernel.setArg(IP_GAZE_CHANGED, _gazeChanged);
 	}
 
 }
@@ -473,6 +476,8 @@ void VolumeRenderCL::updateView(const std::array<float, 16> viewMat)
     } catch (cl::Error err) {
         logCLerror(err);
     }
+    _viewChanged = true;
+    _frameId = 0;
 }
 
 
@@ -659,15 +664,16 @@ void VolumeRenderCL::runRaycastLBG(const size_t t)
 //		cl::NDRange globalThreads(xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE), xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE));
 //		cl::NDRange localThreads(LOCAL_SIZE, LOCAL_SIZE);
 
-        cl::NDRange globalThreads(total_threads, 1);
-        cl::NDRange localThreads(LOCAL_SIZE * LOCAL_SIZE, 1);
+        size_t wgSize = LOCAL_SIZE*LOCAL_SIZE;
+        cl::NDRange globalThreads(total_threads + (wgSize - total_threads % wgSize));
+        cl::NDRange localThreads(wgSize);
 		cl::Event ndrEvt;
 
         std::vector<cl::Memory> memObj;
         memObj.push_back(_outputMem);
         _queueCL.enqueueAcquireGLObjects(&memObj);
 		_queueCL.enqueueNDRangeKernel(
-            _raycastKernel, cl::NullRange, globalThreads, cl::NullRange, nullptr, &ndrEvt);
+            _raycastKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
         _queueCL.enqueueReleaseGLObjects(&memObj);
 
 //        _queueCL.enqueueReadImage(_outputMemNoGL,
@@ -713,11 +719,6 @@ void VolumeRenderCL::interpolateLBG(const size_t width, const size_t height,
 	try // opencl scope
 	{
         setMemObjectsInterpolationLBG(inTexId, outTexId);
-		_interpolateLBGKernel.setArg(IP_SDSAMPLES, static_cast<uint>(_amountOfSamples));
-        _interpolateLBGKernel.setArg(IP_FRAME_ID, _frameId);
-        _interpolateLBGKernel.setArg(IP_THIS_FRAME, _thisFrameMem);
-        _interpolateLBGKernel.setArg(IP_FRAME_CNT, _frameIpCnt);
-
 		// std::cout << "total amount of Samples: " << _amountOfSamples << ", xy_samples: " << xy_threads << std::endl;
         size_t w = width;
         size_t h = height;
@@ -737,9 +738,13 @@ void VolumeRenderCL::interpolateLBG(const size_t width, const size_t height,
 		_queueCL.enqueueNDRangeKernel(
             _interpolateLBGKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
 
-        _queueCL.enqueueCopyImage(_thisFrameMem, _lastFramesMem, {0,0,0}, {0,0,_frameId % _frameIpCnt},
-                                 {width, height, 1});
-        _frameId++;
+        if (!_viewChanged && _gazeChanged)
+        {
+//            std::cout << "change " << _frameId << std::endl;
+            _queueCL.enqueueCopyImage(_thisFrameMem, _lastFramesMem, {0,0,0}, {0,0,_frameId % _frameIpCnt},
+                                     {width, height, 1});
+            _frameId++;
+        }
         _queueCL.enqueueReleaseGLObjects(&memObj);
         _queueCL.finish();    // global sync
 
@@ -756,6 +761,8 @@ void VolumeRenderCL::interpolateLBG(const size_t width, const size_t height,
 	{
 		logCLerror(err);
 	}
+    _viewChanged = false;
+    _gazeChanged = false;
 }
 
 
@@ -1284,14 +1291,24 @@ void VolumeRenderCL::setBackground(const std::array<float, 4> color)
 void VolumeRenderCL::setGazePoint(QPoint gaze_point)
 {
 	cl_float2 gpf = { static_cast<cl_float>(gaze_point.x()), static_cast<cl_float>(gaze_point.y()) };
-	_raycastKernel.setArg(GPOINT, gpf);
-	_interpolateLBGKernel.setArg(IP_GPOINT, gpf);
+    try {
+        _raycastKernel.setArg(GPOINT, gpf);
+        _interpolateLBGKernel.setArg(IP_GPOINT, gpf);
+    } catch (cl::Error err) { logCLerror(err); }
 }
 
 void VolumeRenderCL::setGazePoint(cl_float2 gaze_point)
 {
-	_raycastKernel.setArg(GPOINT, gaze_point);
-	_interpolateLBGKernel.setArg(IP_GPOINT, gaze_point);
+
+    try {
+        _raycastKernel.setArg(GPOINT, gaze_point);
+        _interpolateLBGKernel.setArg(IP_GPOINT, gaze_point);
+        if (_gazePoint.x != gaze_point.x || _gazePoint.y != gaze_point.y)
+        {
+            _gazeChanged = true;
+            _gazePoint = gaze_point;
+        }
+    } catch (cl::Error err) { logCLerror(err); }
 }
 
 
