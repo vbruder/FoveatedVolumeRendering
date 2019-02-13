@@ -273,14 +273,10 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     QImage dbgImg = QPixmap(2048,2048).toImage();
     dbgImg.fill(Qt::white);
     QPainter dbgPainter(&dbgImg);
-    QMapIterator<unsigned int, unsigned int> it(mortonMap);
     QVector<QPointF> dbgPoints;
-    for (int i = 0; i < points.size(); ++i)
+    for (auto && a: mortonMap.values())
     {
-        it.next();
-        dbgPoints.push_back(points.at(it.value()).toPointF()*2048.);
-//        dbgPoints.push_back(points.at(i).toPointF()*1024.);
-//        qDebug() << points.at(it.value()).toPointF()*1024.;
+        dbgPoints.push_back(points.at(a).toPointF()*2048.);
     }
     dbgPainter.drawPolyline(dbgPoints);
     dbgPainter.end();

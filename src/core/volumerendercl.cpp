@@ -753,7 +753,7 @@ void VolumeRenderCL::interpolateLBG(const size_t width, const size_t height,
 		cl_ulong end = 0;
 		ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
 		ndrEvt.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
-        _lastExecTime = static_cast<double>(end - start)*1e-9;  // ns -> sec
+        _lastExecTime += static_cast<double>(end - start)*1e-9;  // ns -> sec
 		//        std::cout << "Kernel time: " << _lastExecTime << std::endl << std::endl;
 #endif
 	}

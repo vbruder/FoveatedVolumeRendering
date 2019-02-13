@@ -29,8 +29,8 @@ class LBGStippling {
         double initialPointSize = 1.0;
 
         bool adaptivePointSize = true;
-        double pointSizeMin = 0.6;
-        double pointSizeMax = 4.0;
+        double pointSizeMin = 0.5;
+        double pointSizeMax = 2.0;
 
         PointMappingFunction mapping = PointMappingFunction::SQUAREROOT;
 
