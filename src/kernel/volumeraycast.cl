@@ -445,6 +445,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     int2 gp;
     int mipLvl = 0;
     float mipMix = 0.f;
+    float gazeDistance = 0.f;
 
     switch(rmode){
         case 1:
@@ -468,6 +469,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
 
             sampleCoords /= 2;
             sampleCoords -= img_bounds/4;
+            gazeDistance = length(convert_float2(sampleCoords)/convert_float2(img_bounds/4));
 //            float mipDiv = (convert_float2(max(img_bounds.x, img_bounds.y)/4) * (float)(1.f/4.f));
 //            float mipDist = length(convert_float2(sampleCoords)) / (mipDiv * 2.f);// M_SQRT2_F);
 //            mipMix = fract(mipDist, &mipMix);
@@ -483,8 +485,8 @@ __kernel void volumeRender(  __read_only image3d_t volData
     if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
         return;
 
-//        write_imagef(outImg, texCoords, (float4)(mipDist/5.f, 0,0,1));
-//        return;
+//write_imagef(outImg, texCoords, (float4)(gazeDistance, 0,0,1));
+//return;
 
     // TODO: Check if get_group_id() is related to the number of total work items and if it results in an error when using lbg-sampling.
     local uint hits;
@@ -574,6 +576,10 @@ __kernel void volumeRender(  __read_only image3d_t volData
                             (samplingRate*length(sampleDist*rayDir*convert_float3(volRes))));
     float samples = ceil(sampleDist/stepSize);
     stepSize = sampleDist/samples;
+
+    // sample dist adaption (gazeDistance is normalized)
+    stepSize *= 1.f + gazeDistance*2.f;
+
     float offset = stepSize*rand*0.9f; // offset by 'random' distance to avoid moiré pattern
 
     // raycast parameters
