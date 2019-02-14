@@ -231,9 +231,9 @@ void VolumeRenderCL::setMemObjectsRaycast(const size_t t)
 
     if (_imsmLoaded)
     {
-        cl_uint2 extend = {{static_cast<cl_uint>(_indexMapExtends.x()),
-                            static_cast<cl_uint>(_indexMapExtends.y())}};
-        _raycastKernel.setArg(IMAP, extend);
+//        cl_uint2 extend = {{static_cast<cl_uint>(_indexMapExtends.x()),
+//                            static_cast<cl_uint>(_indexMapExtends.y())}};
+//        _raycastKernel.setArg(IMAP, extend);
 		_raycastKernel.setArg(SDATA, _samplingMapData);
 	}
 }
@@ -561,6 +561,10 @@ void VolumeRenderCL::runRaycast(const size_t width, const size_t height, const s
     try // opencl scope
     {
         setMemObjectsRaycast(t);
+        cl_uint2 extend = {{static_cast<cl_uint>(width),
+                            static_cast<cl_uint>(height)}};
+        _raycastKernel.setArg(IMAP, extend);
+
         cl::NDRange globalThreads(width + (LOCAL_SIZE - width % LOCAL_SIZE), height
                                   + (LOCAL_SIZE - height % LOCAL_SIZE));
         cl::NDRange localThreads(LOCAL_SIZE, LOCAL_SIZE);
@@ -613,6 +617,10 @@ void VolumeRenderCL::runRaycastNoGL(const size_t width, const size_t height, con
     try // opencl scope
     {
         setMemObjectsRaycast(t);
+        cl_uint2 extend = {{static_cast<cl_uint>(width),
+                            static_cast<cl_uint>(height)}};
+        _raycastKernel.setArg(IMAP, extend);
+
         cl::NDRange globalThreads(width + (LOCAL_SIZE - width % LOCAL_SIZE),
                                   height + (LOCAL_SIZE - height % LOCAL_SIZE));
         cl::NDRange localThreads(LOCAL_SIZE, LOCAL_SIZE);
@@ -646,7 +654,7 @@ void VolumeRenderCL::runRaycastNoGL(const size_t width, const size_t height, con
     }
 }
 
-void VolumeRenderCL::runRaycastLBG(const size_t t)
+void VolumeRenderCL::runRaycastLBG(const size_t width, const size_t height, const size_t t)
 {
 	if (!this->_volLoaded || !this->_imsmLoaded)
 		return;
@@ -658,13 +666,17 @@ void VolumeRenderCL::runRaycastLBG(const size_t t)
             _currentTimestep = t;
         }
         setMemObjectsRaycast(t);
+        if (_imsmLoaded)
+        {
+            cl_uint2 extend = {{static_cast<cl_uint>(width),
+                                static_cast<cl_uint>(height)}};
+            _raycastKernel.setArg(IMAP, extend);
+        }
 		
-		size_t total_threads = _amountOfSamples;
+        size_t total_threads = _amountOfSamples;
         //size_t xy_threads = static_cast<size_t>(ceil(std::sqrt(total_threads)));
 
 		_raycastKernel.setArg(SDSAMPLES, static_cast<cl_uint>(total_threads));	// sets the amount of samples so they won't be taken from undefined memory
-//        _raycastKernel.setArg(OUTPUT, _outputMemNoGL);
-
 //         std::cout << "total amount of Samples: " << _amountOfSamples << std::endl;
 //		cl::NDRange globalThreads(xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE), xy_threads + (LOCAL_SIZE - xy_threads % LOCAL_SIZE));
 //		cl::NDRange localThreads(LOCAL_SIZE, LOCAL_SIZE);
@@ -680,13 +692,6 @@ void VolumeRenderCL::runRaycastLBG(const size_t t)
 		_queueCL.enqueueNDRangeKernel(
             _raycastKernel, cl::NullRange, globalThreads, localThreads, nullptr, &ndrEvt);
         _queueCL.enqueueReleaseGLObjects(&memObj);
-
-//        _queueCL.enqueueReadImage(_outputMemNoGL,
-//                                  CL_TRUE,
-//                                  {0,0,0}, {1024, 1024, 1}, 0, 0,
-//                                  _output.data());
-//        std::cout << "raycast  " << _output.at(0) << " " << _output.at(1) << " " << _output.at(2) << std::endl;
-
         _queueCL.finish();    // global sync
 		if (_useImgESS)
 		{

@@ -749,7 +749,9 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 				// set first Texture to extends of index map
                 _volumerender.updateOutputTex(_tmpTexId);
 
-                _volumerender.runRaycastLBG(_timestep);
+                _volumerender.runRaycastLBG(floor(this->size().width() * _imgSamplingRate),
+                                            floor(this->size().height()* _imgSamplingRate),
+                                            _timestep);
 
 				fps = _volumerender.getLastExecTime();
 

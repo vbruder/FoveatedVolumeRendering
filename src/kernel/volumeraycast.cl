@@ -430,7 +430,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
                            , const float2 gpoint // gaze point
                            , const uint sdSamples // amount of samples in samplingData
 //                           , __read_only image2d_t indexMap
-                           , const uint2 imExtends
+                           , const uint2 resultImgExtends
                            , __global samplingDataStruct *samplingData
                            , __read_only image3d_t volMip1
                            , __read_only image3d_t volMip2
@@ -447,17 +447,13 @@ __kernel void volumeRender(  __read_only image3d_t volData
     float mipMix = 0.f;
     float gazeDistance = 0.f;
 
-    switch(rmode){
+    switch(rmode)
+    {
         case 1:
             // LBG-Sampling
-            /*{
-                // debug
-            }*/
-            // img_bounds /= 3;
             // gp are the unnormalized coordinates between 0 and one half of the indexMap extends
-            gp = convert_int2_rtz(convert_float2(imExtends/2) * gpoint);
+            gp = convert_int2_rtz(convert_float2(img_bounds/2) * gpoint);
 //            gp += get_image_dim(indexMap) / (int2)(2);
-
             // used to look up the sampleCoordinates
             texId = globalId.x; //index_from_2d(globalId, get_global_size(0));
             if(texId >= sdSamples) return;
@@ -466,7 +462,6 @@ __kernel void volumeRender(  __read_only image3d_t volData
             // texCoords are the sampleCoords but with an offset according to gp
             // if gp in middle of screen one half of one half, then offset is zero
             texCoords = sampleCoords + gp - (img_bounds / 4);
-
             sampleCoords /= 2;
             sampleCoords -= img_bounds/4;
             gazeDistance = length(convert_float2(sampleCoords)/convert_float2(img_bounds/4));
@@ -485,7 +480,7 @@ __kernel void volumeRender(  __read_only image3d_t volData
     if(any(texCoords >= get_image_dim(outImg)) || any(texCoords < (int2)(0,0)))
         return;
 
-//write_imagef(outImg, texCoords, (float4)(gazeDistance, 0,0,1));
+//write_imagef(outImg, texCoords, (float4)(convert_float2(texCoords)/convert_float2(resultImgExtends),0,1));
 //return;
 
     // TODO: Check if get_group_id() is related to the number of total work items and if it results in an error when using lbg-sampling.
@@ -520,13 +515,16 @@ __kernel void volumeRender(  __read_only image3d_t volData
                               native_divide((float)(img_bounds.y), (float)(img_bounds.x))
                             : native_divide((float)(img_bounds.x), (float)(img_bounds.y));
 
-    int maxImgSize = max(img_bounds.x, img_bounds.y);
-    float2 imgCoords;
-    imgCoords.x = native_divide((texCoords.x + 0.f), convert_float(maxImgSize)) * 2.f;
-    imgCoords.y = native_divide((texCoords.y + 0.f), convert_float(maxImgSize)) * 2.f;
+    int maxImgSize = max(resultImgExtends.x, resultImgExtends.y);
+    float2 imgCoords; // [-1,+1]
+    imgCoords.x = native_divide(texCoords.x + 0.f, convert_float(maxImgSize)) * 2.f;
+    imgCoords.y = native_divide(texCoords.y + 0.f, convert_float(maxImgSize)) * 2.f;
     // calculate correct offset based on aspect ratio
     imgCoords -= img_bounds.x > img_bounds.y ?
                         (float2)(1.0f, aspectRatio) : (float2)(aspectRatio, 1.0);
+    if (rmode == 1) // add LBG-sampling offset
+        imgCoords -= img_bounds.x > img_bounds.y ?
+                            (float2)(1.0f, aspectRatio) : (float2)(aspectRatio, 1.0);
     imgCoords.y *= -1.f;   // flip y coord
 
     // z position of view plane is -1.0 to fit the cube to the screen quad when axes are aligned,
