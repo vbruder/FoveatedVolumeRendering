@@ -652,6 +652,11 @@ void VolumeRenderCL::runRaycastLBG(const size_t t)
 		return;
 	try // opencl scope
 	{
+        if (_currentTimestep != t)
+        {
+            _viewChanged = true;
+            _currentTimestep = t;
+        }
         setMemObjectsRaycast(t);
 		
 		size_t total_threads = _amountOfSamples;

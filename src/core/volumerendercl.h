@@ -501,6 +501,7 @@ private:
     cl_uint _viewChanged = false;
     cl_uint _gazeChanged = false;
     cl_float2 _gazePoint = {{0,0}};
+    size_t _currentTimestep = 0;
 
     std::vector<float> _output;
 

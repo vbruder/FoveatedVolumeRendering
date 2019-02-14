@@ -280,7 +280,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     }
     dbgPainter.drawPolyline(dbgPoints);
     dbgPainter.end();
-    dbgImg.save("mortonOrder.png");
+    dbgImg.save(QString::number(points.size()) + "morton.png");
 
     // map: point id -> morton order id (compacted)
     QList<unsigned int> point2morton = mortonMap.values();
@@ -293,7 +293,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     neighborIndexMap.resize(indexMap.width * batchSize * BucketCount, 0);
     neighborWeightMap.resize(indexMap.width * batchSize * BucketCount, 0.0f);
 
-#if true
+#if false
     qDebug() << "Starting batch" << batchNo << "/" << batchCount << "with size" << batchSize
              << indexMap.width << "x" << indexMap.height;
 
@@ -359,9 +359,9 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
                 {
                     if (indexMapModified.get(xx, yy) == modifierPointIndex)
                     {
-                        if (intersectionSet.size() == BucketCount)
+                        if (intersectionSet.size() >= BucketCount)
                         {
-                            qDebug() << "__Bucket overflow on id" << modifierPointIndex;
+                            qDebug() << "__Bucket overflow on pixel" << x << y;
                             break;
                         }
                         // encode in morton order

@@ -27,6 +27,7 @@ QImage foveaSampling() {
     const QSizeF screenSizeCm(30, 30); // 80, 33.5
     const qreal viewDistanceCm = 60;
     const qreal foveaAlpha = 5.0 / 180.0 * M_PI;
+    const qreal gaussFactor = 0.75;
     const qreal foveaCm = viewDistanceCm * qSin(foveaAlpha);
     const QSizeF foveaPx(screenSizePx.width() / screenSizeCm.width() * foveaCm,
                          screenSizePx.height() / screenSizeCm.height() * foveaCm);
@@ -39,11 +40,13 @@ QImage foveaSampling() {
         for (int x = 0; x < gaussian.width(); ++x)
         {
             float g = ellipticalGauss2DAppox(x - gaussian.width() / 2, y - gaussian.height() / 2, //
-                                             foveaPx.width()*0.6, foveaPx.height()*0.6);
+                                             foveaPx.width()*gaussFactor, foveaPx.height()*gaussFactor);
             line[x] = qMin(static_cast<int>((1.0 - g) * 255.0), 254);
         }
     }
-    gaussian.save("gaussian.png");
+    qDebug() << "sceen size" << screenSizeCm << ", view distance" << viewDistanceCm
+             << ", gauss factor" << gaussFactor;
+    gaussian.save(QString::number(gaussFactor) + "_gauss.png");
     return gaussian;
 }
 int main(int argc, char* argv[]) {
@@ -90,6 +93,8 @@ int main(int argc, char* argv[]) {
 
     QImage density = foveaSampling(); // QImage(":/input/input1.jpg");
     LBGStippling::Params params;
+
+    qDebug() << "Point size range [" << params.pointSizeMin << params.pointSizeMax << "]";
 
     if (parser.isSet("input")) {
         density = QImage(parser.value("input"));

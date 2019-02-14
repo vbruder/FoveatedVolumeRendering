@@ -26,16 +26,16 @@ class LBGStippling {
 
     struct Params {
         int initialPoints = 10000;
-        double initialPointSize = 1.0;
+        double initialPointSize = 2.0;
 
         bool adaptivePointSize = true;
-        double pointSizeMin = 0.5;
+        double pointSizeMin = 1.0;
         double pointSizeMax = 2.0;
 
         PointMappingFunction mapping = PointMappingFunction::SQUAREROOT;
 
         size_t superSamplingFactor = 1;
-        size_t maxIterations = 42;
+        size_t maxIterations = 50;
 
         double hysteresis = 0.5;
         double hysteresisDelta = 0.01;
