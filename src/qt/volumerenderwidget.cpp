@@ -67,9 +67,14 @@ VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
     : QOpenGLWidget(parent)
     , _tffRange(QPoint(0, 255))
     , _timestep(0)
+    , _eyetracker(nullptr)
+    , _monitor_offset(QPoint(0,0))
+    , _curr_monitor_width(0)
+    , _curr_monitor_height(0)
     , _lastLocalCursorPos(QPoint(0,0))
     , _rotQuat(QQuaternion(1, 0, 0, 0))
     , _translation(QVector3D(0, 0, 2.0))
+    , _useEyetracking(false)
     , _noUpdate(true)
     , _loadingFinished(false)
     , _writeImage(false)
@@ -79,14 +84,9 @@ VolumeRenderWidget::VolumeRenderWidget(QWidget *parent)
     , _useGL(true)
     , _showOverlay(true)
     , _logView(false)
-	, _logInteraction(false)
+    , _logInteraction(false)
     , _contRendering(false)
-	, _renderingMethod(Standard)
-	, _eyetracker(nullptr)
-	, _monitor_offset(QPoint(0,0))
-	, _curr_monitor_width(0)
-	, _curr_monitor_height(0)
-	, _useEyetracking(false)
+    , _renderingMethod(Standard)
 {
     this->setMouseTracking(true);
 }
@@ -278,7 +278,6 @@ void VolumeRenderWidget::toggleViewRecording()
     qInfo() << (_logView ? "Stopped view config recording." : "Started view config recording.");
 
     _logView = !_logView;
-
     if (_logView)
     {
         QFileDialog dialog;
@@ -287,17 +286,17 @@ void VolumeRenderWidget::toggleViewRecording()
         if (_viewLogFile.isEmpty())
             return;
     }
-
     updateView();
 }
 
-
+/**
+ * @brief VolumeRenderWidget::toggleInteractionLogging
+ */
 void VolumeRenderWidget::toggleInteractionLogging()
 {
 	qInfo() << (_logInteraction ? "Stopped view config recording." : "Started view config recording.");
 
 	_logInteraction = !_logInteraction;
-
 	if (_logInteraction)
 	{
 		QFileDialog dialog;
@@ -722,7 +721,7 @@ void VolumeRenderWidget::paintGL_standard() {
 	// render overlays
 	if (_showOverlay)
 	{
-		paintFps(p, fps, _volumerender.getLastExecTime());
+        paintFps(p, fps, _volumerender.getLastExecTime());
 		paintOrientationAxis(p);
 	}
 
@@ -743,7 +742,6 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 		// OpenCL raycast
 		try
 		{
-
             if (_useGL)
             {
 				// set first Texture to extends of index map
@@ -798,7 +796,8 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 		{
 			qCritical() << e.what();
 		}
-		fps = getFps(fps);
+        // offset for render pass + interpolation
+        fps = getFps(fps);
 	}
 
 	QPainter p(this);
@@ -854,7 +853,7 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 	// render overlays
 	if (_showOverlay)
 	{
-		paintFps(p, fps, _volumerender.getLastExecTime());
+        paintFps(p, fps, _volumerender.getLastExecTime());
 		paintOrientationAxis(p);
 	}
 
@@ -1684,7 +1683,7 @@ void VolumeRenderWidget::setBackgroundColor(const QColor col)
 double VolumeRenderWidget::getFps(double offset)
 {
     _times.push_back(_volumerender.getLastExecTime() + offset);
-    if (_times.length() > 60)
+    if (_times.length() > 64)
         _times.pop_front();
 
     double sum = 0.0;

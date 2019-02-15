@@ -293,7 +293,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     neighborIndexMap.resize(indexMap.width * batchSize * BucketCount, 0);
     neighborWeightMap.resize(indexMap.width * batchSize * BucketCount, 0.0f);
 
-#if false
+#if true
     qDebug() << "Starting batch" << batchNo << "/" << batchCount << "with size" << batchSize
              << indexMap.width << "x" << indexMap.height;
 
