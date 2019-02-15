@@ -42,6 +42,7 @@
 #include <QPainter>
 #include <QElapsedTimer>
 #include <qcheckbox.h>
+#include <QRandomGenerator>
 
 #include "src/core/volumerendercl.h"
 
@@ -49,6 +50,38 @@
 #include <inc/TOBIIRESEARCH/tobii_research_eyetracker.h>
 #include <inc/TOBIIRESEARCH/tobii_research_streams.h>
 #include <inc/TOBIIRESEARCH/tobii_research_calibration.h>
+
+
+struct Benchmark
+{
+    bool active = false;
+    quint64 iteration = 0;
+    quint64 gaze_iterations = 100;    // gaze iterations per camera state
+    QString logFileName = "";
+    QFile f;
+
+    bool isCameraIteration()
+    {
+//        std::cout << this->iteration << " " << (this->iteration % this->gaze_iterations) << std::endl;
+        return (this->iteration % this->gaze_iterations) == 0;
+    }
+
+    void writeState(const QString &str)
+    {
+        if (!f.isOpen() && !logFileName.isEmpty())
+        {
+            this->f.setFileName(this->logFileName);
+            bool ok = f.open(QFile::WriteOnly);
+            if (!ok)
+            {
+                qWarning() << "Failed to open benchmark file" << logFileName;
+                return;
+            }
+        }
+        QTextStream fileStream(&f);
+        fileStream << str;
+    }
+};
 
 class VolumeRenderWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_3_Core
 {
@@ -83,7 +116,7 @@ public:
 
     void keyReleaseEvent(QKeyEvent *event) Q_DECL_OVERRIDE;
 
-    void updateView(const float dx = 0, const float dy = 0);
+    void updateView(float dx = 0, float dy = 0);
 
     bool getLoadingFinished() const;
     void setLoadingFinished(const bool loadingFinished);
@@ -155,7 +188,7 @@ public slots:
 
     void showSelectOpenCL();
     void reloadKernels();
-
+    void toggleBenchmark();
 
 signals:
     void fpsChanged(double);
@@ -261,4 +294,6 @@ private:
     QGradientStops _tffStops;
 	QElapsedTimer _timer;
 	RenderingMethod _renderingMethod;	// selects the rendering method which will be called within paintGL()
+    QRandomGenerator64 _prng;
+    Benchmark _bench;
 };

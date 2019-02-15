@@ -34,6 +34,9 @@
 #include <QMessageBox>
 #include <QFileDialog>
 
+#include <thread>
+#include <chrono>
+
 const static double Z_NEAR = 1.0;
 const static double Z_FAR = 500.0;
 
@@ -616,20 +619,45 @@ void VolumeRenderWidget::gaze_data_callback(TobiiResearchGazeData * gaze_data, v
  */
 void VolumeRenderWidget::paintGL()
 {
-   
 	switch (_renderingMethod) {
 	case LBG_Sampling:
 		cl_float2 lcpf;
-		lcpf.x = static_cast<cl_float>(_lastLocalCursorPos.x() / static_cast<cl_float>(this->size().width()));
-		lcpf.y = static_cast<cl_float>(_lastLocalCursorPos.y() / static_cast<cl_float>(this->size().height()));
+        if (_bench.active)
+        {
+            if (_bench.active && _bench.isCameraIteration())
+                updateView();
+            else
+            {
+                lcpf.x = static_cast<float>(std::generate_canonical<float, std::numeric_limits<float>::digits>(_prng));
+                lcpf.y = static_cast<float>(std::generate_canonical<float, std::numeric_limits<float>::digits>(_prng));
+            }
+            _bench.iteration++;
+        }
+        else
+        {
+            lcpf.x = static_cast<cl_float>(_lastLocalCursorPos.x() / static_cast<cl_float>(this->size().width()));
+            lcpf.y = static_cast<cl_float>(_lastLocalCursorPos.y() / static_cast<cl_float>(this->size().height()));
+        }
 		_volumerender.setGazePoint(lcpf);
 		paintGL_LBG_sampling();
+
+        if (_bench.active)
+        {
+            QString outString;
+            QTextStream out(&outString);
+            out << _bench.iteration << "; ";
+            out << _rotQuat.toVector4D().w() << " " << _rotQuat.x() << " " << _rotQuat.y() << " "
+                       << _rotQuat.z() << "; ";
+            out << _translation.x() << " " << _translation.y() << " " << _translation.z() << "; ";
+            out << lcpf.x << " " << lcpf.y << "; ";
+            out << _volumerender.getLastExecTime() << "\n";
+            _bench.writeState(out.readAll());
+        }
 		break;
 	default:
 		paintGL_standard();
 		break;
 	}
-
     if (_contRendering)
         update();
 }
@@ -1407,10 +1435,18 @@ void VolumeRenderWidget::resetCam()
  * @param dx
  * @param dy
  */
-void VolumeRenderWidget::updateView(const float dx, const float dy)
+void VolumeRenderWidget::updateView(float dx, float dy)
 {
+    if (_bench.active && _bench.isCameraIteration())
+    {
+        _bench.iteration++;
+        dx = static_cast<float>(std::generate_canonical<float, std::numeric_limits<float>::digits>(_prng));
+        dy = static_cast<float>(std::generate_canonical<float, std::numeric_limits<float>::digits>(_prng));
+        _translation.setZ(static_cast<float>(std::generate_canonical<float, std::numeric_limits<float>::digits>(_prng)) * 4);
+    }
+
     QVector3D rotAxis = QVector3D(dy, dx, 0.0f).normalized();
-    double angle = QVector2D(dx, dy).length()*500.0;
+    float angle = QVector2D(dx, dy).length()*360.f;
     _rotQuat = _rotQuat * QQuaternion::fromAxisAndAngle(rotAxis, -angle);
 
     QMatrix4x4 viewMat;
@@ -1780,4 +1816,31 @@ void VolumeRenderWidget::reloadKernels()
     // NOTE: this reload resets all previously defined rendering settings to default values
     initVolumeRenderer();
     resizeGL(width(), height());
+}
+
+/**
+ * @brief VolumeRenderWidget::toggleBenchmark
+ */
+void VolumeRenderWidget::toggleBenchmark()
+{
+    qInfo() << (_bench.active ? "Stopped benchmark run." : "Started benchmark run.");
+
+    _bench.active = !_bench.active;
+    if (_bench.active)
+    {
+        QFileDialog dialog;
+        _bench.logFileName = dialog.getSaveFileName(this, tr("Save benchmark results"),
+                                                   QDir::currentPath(), tr("All files"));
+        if (_bench.logFileName.isEmpty())
+        {
+            _bench.active = false;
+            return;
+        }
+        bool ok = false;
+        _bench.gaze_iterations = QInputDialog::getInt(this, tr("Gaze iterations"),
+                                             tr("Select gaze iterations:"), 100, 1, 10000, 1, &ok);
+        _prng = QRandomGenerator64(42);
+        _bench.iteration = 0;
+    }
+    updateView();
 }

@@ -26,7 +26,7 @@
      <x>0</x>
      <y>0</y>
      <width>1752</width>
-     <height>21</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -81,6 +81,8 @@
     <addaction name="actionRecord"/>
     <addaction name="actionRecordCamera"/>
     <addaction name="actionLogInteraction"/>
+    <addaction name="separator"/>
+    <addaction name="actionBenchmarkMode"/>
     <addaction name="separator"/>
     <addaction name="actionSelectOpenCL"/>
     <addaction name="actionRealoadKernel"/>
@@ -707,6 +709,14 @@
   <action name="actionLoad_Sampling_Map">
    <property name="text">
     <string>Load Sampling Map</string>
+   </property>
+  </action>
+  <action name="actionBenchmarkMode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Benchmark mode</string>
    </property>
   </action>
  </widget>
