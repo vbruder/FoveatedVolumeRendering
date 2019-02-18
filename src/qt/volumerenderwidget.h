@@ -137,8 +137,8 @@ public:
 	*/
 	void setEyetracking(bool eyetracking);
 	void showSelectEyetrackingDevice();
+#if _WIN32
 	void actionSelectMonitor();
-#ifdef WIN_32
     static bool MonitorEnumProc(HMONITOR monitor, HDC hdcMnitor, LPRECT rect, LPARAM param);
 #endif
 
@@ -211,7 +211,7 @@ private:
 	void paintGL_LBG_sampling();
 
 	// Eyetracking
-	bool check_eyetracker_availability();	// Checks if the currently selected eyetracker (_eyetracker) exists
+	bool check_eyetracker_availability(bool eyetracking);	// Checks if the currently selected eyetracker (_eyetracker) exists
 	static void gaze_data_callback(TobiiResearchGazeData *gaze_data, void *user_data);
 
     /**

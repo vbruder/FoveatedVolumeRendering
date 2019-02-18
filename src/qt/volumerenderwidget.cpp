@@ -378,10 +378,9 @@ void VolumeRenderWidget::setRenderingMethod(int rm)
 	this->resizeGL(this->size().width(), this->size().height()); // calling resize to create new textures
 }
 
-#ifdef _WIN32
 void VolumeRenderWidget::setEyetracking(bool eyetracking)
 {
-	if (check_eyetracker_availability()) {
+	if (check_eyetracker_availability(eyetracking)) {
 		if (eyetracking) {
 			// start using eyetracking: subscribe to data
 			TobiiResearchStatus status = tobii_research_subscribe_to_gaze_data(_eyetracker, &VolumeRenderWidget::gaze_data_callback, &_gaze_data);
@@ -463,11 +462,13 @@ void VolumeRenderWidget::showSelectEyetrackingDevice()
 	if (ok && !platform.isEmpty() || only_one && eyetrackers->count > 0)
 	{
 		_eyetracker = eyetrackers->eyetrackers[eyetracker_index];
+		qDebug() << QString("Selected Eyetracker: ").append(QString::fromStdString(eyetracker_device_names[eyetracker_index]));
 	}
 
 	tobii_research_free_eyetrackers(eyetrackers);
 }
 
+#ifdef _WIN32
 /*
 Shows the available monitors in a drop down menu and lets the user select one of them.
 The monitor to be selected should be the monitor on which the current eyetracking device is calibrated to.
@@ -537,20 +538,23 @@ void VolumeRenderWidget::actionSelectMonitor()
 		return_data.device_name = device_names[monitor_index];
 
 		// enumerate display monitors to retrive handles and information
-//		EnumDisplayMonitors(NULL, NULL, reinterpret_cast<MONITORENUMPROC>(&VolumeRenderWidget::MonitorEnumProc), reinterpret_cast<LPARAM>(&return_data));
+		EnumDisplayMonitors(NULL, NULL, reinterpret_cast<MONITORENUMPROC>(&VolumeRenderWidget::MonitorEnumProc), reinterpret_cast<LPARAM>(&return_data));
 
 		if (return_data.success) {
 			_monitor_offset = QPoint(return_data.left, return_data.top);
 			_curr_monitor_width = return_data.right - return_data.left;
 			_curr_monitor_height = return_data.bottom - return_data.top;
+			qDebug() << QString("Montitor ").append(QString::fromStdString(return_data.device_name)).append(" selected.");
 		}
 		else {
 			qCritical() << "Could not retrive data for selected Monitor!\n";
 		}
 	}
 }
+#endif
 
-/*bool VolumeRenderWidget::MonitorEnumProc(HMONITOR monitor, HDC hdcMnitor, LPRECT rect, LPARAM param)
+#ifdef _WIN32
+bool VolumeRenderWidget::MonitorEnumProc(HMONITOR monitor, HDC hdcMnitor, LPRECT rect, LPARAM param)
 {
 	struct return_data_struct {
 		bool success;
@@ -579,12 +583,14 @@ void VolumeRenderWidget::actionSelectMonitor()
 	}
 
 	return success;
-}*/
+}
+#endif
 
-bool VolumeRenderWidget::check_eyetracker_availability()
+bool VolumeRenderWidget::check_eyetracker_availability(bool eyetracking)
 {
 	if (_eyetracker == nullptr) {
-		return false;
+		if(eyetracking) showSelectEyetrackingDevice(); // only do this if the intention is to enabled
+		return _eyetracker != nullptr;
 	}
 	else {
 		TobiiResearchEyeTrackers* eyetrackers = NULL;
@@ -607,7 +613,6 @@ bool VolumeRenderWidget::check_eyetracker_availability()
 	}
 
 }
-#endif
 
 void VolumeRenderWidget::gaze_data_callback(TobiiResearchGazeData * gaze_data, void * user_data)
 {

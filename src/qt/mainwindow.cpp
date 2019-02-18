@@ -122,10 +122,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->pbBgColor, &QPushButton::released, this, &MainWindow::chooseBackgroundColor);
 	connect(ui->setRdMt, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
 		ui->volumeRenderWidget, &VolumeRenderWidget::setRenderingMethod);
-//	connect(ui->actionSelectEyetrackingDevice, &QAction::triggered,
-//		ui->volumeRenderWidget, &VolumeRenderWidget::showSelectEyetrackingDevice);
-//	connect(ui->actionSelectMonitor, &QAction::triggered,
-//		ui->volumeRenderWidget, &VolumeRenderWidget::actionSelectMonitor);
+	connect(ui->actionSelectEyetrackingDevice, &QAction::triggered,
+		ui->volumeRenderWidget, &VolumeRenderWidget::showSelectEyetrackingDevice);
+#ifdef _WIN320
+	connect(ui->actionSelectMonitor, &QAction::triggered,
+		ui->volumeRenderWidget, &VolumeRenderWidget::actionSelectMonitor);
+#endif
     // check boxes
     connect(ui->chbLinear, &QCheckBox::toggled,
             ui->volumeRenderWidget, &VolumeRenderWidget::setLinearInterpolation);
@@ -157,8 +159,8 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->transferFunctionEditor, SLOT(setInterpolation(QString)));
 //    connect(ui->cbInterpolation, qOverload<const QString &>(&QComboBox::currentIndexChanged),
 //            ui->transferFunctionEditor, &TransferFunctionEditor::setInterpolation);
-//	connect(ui->chbEyetracking, &QCheckBox::toggled,
-//		ui->volumeRenderWidget, &VolumeRenderWidget::setEyetracking);
+	connect(ui->chbEyetracking, &QCheckBox::toggled,
+		ui->volumeRenderWidget, &VolumeRenderWidget::setEyetracking);
     connect(ui->transferFunctionEditor->getEditor(), &TransferFunctionEditor::selectedPointChanged,
             ui->colorWheel, &colorwidgets::ColorWheel::setColor);
     connect(ui->colorWheel, &colorwidgets::ColorWheel::colorChanged,
