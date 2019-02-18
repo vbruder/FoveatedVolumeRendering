@@ -10,6 +10,7 @@
 #include <QJsonValue>
 #include <QtMath>
 #include <QPainter>
+#include <algorithm>
 
 #include <nanoflann.hpp>
 
@@ -378,14 +379,14 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 //            qDebug() << "# pixels" << intersectionSum << "time " << perfTimer.restart();
 //            assert(intersectionSet.size() < BucketCount && "Mehr geht halt net erstmal...");
 
-            std::map smap = intersectionSet.toStdMap();
+            auto smap = intersectionSet.toStdMap();
             while (smap.size() > BucketCount)
             {
                 auto it = min_element(smap.begin(), smap.end(),
                                       [](decltype(smap)::value_type & l, decltype(smap)::value_type& r) -> bool { return l.second < r.second; });
                 smap.erase(it);
             }
-            intersectionSet = QMap(smap);
+            intersectionSet = QMap<uint32_t, float>(smap);
 
             // Normalize weights and copy to neighbor maps.
             size_t bucketIndex = 0;
