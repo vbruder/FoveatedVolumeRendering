@@ -378,10 +378,9 @@ void VolumeRenderWidget::setRenderingMethod(int rm)
 	this->resizeGL(this->size().width(), this->size().height()); // calling resize to create new textures
 }
 
-#ifdef _WIN32
 void VolumeRenderWidget::setEyetracking(bool eyetracking)
 {
-	if (check_eyetracker_availability()) {
+	if (check_eyetracker_availability(eyetracking)) {
 		if (eyetracking) {
 			// start using eyetracking: subscribe to data
 			TobiiResearchStatus status = tobii_research_subscribe_to_gaze_data(_eyetracker, &VolumeRenderWidget::gaze_data_callback, &_gaze_data);
@@ -463,11 +462,13 @@ void VolumeRenderWidget::showSelectEyetrackingDevice()
 	if (ok && !platform.isEmpty() || only_one && eyetrackers->count > 0)
 	{
 		_eyetracker = eyetrackers->eyetrackers[eyetracker_index];
+		qDebug() << QString("Selected Eyetracker: ").append(QString::fromStdString(eyetracker_device_names[eyetracker_index]));
 	}
 
 	tobii_research_free_eyetrackers(eyetrackers);
 }
 
+#ifdef _WIN32
 /*
 Shows the available monitors in a drop down menu and lets the user select one of them.
 The monitor to be selected should be the monitor on which the current eyetracking device is calibrated to.
@@ -537,20 +538,23 @@ void VolumeRenderWidget::actionSelectMonitor()
 		return_data.device_name = device_names[monitor_index];
 
 		// enumerate display monitors to retrive handles and information
-//		EnumDisplayMonitors(NULL, NULL, reinterpret_cast<MONITORENUMPROC>(&VolumeRenderWidget::MonitorEnumProc), reinterpret_cast<LPARAM>(&return_data));
+		EnumDisplayMonitors(NULL, NULL, reinterpret_cast<MONITORENUMPROC>(&VolumeRenderWidget::MonitorEnumProc), reinterpret_cast<LPARAM>(&return_data));
 
 		if (return_data.success) {
 			_monitor_offset = QPoint(return_data.left, return_data.top);
 			_curr_monitor_width = return_data.right - return_data.left;
 			_curr_monitor_height = return_data.bottom - return_data.top;
+			qDebug() << QString("Montitor ").append(QString::fromStdString(return_data.device_name)).append(" selected.");
 		}
 		else {
 			qCritical() << "Could not retrive data for selected Monitor!\n";
 		}
 	}
 }
+#endif
 
-/*bool VolumeRenderWidget::MonitorEnumProc(HMONITOR monitor, HDC hdcMnitor, LPRECT rect, LPARAM param)
+#ifdef _WIN32
+bool VolumeRenderWidget::MonitorEnumProc(HMONITOR monitor, HDC hdcMnitor, LPRECT rect, LPARAM param)
 {
 	struct return_data_struct {
 		bool success;
@@ -579,12 +583,14 @@ void VolumeRenderWidget::actionSelectMonitor()
 	}
 
 	return success;
-}*/
+}
+#endif
 
-bool VolumeRenderWidget::check_eyetracker_availability()
+bool VolumeRenderWidget::check_eyetracker_availability(bool eyetracking)
 {
 	if (_eyetracker == nullptr) {
-		return false;
+		if(eyetracking) showSelectEyetrackingDevice(); // only do this if the intention is to enabled
+		return _eyetracker != nullptr;
 	}
 	else {
 		TobiiResearchEyeTrackers* eyetrackers = NULL;
@@ -607,7 +613,6 @@ bool VolumeRenderWidget::check_eyetracker_availability()
 	}
 
 }
-#endif
 
 void VolumeRenderWidget::gaze_data_callback(TobiiResearchGazeData * gaze_data, void * user_data)
 {
@@ -635,8 +640,21 @@ void VolumeRenderWidget::paintGL()
         }
         else
         {
-            lcpf.x = static_cast<cl_float>(_lastLocalCursorPos.x() / static_cast<cl_float>(this->size().width()));
-            lcpf.y = static_cast<cl_float>(_lastLocalCursorPos.y() / static_cast<cl_float>(this->size().height()));
+			if (_useEyetracking) {
+				if (_gaze_data.right_eye.gaze_point.validity == TOBII_RESEARCH_VALIDITY_VALID) {
+					lcpf.x = _gaze_data.right_eye.gaze_point.position_on_display_area.x;
+					lcpf.y = _gaze_data.right_eye.gaze_point.position_on_display_area.y;
+					_last_valid_gaze_position = lcpf;
+				}
+				else {
+					lcpf = _last_valid_gaze_position;
+				}
+				
+			}
+			else {
+				lcpf.x = static_cast<cl_float>(_lastLocalCursorPos.x() / static_cast<cl_float>(this->size().width()));
+				lcpf.y = static_cast<cl_float>(_lastLocalCursorPos.y() / static_cast<cl_float>(this->size().height()));
+			}
         }
 		_volumerender.setGazePoint(lcpf);
 		paintGL_LBG_sampling();
@@ -782,27 +800,11 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 				fps = _volumerender.getLastExecTime();
 
 				// second texture needs to have one third in each dimension of the index map
-				//_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0),
-				//	_outTexId);
 
                 _volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 2.0),
                                              floor(_volumerender.getIndexMapExtends().y() / 2.0),
                                              _tmpTexId, _outTexId);
-				
-
-				/*generateOutputTextures(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()),
-					&_tmpTexId, GL_TEXTURE1);
-
-				_volumerender.runRaycastLBG(_timestep);
-
-				fps = _volumerender.getLastExecTime();
-
-				// second texture needs to have one third in each dimension of the index map
-				//_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0),
-				//	_outTexId);
-
-				_volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0), _tmpTexId, _outTexId);
-				*/
+	
 			}
 			else
 			{
