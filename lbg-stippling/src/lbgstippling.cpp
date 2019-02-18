@@ -177,7 +177,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 
     IndexMap indexMap;
 
-    Status status = {0, 0, 1, 1};
+    Status status = {0, 0, 1, 1, 0.5f};
 
     QVector<QVector2D> points;
 
@@ -274,7 +274,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     dbgImg.fill(Qt::white);
     QPainter dbgPainter(&dbgImg);
     QVector<QPointF> dbgPoints;
-    for (auto && a: mortonMap.values())
+    for (auto &a: mortonMap.values())
     {
         dbgPoints.push_back(points.at(a).toPointF()*2048.);
     }
@@ -286,7 +286,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
     QList<unsigned int> point2morton = mortonMap.values();
 
     const size_t batchSize = indexMap.height / batchCount;
-    const size_t BucketCount = 8;
+    const size_t BucketCount = 16;
     std::vector<uint32_t> neighborIndexMap;
     std::vector<float> neighborWeightMap;
 
@@ -311,7 +311,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
 //    QElapsedTimer perfTimer;
 //    perfTimer.start();
 
-    const size_t k = BucketCount + 4;
+    const size_t k = BucketCount; // + 4;
     std::vector<size_t> ret_indices(k);
     std::vector<float> out_dists_sqr(k);
 
@@ -320,7 +320,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
         int yOffset = (y - batchNo * batchSize);
         for (int x = 0; x < indexMap.width; ++x)
         {
-            if (x % 10000 == 1)
+            if (x == 1 && (y % 10 == 0))
             {
                 float pointsTotal = static_cast<float>(indexMap.width * batchSize);
                 float pointsProgress = static_cast<float>(yOffset * indexMap.width + x) / pointsTotal;
@@ -350,8 +350,9 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
             QMap<uint32_t, float> intersectionSet;
             uint32_t modifierPointIndex = indexMapModified.get(x, y);
 
-            int kernelHeight = 20;  //indexMapModified.height /4;
-            int kernelWidth = 20;   //indexMapModified.width /4;
+            int kernelHeight = 40;  //indexMapModified.height /4;
+            int kernelWidth = 40;   //indexMapModified.width /4;
+            bool overflow = false;
 //#pragma omp parallel for
             for (int yy = std::max(yOffset - kernelHeight, 0); yy < std::min(y + kernelHeight, static_cast<int>(indexMapModified.height)); ++yy)
             {
@@ -362,17 +363,29 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
                         if (intersectionSet.size() >= BucketCount)
                         {
                             qDebug() << "__Bucket overflow on pixel" << x << y;
-                            break;
+                            overflow = true;
+                        }
+                        else
+                        {
+                            intersectionSum++;
                         }
                         // encode in morton order
                         auto originalIndex = point2morton.value(indexMap.get(xx, yy));
                         intersectionSet[originalIndex]++;
-                        intersectionSum++;
                     }
                 }
-            }
+            }            
 //            qDebug() << "# pixels" << intersectionSum << "time " << perfTimer.restart();
 //            assert(intersectionSet.size() < BucketCount && "Mehr geht halt net erstmal...");
+
+            std::map smap = intersectionSet.toStdMap();
+            while (smap.size() > BucketCount)
+            {
+                auto it = min_element(smap.begin(), smap.end(),
+                                      [](decltype(smap)::value_type & l, decltype(smap)::value_type& r) -> bool { return l.second < r.second; });
+                smap.erase(it);
+            }
+            intersectionSet = QMap(smap);
 
             // Normalize weights and copy to neighbor maps.
             size_t bucketIndex = 0;
