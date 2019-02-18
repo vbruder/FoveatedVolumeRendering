@@ -588,29 +588,29 @@ bool VolumeRenderWidget::MonitorEnumProc(HMONITOR monitor, HDC hdcMnitor, LPRECT
 
 bool VolumeRenderWidget::check_eyetracker_availability(bool eyetracking)
 {
-	if (_eyetracker == nullptr) {
-		if(eyetracking) showSelectEyetrackingDevice(); // only do this if the intention is to enabled
-		return _eyetracker != nullptr;
-	}
-	else {
-		TobiiResearchEyeTrackers* eyetrackers = NULL;
+    if (_eyetracker == nullptr) {
+        if(eyetracking) showSelectEyetrackingDevice(); // only do this if the intention is to enabled
+        return _eyetracker != nullptr;
+    }
+    else {
+        TobiiResearchEyeTrackers* eyetrackers = NULL;
 
-		TobiiResearchStatus result;
-		result = tobii_research_find_all_eyetrackers(&eyetrackers);
-		if (result != TOBII_RESEARCH_STATUS_OK) {
-			qCritical() << "Finding trackers to check status failed. Error: " << result << "\n";
-			return false;
-		}
+        TobiiResearchStatus result;
+        result = tobii_research_find_all_eyetrackers(&eyetrackers);
+        if (result != TOBII_RESEARCH_STATUS_OK) {
+            qCritical() << "Finding trackers to check status failed. Error: " << result << "\n";
+            return false;
+        }
 
-		bool eyetracker_exists = false;
-		for (int i = 0; i < eyetrackers->count; i++) {
-			if (_eyetracker == eyetrackers->eyetrackers[i]) {
-				eyetracker_exists = true;
-			}
-		}
-		tobii_research_free_eyetrackers(eyetrackers);
-		return eyetracker_exists;
-	}
+        bool eyetracker_exists = false;
+        for (int i = 0; i < eyetrackers->count; i++) {
+            if (_eyetracker == eyetrackers->eyetrackers[i]) {
+                eyetracker_exists = true;
+            }
+        }
+        tobii_research_free_eyetrackers(eyetrackers);
+        return eyetracker_exists;
+    }
 
 }
 
