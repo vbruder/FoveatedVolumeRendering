@@ -822,7 +822,7 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
 
     // negate mouse offset
     int2 lookupCoords = texCoords - (gp - (inImg_bounds / 2));
-    
+
 //#define NEAREST
 #ifdef NEAREST  // nearest neighbor interpolation
     uint4 sample = read_imageui(indexMap, nearestIntSmp, lookupCoords);
@@ -832,7 +832,7 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
     sampleCoord += gp - (inImg_bounds / 4);
     write_imagef(outImg, globalId, read_imagef(inImg, nearestIntSmp, sampleCoord));
 #else
-    // natural neighbot interpolation
+    // natural neighbor interpolation
     float4 result = (float4)(0.f);
     int mapId = lookupCoords.x + lookupCoords.y * inImg_bounds.x;
     uint8 neighborIds = ids[mapId];
@@ -841,7 +841,7 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
     for (int i = 0; i < 8; ++i)
     {
         uint neighbor = getui8(neighborIds, i);
-        if (neighbor > 0)
+        if (neighbor >= 0)
         {
             sampleCoord = convert_int2(samplingData[neighbor].id);
             sampleCoord += gp - (inImg_bounds / 4);
