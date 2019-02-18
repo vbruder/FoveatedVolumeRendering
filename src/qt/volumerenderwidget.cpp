@@ -640,8 +640,21 @@ void VolumeRenderWidget::paintGL()
         }
         else
         {
-            lcpf.x = static_cast<cl_float>(_lastLocalCursorPos.x() / static_cast<cl_float>(this->size().width()));
-            lcpf.y = static_cast<cl_float>(_lastLocalCursorPos.y() / static_cast<cl_float>(this->size().height()));
+			if (_useEyetracking) {
+				if (_gaze_data.right_eye.gaze_point.validity == TOBII_RESEARCH_VALIDITY_VALID) {
+					lcpf.x = _gaze_data.right_eye.gaze_point.position_on_display_area.x;
+					lcpf.y = _gaze_data.right_eye.gaze_point.position_on_display_area.y;
+					_last_valid_gaze_position = lcpf;
+				}
+				else {
+					lcpf = _last_valid_gaze_position;
+				}
+				
+			}
+			else {
+				lcpf.x = static_cast<cl_float>(_lastLocalCursorPos.x() / static_cast<cl_float>(this->size().width()));
+				lcpf.y = static_cast<cl_float>(_lastLocalCursorPos.y() / static_cast<cl_float>(this->size().height()));
+			}
         }
 		_volumerender.setGazePoint(lcpf);
 		paintGL_LBG_sampling();
@@ -787,27 +800,11 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 				fps = _volumerender.getLastExecTime();
 
 				// second texture needs to have one third in each dimension of the index map
-				//_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0),
-				//	_outTexId);
 
                 _volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 2.0),
                                              floor(_volumerender.getIndexMapExtends().y() / 2.0),
                                              _tmpTexId, _outTexId);
-				
-
-				/*generateOutputTextures(floor(_volumerender.getIndexMapExtends().x()), floor(_volumerender.getIndexMapExtends().y()),
-					&_tmpTexId, GL_TEXTURE1);
-
-				_volumerender.runRaycastLBG(_timestep);
-
-				fps = _volumerender.getLastExecTime();
-
-				// second texture needs to have one third in each dimension of the index map
-				//_volumerender.updateOutputImg(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0),
-				//	_outTexId);
-
-				_volumerender.interpolateLBG(floor(_volumerender.getIndexMapExtends().x() / 2.0), floor(_volumerender.getIndexMapExtends().y() / 2.0), _tmpTexId, _outTexId);
-				*/
+	
 			}
 			else
 			{

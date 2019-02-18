@@ -265,6 +265,7 @@ private:
 	// Eyetracking
 	TobiiResearchEyeTracker* _eyetracker;	// points to the currently selected eyetracker
 	TobiiResearchGazeData _gaze_data;	// holds the latest collected data from the eyetracking callback
+	cl_float2 _last_valid_gaze_position;
 
 	// Monitorselection
 	QPoint _monitor_offset;	// The offset which is used for the transformation of the gaze point
