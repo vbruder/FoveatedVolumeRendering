@@ -1823,26 +1823,129 @@ void VolumeRenderWidget::reloadKernels()
 /**
  * @brief VolumeRenderWidget::toggleBenchmark
  */
-void VolumeRenderWidget::toggleBenchmark()
+void VolumeRenderWidget::toggleBenchmark(QString logFileName, int gaze_iterations)
 {
     qInfo() << (_bench.active ? "Stopped benchmark run." : "Started benchmark run.");
 
     _bench.active = !_bench.active;
     if (_bench.active)
     {
-        QFileDialog dialog;
-        _bench.logFileName = dialog.getSaveFileName(this, tr("Save benchmark results"),
-                                                   QDir::currentPath(), tr("All files"));
+		if (logFileName.isEmpty()) {
+			QFileDialog dialog;
+			_bench.logFileName = dialog.getSaveFileName(this, tr("Save benchmark results"),
+				QDir::currentPath(), tr("All files"));
+		}
+		else {
+			_bench.logFileName = logFileName;
+		}
+        
         if (_bench.logFileName.isEmpty())
         {
             _bench.active = false;
             return;
         }
         bool ok = false;
-        _bench.gaze_iterations = QInputDialog::getInt(this, tr("Gaze iterations"),
-                                             tr("Select gaze iterations:"), 100, 1, 10000, 1, &ok);
+		
+		if (gaze_iterations == -1) {
+			_bench.gaze_iterations = QInputDialog::getInt(this, tr("Gaze iterations"),
+				tr("Select gaze iterations:"), 100, 1, 10000, 1, &ok);
+		}
+		else {
+			_bench.gaze_iterations = gaze_iterations;
+		}
+        
         _prng = QRandomGenerator64(42);
         _bench.iteration = 0;
     }
     updateView();
+
+}
+
+/*
+* Select a folder to save the benchmarks to and select a folder which contains a folder for each volume to be benchmarked.
+* In each of those folders there has to exist a volume file (.dat with the appropriate .raw) and a transferfunction file (.tff) (loaded as raw values).
+* In the previously selected folder to save the benchmarks to, the same folder structure will be created but in each folder there will be two benchmarks,
+* one for the standard method and one for the lbg-sampling method.
+*/
+void VolumeRenderWidget::do_all_Benchmarks()
+{
+	std::cout << "Starting to do all benchmarks." << std::endl;
+
+	QFileDialog dialog;
+	QString directorySavePath = dialog.getExistingDirectory(this, tr("Select the Folder to save the benchmarks results to."),
+		QDir::currentPath());
+	
+	QString directoryVolumesPath = dialog.getExistingDirectory(this, tr("Select the Folder containing the the folders to the volumes and transferfunctions."),
+		QDir::currentPath());
+
+	std::cout << "directorySavePath: " << directorySavePath.toStdString() << std::endl;
+	std::cout << "directoryVolumesPath: " << directoryVolumesPath.toStdString() << std::endl;
+
+	QDirIterator it(directoryVolumesPath, QDirIterator::NoIteratorFlags);
+	std::cout << "Direcotries in directoryVolumesPath:" << std::endl;
+	
+	// iterate the directories and do the benchmarks for each of them
+	while (it.hasNext()) {
+		it.next();
+		
+		if (it.fileName() == "." || it.fileName() == "..") {
+			// skip '.' and '..' directories, only want folders
+			it.next();
+			continue;
+		}
+
+		QDir cBD = QDir(it.filePath());
+
+		std::cout << "currentBenchmarkDirectoryPath: " << cBD.absolutePath().toStdString() << std::endl;
+		std::cout << "currentBenchmarkDirectoryName: " << cBD.dirName().toStdString() << std::endl;
+		
+		// search for .dat file
+		cBD.setNameFilters(QStringList() << "*.dat");
+		if (cBD.entryList().isEmpty()) {
+			std::cout << "could not find the volume file for : " << cBD.dirName().toStdString() << std::endl;
+			continue;
+		}
+		QString volume_file = cBD.entryList().first();
+
+		cBD.setNameFilters(QStringList() << "*.tff");
+		if (cBD.entryList().isEmpty()) {
+			std::cout << "could not find the tff file for : " << cBD.dirName().toStdString() << std::endl;
+			continue;
+		}
+		QString tff_file = cBD.entryList().first();
+
+		std::cout << "volume_file: " << volume_file.toStdString() << std::endl;
+		std::cout << "tff_file: " << tff_file.toStdString() << std::endl;
+
+		// load volume
+		setVolumeData(cBD.absolutePath() + QDir::separator() + volume_file);
+		
+		// load raw values of tff
+		std::ifstream tff_file_((cBD.absolutePath() + QDir::separator() + tff_file).toStdString(), std::ios::in);
+		float value = 0;
+		std::vector<unsigned char> values;
+		// read lines from file and split on whitespace
+		if (tff_file_.is_open())
+		{
+			while (tff_file_ >> value)
+			{
+				values.push_back((char)value);
+			}
+			tff_file_.close();
+			setRawTransferFunction(values);
+		}
+		else
+		{
+			qDebug() << "Could not open transfer function file " + tff_file;
+		}
+
+		// TODO: Benchmark with Standard
+
+		// TODO: Benchmark with LBG-Sampling
+				
+
+	}
+
+
+	updateView();
 }
