@@ -26,7 +26,7 @@
      <x>0</x>
      <y>0</y>
      <width>1752</width>
-     <height>19</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -83,6 +83,7 @@
     <addaction name="actionLogInteraction"/>
     <addaction name="separator"/>
     <addaction name="actionBenchmarkMode"/>
+    <addaction name="actionRun_Complete_Benchmark"/>
     <addaction name="separator"/>
     <addaction name="actionSelectOpenCL"/>
     <addaction name="actionRealoadKernel"/>
@@ -717,6 +718,11 @@
    </property>
    <property name="text">
     <string>Benchmark mode</string>
+   </property>
+  </action>
+  <action name="actionRun_Complete_Benchmark">
+   <property name="text">
+    <string>Run Complete Benchmark</string>
    </property>
   </action>
  </widget>

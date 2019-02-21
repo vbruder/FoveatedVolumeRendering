@@ -43,6 +43,7 @@
 #include <QElapsedTimer>
 #include <qcheckbox.h>
 #include <QRandomGenerator>
+#include <QDirIterator>
 
 #include "src/core/volumerendercl.h"
 
@@ -188,7 +189,9 @@ public slots:
 
     void showSelectOpenCL();
     void reloadKernels();
-    void toggleBenchmark();
+    void toggleBenchmark(QString logFileName = QString(), int gaze_iterations = -1);
+
+	void do_all_Benchmarks();	// do all the benchmarks for some given volumes and transferfunctions
 
 signals:
     void fpsChanged(double);
