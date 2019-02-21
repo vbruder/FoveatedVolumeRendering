@@ -497,7 +497,7 @@ private:
     bool _useImgESS = false;
     std::string _currentDevice;
     cl_uint _frameId = 0;
-    cl_uint _frameIpCnt = 5;    // max 8
+    cl_uint _frameIpCnt = 8;    // max 8
     cl_uint _viewChanged = false;
     cl_uint _gazeChanged = false;
     cl_float2 _gazePoint = {{0,0}};

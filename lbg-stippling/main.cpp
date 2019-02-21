@@ -157,7 +157,7 @@ int main(int argc, char* argv[]) {
 
         LBGStippling stippling = LBGStippling();
 
-            params.mapping =  LBGStippling::PointMappingFunction::LINEAR;
+//            params.mapping =  LBGStippling::PointMappingFunction::LINEAR;
 
 //        if (outputList.size() == inputList.size()) {
 //            // for each input one output

@@ -853,15 +853,16 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
     if (gazeChanged && !viewChanged)   // not a still image
         write_imagef(thisFrame, globalId, result); // write frame for temporal interpolation
     // Temporal interpolation of last frames
-    if (frameId > frameCnt && !viewChanged)
+    uint numFrames = frameId > frameCnt ? frameCnt : frameId;
+    if (!viewChanged)
     {                       
-        for (uint i = 0; i < frameCnt; ++i)
+        for (uint i = 0; i < numFrames; ++i)
         {
             float4 last = read_imagef(lastFrames, nearestIntSmp,
-                                      (int4)(globalId, (frameId-(i+1)) % frameCnt, 0));
+                                      (int4)(globalId, (frameId-(i+1)) % numFrames, 0));
             result += last;
         }
-        result /= convert_float(frameCnt + 1);
+        result /= convert_float(numFrames + 1);
     }
     result.w = 1.f;
     write_imagef(outImg, globalId, result);

@@ -29,13 +29,13 @@ class LBGStippling {
         double initialPointSize = 1.0;
 
         bool adaptivePointSize = true;
-        double pointSizeMin = 0.6;
-        double pointSizeMax = 3.0;
+        double pointSizeMin = 0.5;
+        double pointSizeMax = 2.0;
 
         PointMappingFunction mapping = PointMappingFunction::SQUAREROOT;
 
         size_t superSamplingFactor = 1;
-        size_t maxIterations = 50;
+        size_t maxIterations = 64;
 
         double hysteresis = 0.5;
         double hysteresisDelta = 0.01;

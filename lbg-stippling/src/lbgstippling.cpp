@@ -351,8 +351,8 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
             QMap<uint32_t, float> intersectionSet;
             uint32_t modifierPointIndex = indexMapModified.get(x, y);
 
-            int kernelHeight = 40;  //indexMapModified.height /4;
-            int kernelWidth = 40;   //indexMapModified.width /4;
+            int kernelHeight = 32;  //indexMapModified.height /4;
+            int kernelWidth = 32;   //indexMapModified.width /4;
             bool overflow = false;
 //#pragma omp parallel for
             for (int yy = std::max(yOffset - kernelHeight, 0); yy < std::min(y + kernelHeight, static_cast<int>(indexMapModified.height)); ++yy)
@@ -363,7 +363,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
                     {
                         if (intersectionSet.size() >= BucketCount)
                         {
-                            qDebug() << "__Bucket overflow on pixel" << x << y;
+//                            qDebug() << "__Bucket overflow on pixel" << x << y;
                             overflow = true;
                         }
                         else
@@ -382,6 +382,7 @@ LBGStippling::Result LBGStippling::stipple(const QImage& density, const Params& 
             auto smap = intersectionSet.toStdMap();
             while (smap.size() > BucketCount)
             {
+                qDebug() << "__Bucket overflow on pixel" << x << y << "size" << smap.size();
                 auto it = min_element(smap.begin(), smap.end(),
                                       [](decltype(smap)::value_type & l, decltype(smap)::value_type& r) -> bool { return l.second < r.second; });
                 smap.erase(it);
