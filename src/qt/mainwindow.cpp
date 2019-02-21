@@ -101,7 +101,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionBenchmarkMode, &QAction::triggered,
             ui->volumeRenderWidget, &VolumeRenderWidget::toggleBenchmark);
 	connect(ui->actionRun_Complete_Benchmark, &QAction::triggered,
-		ui->volumeRenderWidget, &VolumeRenderWidget::do_all_Benchmarks);
+            ui->volumeRenderWidget, &VolumeRenderWidget::do_all_Benchmarks);
 
     // future watcher for concurrent data loading
     _watcher = new QFutureWatcher<void>(this);

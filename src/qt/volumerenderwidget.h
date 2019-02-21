@@ -189,7 +189,7 @@ public slots:
 
     void showSelectOpenCL();
     void reloadKernels();
-    void toggleBenchmark(QString logFileName = QString(), int gaze_iterations = -1);
+    void toggleBenchmark();  //QString logFileName = QString(), int gaze_iterations = -1);
 
 	void do_all_Benchmarks();	// do all the benchmarks for some given volumes and transferfunctions
 

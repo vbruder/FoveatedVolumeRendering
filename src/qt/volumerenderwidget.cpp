@@ -1823,8 +1823,12 @@ void VolumeRenderWidget::reloadKernels()
 /**
  * @brief VolumeRenderWidget::toggleBenchmark
  */
-void VolumeRenderWidget::toggleBenchmark(QString logFileName, int gaze_iterations)
+void VolumeRenderWidget::toggleBenchmark() //QString logFileName, int gaze_iterations)
 {
+    // TODO: add a forward slot for parameters
+    QString logFileName;
+    int gaze_iterations = -1;
+
     qInfo() << (_bench.active ? "Stopped benchmark run." : "Started benchmark run.");
 
     _bench.active = !_bench.active;
