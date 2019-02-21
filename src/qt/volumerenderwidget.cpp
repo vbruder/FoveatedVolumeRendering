@@ -332,10 +332,15 @@ void VolumeRenderWidget::toggleInteractionLogging()
 		s += QString::number(_rotQuat.z()) + ", ";
 		s += QString::number(_translation.x()) + " " + QString::number(_translation.y()) + " ";
 		s += QString::number(_translation.z()) + "\n";
-		// timestep
+        // volume timestep
 		s += QString::number(_timer.elapsed());
 		s += "; timestep; ";
 		s += QString::number(_timestep) + "\n";
+        // gaze
+        s += QString::number(_timer.elapsed());
+        s += "; gaze; ";
+        s += QString::number(_renderingMethod == LBG_Sampling ? _last_valid_gaze_position.x : 0) + " ";
+        s += QString::number(_renderingMethod == LBG_Sampling ? _last_valid_gaze_position.y : 0) + "\n";
 		logInteraction(s);
 	}
 }
@@ -640,21 +645,25 @@ void VolumeRenderWidget::paintGL()
         }
         else
         {
-			if (_useEyetracking) {
-				if (_gaze_data.right_eye.gaze_point.validity == TOBII_RESEARCH_VALIDITY_VALID) {
+            if (_useEyetracking && _gaze_data.right_eye.gaze_point.validity == TOBII_RESEARCH_VALIDITY_VALID)
+            {
 					lcpf.x = _gaze_data.right_eye.gaze_point.position_on_display_area.x;
 					lcpf.y = _gaze_data.right_eye.gaze_point.position_on_display_area.y;
-					_last_valid_gaze_position = lcpf;
-				}
-				else {
-					lcpf = _last_valid_gaze_position;
-				}
-				
+                    _last_valid_gaze_position = lcpf;
 			}
-			else {
-				lcpf.x = static_cast<cl_float>(_lastLocalCursorPos.x() / static_cast<cl_float>(this->size().width()));
-				lcpf.y = static_cast<cl_float>(_lastLocalCursorPos.y() / static_cast<cl_float>(this->size().height()));
-			}
+            else
+                lcpf = _last_valid_gaze_position;
+
+            // log gaze data
+            if (_logInteraction && _renderingMethod == LBG_Sampling)
+            {
+                QString s;
+                s += QString::number(_timer.elapsed());
+                s += "; gaze; ";
+                s += QString::number(_last_valid_gaze_position.x) + " ";
+                s += QString::number(_last_valid_gaze_position.y) + "\n";
+                logInteraction(s);
+            }
         }
 		_volumerender.setGazePoint(lcpf);
 		paintGL_LBG_sampling();
@@ -1368,8 +1377,9 @@ void VolumeRenderWidget::cleanup()
  */
 void VolumeRenderWidget::mousePressEvent(QMouseEvent *event)
 {
-    // nothing yet
     _lastLocalCursorPos = event->pos();
+    _last_valid_gaze_position = {{event->pos().x() / static_cast<float>(width()),
+                                  event->pos().y() / static_cast<float>(height())}};
 }
 
 
@@ -1528,6 +1538,8 @@ void VolumeRenderWidget::mouseMoveEvent(QMouseEvent *event)
     }
 
     _lastLocalCursorPos = event->pos();
+    _last_valid_gaze_position = {{event->pos().x() / static_cast<float>(width()),
+                                  event->pos().y() / static_cast<float>(height())}};
     event->accept();
 }
 
