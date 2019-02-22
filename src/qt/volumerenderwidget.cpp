@@ -403,6 +403,7 @@ void VolumeRenderWidget::playInteractionSequence(const QString &fileName)
 
     toggleVideoRecording();
     _playInteraction = true;
+    update();
 }
 
 /**
@@ -753,7 +754,7 @@ void VolumeRenderWidget::paintGL()
     {
         setSequenceStep(_interactionSequence.at(_interactionSequencePos));
         _interactionSequencePos++;
-        if (_interactionSequencePos == _interactionSequence.size())
+        if (_interactionSequencePos >= _interactionSequence.size())
         {
             toggleVideoRecording();
             _playInteraction = false;
