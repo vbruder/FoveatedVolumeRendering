@@ -206,6 +206,26 @@ uint getui8(uint8 v, int id)
     if (id == 7) return v.s7;
 }
 
+uint getui16(uint16 v, int id)
+{
+    if (id == 0) return v.s0;
+    if (id == 1) return v.s1;
+    if (id == 2) return v.s2;
+    if (id == 3) return v.s3;
+    if (id == 4) return v.s4;
+    if (id == 5) return v.s5;
+    if (id == 6) return v.s6;
+    if (id == 7) return v.s7;
+    if (id == 8) return v.s8;
+    if (id == 9) return v.s9;
+    if (id == 10) return v.sA;
+    if (id == 11) return v.sB;
+    if (id == 12) return v.sC;
+    if (id == 13) return v.sD;
+    if (id == 14) return v.sE;
+    if (id == 15) return v.sF;
+}
+
 float getf8(float8 v, int id)
 {
     if (id == 0) return v.s0;
@@ -216,6 +236,26 @@ float getf8(float8 v, int id)
     if (id == 5) return v.s5;
     if (id == 6) return v.s6;
     if (id == 7) return v.s7;
+}
+
+float getf16(float16 v, int id)
+{
+    if (id == 0) return v.s0;
+    if (id == 1) return v.s1;
+    if (id == 2) return v.s2;
+    if (id == 3) return v.s3;
+    if (id == 4) return v.s4;
+    if (id == 5) return v.s5;
+    if (id == 6) return v.s6;
+    if (id == 7) return v.s7;
+    if (id == 8) return v.s8;
+    if (id == 9) return v.s9;
+    if (id == 10) return v.sA;
+    if (id == 11) return v.sB;
+    if (id == 12) return v.sC;
+    if (id == 13) return v.sD;
+    if (id == 14) return v.sE;
+    if (id == 15) return v.sF;
 }
 
 // Compute gradient using a sobel filter (1,2,4)
@@ -801,8 +841,8 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
                             , const uint sdSamples
                             , const uint frameId
                             , __global samplingDataStruct *samplingData
-                            , __global uint8 *ids
-                            , __global float8 *weights
+                            , __global uint16 *ids
+                            , __global float16 *weights // normalized neighbor weights
                             , __write_only image2d_t thisFrame
                             , const uint frameCnt
                             , const uint viewChanged
@@ -835,15 +875,15 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
     // natural neighbor interpolation   TODO: change to 16 values
     float4 result = (float4)(0.f);
     int mapId = lookupCoords.x + lookupCoords.y * inImg_bounds.x;
-    uint8 neighborIds = ids[mapId];
-    float8 neighborWeights = weights[mapId];
+    uint16 neighborIds = ids[mapId];
+    float16 neighborWeights = weights[mapId];
     int2 sampleCoord;
-    for (int i = 0; i < 8; ++i)
+    for (int i = 0; i < 16; ++i)
     {
-        float neighborWeight = getf8(neighborWeights, i);
+        float neighborWeight = getf16(neighborWeights, i);
         if (neighborWeight > 0.f)
         {
-            sampleCoord = convert_int2(samplingData[getui8(neighborIds, i)].id);
+            sampleCoord = convert_int2(samplingData[getui16(neighborIds, i)].id);
             sampleCoord += gp - (inImg_bounds / 4);
             float4 sampleColor = read_imagef(inImg, nearestIntSmp, sampleCoord);
             result += sampleColor * neighborWeight;
