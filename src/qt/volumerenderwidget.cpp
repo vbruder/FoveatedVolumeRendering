@@ -300,8 +300,10 @@ void VolumeRenderWidget::toggleInteractionLogging()
 	qInfo() << (_logInteraction ? "Stopped view config recording." : "Started view config recording.");
 
 	_logInteraction = !_logInteraction;
+//    toggleVideoRecording();   // TODO: only in case playback isn't finished in time
+
 	if (_logInteraction)
-	{
+	{        
 		QFileDialog dialog;
 		_interactionLogFile = dialog.getSaveFileName(this, tr("Save camera path"),
 			QDir::currentPath(), tr("All files"));
@@ -345,6 +347,63 @@ void VolumeRenderWidget::toggleInteractionLogging()
 	}
 }
 
+void VolumeRenderWidget::setSequenceStep(QString line)
+{
+    std::cout << line.toStdString() << std::endl;
+
+    if (line.contains("gaze"))
+    {
+        int pos = line.lastIndexOf(';');
+        QStringList values = line.remove(0, pos + 2).split(' ');
+        _last_valid_gaze_position.x = values.at(0).toFloat();
+        _last_valid_gaze_position.y = values.at(1).toFloat();
+    }
+    else if (line.contains("camera"))
+    {
+        int pos = line.lastIndexOf(';');
+        line.remove(',');
+        QStringList values = line.remove(0, pos + 2).split(' ');
+        setCamRotation(QQuaternion(values.at(0).toFloat(), values.at(1).toFloat(),
+                                   values.at(2).toFloat(), values.at(3).toFloat()));
+        setCamTranslation(QVector3D(values.at(4).toFloat(), values.at(5).toFloat(),
+                                    values.at(6).toFloat()));
+        updateViewMatrix();
+    }
+    else if (line.contains("timestep"))
+    {
+        int pos = line.lastIndexOf(';');
+        _timestep = line.remove(0, pos + 2).toInt();
+    }
+    else if (line.contains("transferFunction"))
+    {
+        // TODO
+    }
+    else if (line.contains("tffInterpolation"))
+    {
+        // TODO
+    }
+}
+
+/**
+ * @brief VolumeRenderWidget::playInteractionSequence
+ * @param fileName
+ */
+void VolumeRenderWidget::playInteractionSequence(const QString &fileName)
+{
+    QFile f(fileName);
+    if (!f.isOpen() && !f.open(QFile::ReadOnly | QFile::Text))
+        throw std::invalid_argument("Invalid file name for interaction log: " + fileName.toStdString());
+
+    _interactionSequence.clear();
+    _interactionSequencePos = 0;
+    QTextStream sqeuence(&f);
+    QString line;
+    while (sqeuence.readLineInto(&line))
+        _interactionSequence.append(line);
+
+    toggleVideoRecording();
+    _playInteraction = true;
+}
 
 /**
  * @brief VolumeRenderWidget::setTimeStep
@@ -667,6 +726,8 @@ void VolumeRenderWidget::paintGL()
         }
 		_volumerender.setGazePoint(lcpf);
 		paintGL_LBG_sampling();
+//        if (_logInteraction)
+//            paintGL_standard();
 
         if (_bench.active)
         {
@@ -687,10 +748,20 @@ void VolumeRenderWidget::paintGL()
 	}
     if (_contRendering)
         update();
+
+    if (_playInteraction)
+    {
+        setSequenceStep(_interactionSequence.at(_interactionSequencePos));
+        _interactionSequencePos++;
+        if (_interactionSequencePos == _interactionSequence.size())
+            _playInteraction = false;
+        update();
+    }
 }
 
 
-void VolumeRenderWidget::paintGL_standard() {
+void VolumeRenderWidget::paintGL_standard()
+{
 	double fps = 0.0;
 	if (this->_loadingFinished && _volumerender.hasData() && !_noUpdate)
 	{
@@ -870,6 +941,16 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 		glDisable(GL_CULL_FACE);
 		glDisable(GL_DEPTH_TEST);
 
+        // draw gaze point
+        p.endNativePainting();
+        p.setPen(QPen(QBrush(Qt::red, Qt::SolidPattern), 3));
+        QPoint gaze = QPoint(qRound(_last_valid_gaze_position.x * width()),
+                             qRound(_last_valid_gaze_position.y * height()));
+        int r = 5;
+        p.drawLine(gaze - QPoint(r,0), gaze + QPoint(r,0));
+        p.drawLine(gaze - QPoint(0,r), gaze + QPoint(0,r));
+        //p.drawEllipse(QPointF(_last_valid_gaze_position.x * width(), _last_valid_gaze_position.y * height()), 5, 5);
+
 		if (_volumerender.hasData() && _writeImage)
 		{
 			QImage img = this->grabFramebuffer();
@@ -881,9 +962,9 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 					number.toStdString().c_str());
 				_writeImage = false;
 			}
-			if (!QDir("img").exists())
-				QDir().mkdir("img");
-			img.save("img/frame_" + number + "_"
+            if (!QDir("img_et").exists())
+                QDir().mkdir("img_et");
+            img.save("img_et/frame_" + number + "_"
 				+ QString::number(_volumerender.getLastExecTime()) + ".png");
 		}
 	}
@@ -1369,7 +1450,11 @@ void VolumeRenderWidget::cleanup()
 //        _quadVbo.destroy();
 }
 
-
+void VolumeRenderWidget::setGazeFromCursorPos(const QPoint &cursorPos)
+{
+    _last_valid_gaze_position = {{qBound(0.f, cursorPos.x() / static_cast<float>(width()), 1.f),
+                                  qBound(0.f, cursorPos.y() / static_cast<float>(height()), 1.f)}};
+}
 
 /**
  * @brief VolumeRenderWidget::mousePressEvent
@@ -1378,8 +1463,8 @@ void VolumeRenderWidget::cleanup()
 void VolumeRenderWidget::mousePressEvent(QMouseEvent *event)
 {
     _lastLocalCursorPos = event->pos();
-    _last_valid_gaze_position = {{event->pos().x() / static_cast<float>(width()),
-                                  event->pos().y() / static_cast<float>(height())}};
+    if (_interactionSequence.empty())
+        setGazeFromCursorPos(event->pos());
 }
 
 
@@ -1442,6 +1527,33 @@ void VolumeRenderWidget::resetCam()
     updateView();
 }
 
+void VolumeRenderWidget::updateViewMatrix()
+{
+    QMatrix4x4 viewMat;
+//    viewMat.scale(QVector3D(1,1,1./_zScale));
+    viewMat.rotate(_rotQuat);
+
+    _coordViewMX.setToIdentity();
+    _coordViewMX.scale(1, -1, 1);
+    _coordViewMX.translate(_translation * -1.0);
+    _coordViewMX *= QMatrix4x4(_rotQuat.toRotationMatrix().transposed());
+
+    viewMat.translate(_translation);
+    viewMat.scale(_translation.z());
+
+    std::array<float, 16> viewArray;
+    for (size_t i = 0; i < viewArray.size(); ++i)
+        viewArray.at(i) = viewMat.transposed().constData()[i];
+    try
+    {
+        _volumerender.updateView(viewArray);
+    }
+    catch (std::runtime_error e)
+    {
+        qCritical() << e.what();
+    }
+}
+
 /**
  * @brief update camera view
  * @param dx
@@ -1460,31 +1572,7 @@ void VolumeRenderWidget::updateView(float dx, float dy)
     QVector3D rotAxis = QVector3D(dy, dx, 0.0f).normalized();
     float angle = QVector2D(dx, dy).length()*360.f;
     _rotQuat = _rotQuat * QQuaternion::fromAxisAndAngle(rotAxis, -angle);
-
-    QMatrix4x4 viewMat;
-//    viewMat.scale(QVector3D(1,1,1./_zScale));
-    viewMat.rotate(_rotQuat);
-
-    _coordViewMX.setToIdentity();
-    _coordViewMX.scale(1, -1, 1);
-    _coordViewMX.translate(_translation * -1.0);
-    _coordViewMX *= QMatrix4x4(_rotQuat.toRotationMatrix().transposed());
-
-    viewMat.translate(_translation);
-    viewMat.scale(_translation.z());
-
-    std::array<float, 16> viewArray;
-    for (size_t i = 0; i < viewArray.size(); ++i)
-        viewArray.at(i) = viewMat.transposed().constData()[i];
-
-    try
-    {
-        _volumerender.updateView(viewArray);
-    }
-    catch (std::runtime_error e)
-    {
-        qCritical() << e.what();
-    }
+    updateViewMatrix();
     update();
 
     if (_logView)
@@ -1538,8 +1626,8 @@ void VolumeRenderWidget::mouseMoveEvent(QMouseEvent *event)
     }
 
     _lastLocalCursorPos = event->pos();
-    _last_valid_gaze_position = {{event->pos().x() / static_cast<float>(width()),
-                                  event->pos().y() / static_cast<float>(height())}};
+    if (_interactionSequence.empty())       // FIXME: quick hack
+        setGazeFromCursorPos(event->pos());
     event->accept();
 }
 

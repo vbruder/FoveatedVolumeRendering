@@ -472,10 +472,10 @@ __kernel void volumeRender(  __read_only image3d_t volData
 //                           , __read_only image2d_t indexMap
                            , const uint2 resultImgExtends
                            , __global samplingDataStruct *samplingData
-                           , __read_only image3d_t volMip1
-                           , __read_only image3d_t volMip2
-                           , __read_only image3d_t volMip3
-                           , __read_only image3d_t volMip4
+//                           , __read_only image3d_t volMip1
+//                           , __read_only image3d_t volMip2
+//                           , __read_only image3d_t volMip3
+//                           , __read_only image3d_t volMip4
                            )
 {
     int2 globalId = (int2)(get_global_id(0), get_global_id(1));
@@ -727,22 +727,22 @@ __kernel void volumeRender(  __read_only image3d_t volData
                 case 0: density = useLinear ? read_imagef(volData,  linearSmp, (float4)(pos, 1.f)).x :
                                               read_imagef(volData, nearestSmp, (float4)(pos, 1.f)).x;
                         break;
-                case 1: density = read_imagef(volData, linearSmp, (float4)(pos, 1.f)).x;
-                        density2 = read_imagef(volMip1, linearSmp, (float4)(pos, 1.f)).x;
-                        density = mix(density, density2, mipMix);
-                        break;
-                case 2: density = read_imagef(volMip1, linearSmp, (float4)(pos, 1.f)).x;
-                        density2 = read_imagef(volMip2, linearSmp, (float4)(pos, 1.f)).x;
-                        density = mix(density, density2, mipMix);
-                        break;
-                case 3: density = read_imagef(volMip2, linearSmp, (float4)(pos, 1.f)).x;
-                        density2 = read_imagef(volMip3, linearSmp, (float4)(pos, 1.f)).x;
-                        density = mix(density, density2, mipMix);
-                        break;
-                case 4: density = read_imagef(volMip3, linearSmp, (float4)(pos, 1.f)).x;
-                        density2 = read_imagef(volMip4, linearSmp, (float4)(pos, 1.f)).x;
-                        density = mix(density, density2, mipMix);
-                        break;
+//                case 1: density = read_imagef(volData, linearSmp, (float4)(pos, 1.f)).x;
+//                        density2 = read_imagef(volMip1, linearSmp, (float4)(pos, 1.f)).x;
+//                        density = mix(density, density2, mipMix);
+//                        break;
+//                case 2: density = read_imagef(volMip1, linearSmp, (float4)(pos, 1.f)).x;
+//                        density2 = read_imagef(volMip2, linearSmp, (float4)(pos, 1.f)).x;
+//                        density = mix(density, density2, mipMix);
+//                        break;
+//                case 3: density = read_imagef(volMip2, linearSmp, (float4)(pos, 1.f)).x;
+//                        density2 = read_imagef(volMip3, linearSmp, (float4)(pos, 1.f)).x;
+//                        density = mix(density, density2, mipMix);
+//                        break;
+//                case 4: density = read_imagef(volMip3, linearSmp, (float4)(pos, 1.f)).x;
+//                        density2 = read_imagef(volMip4, linearSmp, (float4)(pos, 1.f)).x;
+//                        density = mix(density, density2, mipMix);
+//                        break;
                 }
 
                 tfColor = read_imagef(tffData, linearSmp, density);  // map density to color

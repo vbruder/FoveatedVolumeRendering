@@ -102,6 +102,8 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->volumeRenderWidget, &VolumeRenderWidget::toggleBenchmark);
 	connect(ui->actionRun_Complete_Benchmark, &QAction::triggered,
             ui->volumeRenderWidget, &VolumeRenderWidget::do_all_Benchmarks);
+    connect(ui->actionPlay_interaction_sequence, &QAction::triggered,
+            this, &MainWindow::playInteractionSequence);
 
     // future watcher for concurrent data loading
     _watcher = new QFutureWatcher<void>(this);
@@ -839,4 +841,21 @@ void MainWindow::chooseBackgroundColor()
     QColor col = dia.getColor();
     if (col.isValid())
         ui->volumeRenderWidget->setBackgroundColor(col);
+}
+
+/**
+ * @brief MainWindow::playInteractionSequence
+ */
+void MainWindow::playInteractionSequence()
+{
+    QFileDialog dia;
+    QString defaultPath = _settings->value( "LastInteractionSequence" ).toString();
+    QString pickedFile = dia.getOpenFileName(
+                this, tr("Open Interaction Sequence"),
+                defaultPath, tr("Interaction sequence files (*.csv)"));
+    if (!pickedFile.isEmpty())
+    {
+        ui->volumeRenderWidget->playInteractionSequence(pickedFile);
+        _settings->setValue( "LastInteractionSequence", pickedFile );
+    }
 }

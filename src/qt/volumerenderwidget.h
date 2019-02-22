@@ -193,6 +193,7 @@ public slots:
 
 	void do_all_Benchmarks();	// do all the benchmarks for some given volumes and transferfunctions
 
+    void playInteractionSequence(const QString &fileName);
 signals:
     void fpsChanged(double);
     void frameSizeChanged(QSize);
@@ -205,6 +206,8 @@ protected:
     void resizeGL(const int w, const int h) Q_DECL_OVERRIDE; // generates the two GL textures, GL_TEXTURE0 is active afterwards
 
 private:
+    void updateViewMatrix();
+    void setGazeFromCursorPos(const QPoint &cursorPos);
     void paintOrientationAxis(QPainter &p);
     void paintFps(QPainter &p, const double fps, const double lastTime);
     double getFps(double offset=0.0);
@@ -242,6 +245,7 @@ private:
 	 *	          time stamp, interaction type, interaction parameters
 	 */
 	void logInteraction(const QString &str) const;
+    void setSequenceStep(QString line);
 
     // -------Member variables--------
     //
@@ -300,4 +304,7 @@ private:
 	RenderingMethod _renderingMethod;	// selects the rendering method which will be called within paintGL()
     QRandomGenerator64 _prng;
     Benchmark _bench;
+    QStringList _interactionSequence;
+    int _interactionSequencePos = 0;
+    bool _playInteraction = false;
 };

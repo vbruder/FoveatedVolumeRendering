@@ -940,7 +940,7 @@ size_t VolumeRenderCL::loadVolumeData(const std::string fileName)
     std::partial_sum(prefixSum.begin(), prefixSum.end(), prefixSum.begin());
     setTffPrefixSum(prefixSum);
     this->_volLoaded = true;
-    generateMipmaps(4);
+//    generateMipmaps(4);
 
     return _dr.data().size();
 }

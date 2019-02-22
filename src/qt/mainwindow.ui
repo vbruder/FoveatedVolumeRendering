@@ -26,7 +26,7 @@
      <x>0</x>
      <y>0</y>
      <width>1752</width>
-     <height>21</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -80,7 +80,9 @@
     <addaction name="actionScreenshot"/>
     <addaction name="actionRecord"/>
     <addaction name="actionRecordCamera"/>
+    <addaction name="separator"/>
     <addaction name="actionLogInteraction"/>
+    <addaction name="actionPlay_interaction_sequence"/>
     <addaction name="separator"/>
     <addaction name="actionBenchmarkMode"/>
     <addaction name="actionRun_Complete_Benchmark"/>
@@ -706,6 +708,9 @@
    <property name="text">
     <string>Load Index and Sampling Map</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
   </action>
   <action name="actionLoad_Sampling_Map">
    <property name="text">
@@ -723,6 +728,11 @@
   <action name="actionRun_Complete_Benchmark">
    <property name="text">
     <string>Run Complete Benchmark</string>
+   </property>
+  </action>
+  <action name="actionPlay_interaction_sequence">
+   <property name="text">
+    <string>Play interaction sequence...</string>
    </property>
   </action>
  </widget>
