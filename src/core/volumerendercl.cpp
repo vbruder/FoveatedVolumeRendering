@@ -663,6 +663,7 @@ void VolumeRenderCL::runRaycastLBG(const size_t width, const size_t height, cons
         if (_currentTimestep != t)
         {
             _viewChanged = true;
+            _frameId = 0;
             _currentTimestep = t;
         }
         setMemObjectsRaycast(t);

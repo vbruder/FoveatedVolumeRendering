@@ -58,6 +58,7 @@ static const char *pFsScreenQuadSource =
     "uniform highp sampler2D outTex;\n"
     "void main() {\n"
     "   fragColor = texture(outTex, texCoord);\n"
+    "   //fragColor = pow(fragColor, vec4(1/2.2)); // gamma correction \n"
     "   fragColor.a = 1.0f;\n"
     "}\n";
 
@@ -133,13 +134,13 @@ void VolumeRenderWidget::paintOrientationAxis(QPainter &p)
     p.drawText(x.x() + textOffset, x.y() + textOffset, "x");
     // y axis
     p.setPen(Qt::green);
-    p.drawLine(0, 0, y.x(), y.y());
-    p.drawLine(yArrLeft.x(), yArrLeft.y(), y.x(), y.y());
-    p.drawLine(yArrRight.x(), yArrRight.y(), y.x(), y.y());
-    p.drawText(y.x() + textOffset, y.y() + textOffset, "y");
+    p.drawLine(0, 0, int(y.x()), int(y.y()));
+    p.drawLine(int(yArrLeft.x()), int(yArrLeft.y()), int(y.x()), int(y.y()));
+    p.drawLine(int(yArrRight.x()), int(yArrRight.y()), int(y.x()), int(y.y()));
+    p.drawText(int(y.x()) + textOffset, int(y.y()) + textOffset, "y");
     // z axis
     p.setPen(Qt::blue);
-    p.drawLine(0, 0, z.x(), z.y());
+    p.drawLine(0, 0, int(z.x()), int(z.y()));
     p.drawLine(zArrLeft.x(), zArrLeft.y(), z.x(), z.y());
     p.drawLine(zArrRight.x(), zArrRight.y(), z.x(), z.y());
     p.drawText(z.x() + textOffset, z.y() + textOffset, "z");
@@ -947,10 +948,10 @@ void VolumeRenderWidget::paintGL_LBG_sampling() {
 
         // draw gaze point
         p.endNativePainting();
-        p.setPen(QPen(QBrush(Qt::red, Qt::SolidPattern), 3));
+        p.setPen(QPen(QBrush(Qt::red, Qt::SolidPattern), _writeImage ? 10 : 3));
         QPoint gaze = QPoint(qRound(_last_valid_gaze_position.x * width()),
                              qRound(_last_valid_gaze_position.y * height()));
-        int r = 5;
+        int r = _writeImage ? 20 : 5;
         p.drawLine(gaze - QPoint(r,0), gaze + QPoint(r,0));
         p.drawLine(gaze - QPoint(0,r), gaze + QPoint(0,r));
         //p.drawEllipse(QPointF(_last_valid_gaze_position.x * width(), _last_valid_gaze_position.y * height()), 5, 5);

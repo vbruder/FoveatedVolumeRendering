@@ -872,7 +872,7 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
     sampleCoord += gp - (inImg_bounds / 4);
     write_imagef(outImg, globalId, read_imagef(inImg, nearestIntSmp, sampleCoord));
 #else
-    // natural neighbor interpolation   TODO: change to 16 values
+    // natural neighbor interpolation
     float4 result = (float4)(0.f);
     int mapId = lookupCoords.x + lookupCoords.y * inImg_bounds.x;
     uint16 neighborIds = ids[mapId];
@@ -881,7 +881,7 @@ __kernel void interpolateLBG( __read_only image2d_t inImg
     for (int i = 0; i < 16; ++i)
     {
         float neighborWeight = getf16(neighborWeights, i);
-        if (neighborWeight > 0.f)
+        if (neighborWeight > 0)//.9999f)
         {
             sampleCoord = convert_int2(samplingData[getui16(neighborIds, i)].id);
             sampleCoord += gp - (inImg_bounds / 4);

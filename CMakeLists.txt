@@ -86,8 +86,8 @@ FIND_PACKAGE(Qt5 COMPONENTS Core Gui Widgets Concurrent REQUIRED)
 
 # Check Qt minor version
 if (Qt5Core_FOUND)
-    if (Qt5Core_VERSION VERSION_LESS 5.6.0)
-        message(FATAL_ERROR "Minimum supported Qt5 version is 5.6.0!")
+    if (Qt5Core_VERSION VERSION_LESS 5.10.0)
+        message(FATAL_ERROR "Minimum supported Qt5 version is 5.10.0!")
     endif()
 else()
     message(SEND_ERROR "The Qt5 library could not be found!")

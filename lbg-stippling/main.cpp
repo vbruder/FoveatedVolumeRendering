@@ -27,7 +27,7 @@ QImage foveaSampling() {
     const QSizeF screenSizeCm(30, 30); // 80, 33.5
     const qreal viewDistanceCm = 60;
     const qreal foveaAlpha = 5.0 / 180.0 * M_PI;
-    const qreal gaussFactor = 0.5;
+    const qreal gaussFactor = 0.7;
     const qreal foveaCm = viewDistanceCm * qSin(foveaAlpha);
     const QSizeF foveaPx(screenSizePx.width() / screenSizeCm.width() * foveaCm,
                          screenSizePx.height() / screenSizeCm.height() * foveaCm);
