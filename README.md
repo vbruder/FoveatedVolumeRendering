@@ -39,7 +39,7 @@ For Tobii eye tracking support, you also need to link the respective library.
 
 # Screenshots #
 
-![eye-tracker](hhttps://github.com/vbruder/FoveatedVolumeRendering/blob/master/resources/eyeTracker.jpg)
+![eye-tracker](https://github.com/vbruder/FoveatedVolumeRendering/blob/master/resources/eyeTracker.jpg)
 
 ![richtmyer](https://github.com/vbruder/FoveatedVolumeRendering/blob/master/resources/richtmyer.png)
 
