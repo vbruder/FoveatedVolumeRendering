@@ -2,7 +2,8 @@
 
 An Voronoi-based foveated volume renderer. Check out the paper for more details: https://vbruder.github.io/publication/bruder-sbfwe-19/bruder-sbfwe-19.pdf
 
-The Weighted-Linde-Buzo-Gray algorithm can be used to generate the sampling mask a preprocessing step.
+The Weighted-Linde-Buzo-Gray algorithm can be used to generate the sampling mask in a preprocessing step.
+
 Besides foveated rendering, the raycaster features early ray termination, object and image order empty space skipping, local illumination, and various gradient based shading techniques.
 It can display volume (timeseries) data sets and uses the [Qt](https://www.qt.io) framework for the GUI. 
 
@@ -38,9 +39,11 @@ For Tobii eye tracking support, you also need to link the respective library.
 
 # Screenshots #
 
-![2017-12-19-nova](https://bytebucket.org/theVall/basicvolumeraycaster/raw/6d3ef5483cd67d8a6416620887a19d36ca6e4d67/screenshots/2018-04-23-nova.png)
+![eye-tracker](hhttps://github.com/vbruder/FoveatedVolumeRendering/blob/master/resources/eyeTracker.jpg)
 
-![2017-12-19-cham](https://bytebucket.org/theVall/basicvolumeraycaster/raw/6d3ef5483cd67d8a6416620887a19d36ca6e4d67/screenshots/2018-04-23-cham.png)
+![richtmyer](https://github.com/vbruder/FoveatedVolumeRendering/blob/master/resources/richtmyer.png)
+
+![vortex](https://github.com/vbruder/FoveatedVolumeRendering/blob/master/resources/vortex.png)
 
 # Planned changes/extensions #
 
@@ -57,4 +60,4 @@ This software is licensed under [LGPLv3+](https://www.gnu.org/licenses/lgpl-3.0.
   * Color wheel from Mattia Basaglia's Qt-Color-Widgets: https://github.com/mbasaglia/Qt-Color-Widgets
   * OpenCL utils based on Erik Smistad's OpenCLUtilityLibrary: https://github.com/smistad/OpenCLUtilityLibrary
   * Transfer function editor based on Qt sample code.
-  * Stippling is based in O. Deussen, M. Spicker, Q. Zeng's Weighted Linde-Buzo-Gray Algorithm: http://graphics.uni-konstanz.de/publikationen/Deussen2017LindeBuzoGray/index.html
+  * Stippling is based on O. Deussen, M. Spicker, Q. Zeng's Weighted Linde-Buzo-Gray Algorithm: http://graphics.uni-konstanz.de/publikationen/Deussen2017LindeBuzoGray/index.html
