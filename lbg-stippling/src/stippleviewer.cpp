@@ -33,6 +33,13 @@ StippleViewer::StippleViewer(const QImage& img, QWidget* parent)
     m_stippling.setStippleCallback([this](const auto& stipples) { displayPoints(stipples); });
 }
 
+void StippleViewer::saveImage()
+{
+    QString path = QString::number(m_count++) + ".png";
+    QPixmap map = this->getImage();
+    map.save(path);
+}
+
 void StippleViewer::displayPoints(const std::vector<Stipple>& stipples) {
     for (const auto& s : stipples) {
         auto x = s.pos.x() * m_image.width() - s.size / 2.0;
@@ -41,6 +48,7 @@ void StippleViewer::displayPoints(const std::vector<Stipple>& stipples) {
     }
     // TODO: Fix event handling
     QCoreApplication::processEvents();
+    saveImage();
 }
 
 void StippleViewer::displayCells(const IndexMap &map)

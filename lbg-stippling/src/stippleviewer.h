@@ -19,6 +19,9 @@ class StippleViewer : public QGraphicsView {
     void displayPoints(const std::vector<Stipple>& stipples);
     void displayCells(const IndexMap& cells);
 
+protected slots:
+    void saveImage();
+
   signals:
     void finished();
     void inputImageChanged();
@@ -27,6 +30,7 @@ class StippleViewer : public QGraphicsView {
   private:
     LBGStippling m_stippling;
     QImage m_image;
+    uint m_count = 0;
 };
 
 #endif // STIPPLEVIEWER_H
