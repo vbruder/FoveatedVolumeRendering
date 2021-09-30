@@ -16,9 +16,7 @@ For Tobii eye tracking support, you also need to link the respective library.
 ![richtmyer](https://github.com/vbruder/FoveatedVolumeRendering/blob/master/resources/richtmyer.png)
 ![vortex](https://github.com/vbruder/FoveatedVolumeRendering/blob/master/resources/vortex.png)
 
-## Planned changes/extensions ##
-
-* Support for head mounted devices with integrated eye tracking.
+*Copyright belongs to the Eurographics Association.*
 
 ## License ##
 
